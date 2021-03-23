@@ -6,8 +6,8 @@ import org.starrel.submitee.SubmiteeServer;
 
 public abstract class SFieldString implements SField<String> {
     @Override
-    public String parse(String json) {
-        return JsonParser.parseString(json).getAsJsonObject().getAsString();
+    public String parse(JsonElement json) {
+        return json.getAsString();
     }
 
     @Override

@@ -6,6 +6,7 @@ import org.starrel.submitee.attribute.AttributeHolder;
 import java.util.List;
 
 public interface User extends AttributeHolder<User> {
+    String ATTRIBUTE_COLLECTION_NAME = "users";
 
     boolean isAnonymous();
 

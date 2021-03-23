@@ -10,7 +10,7 @@ public interface SField<TValue> {
      */
     Object getDescription();
 
-    TValue parse(String json);
+    TValue parse(JsonElement json);
 
     /**
      * @return basic value or bson document

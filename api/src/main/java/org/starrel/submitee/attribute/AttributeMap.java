@@ -4,17 +4,9 @@ import com.google.gson.JsonObject;
 
 import java.util.List;
 
-public interface AttributeMap<TContext extends AttributeHolder<?>> {
+public interface AttributeMap<TContext extends AttributeHolder<?>> extends AttributeSpec<Void> {
 
     TContext getHolder();
-
-    <TValue> TValue getAttribute(String path, Class<TValue> type);
-
-    void setAttribute(String path, Object value);
-
-    boolean removeAttribute(String path);
-
-    List<String> getKeys(String path);
 
     JsonObject serialize();
 

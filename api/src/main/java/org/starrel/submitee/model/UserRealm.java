@@ -1,5 +1,7 @@
 package org.starrel.submitee.model;
 
+import org.starrel.submitee.auth.AuthScheme;
+
 import java.util.List;
 
 public interface UserRealm {
@@ -11,6 +13,6 @@ public interface UserRealm {
         throw new UnsupportedOperationException("anonymous user is not supported");
     }
 
-    List<Class<? extends AuthScheme>> getSupportedAuthSchemes();
+    List<? extends AuthScheme> getSupportedAuthSchemes();
 
 }

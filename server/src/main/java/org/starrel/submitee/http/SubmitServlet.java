@@ -9,6 +9,5 @@ public class SubmitServlet extends SubmiteeHttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
     }
 }

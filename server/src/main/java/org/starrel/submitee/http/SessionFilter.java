@@ -1,6 +1,6 @@
 package org.starrel.submitee.http;
 
-import org.starrel.submitee.SServer;
+import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.SessionImpl;
 
 import javax.servlet.FilterChain;
@@ -9,22 +9,33 @@ import javax.servlet.http.HttpFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.io.IOException;
 
 public class SessionFilter extends HttpFilter {
-    private SServer server;
+    private final SubmiteeServer submiteeServer;
 
-    @Override
-    public void init() throws ServletException {
-        this.server = (SServer) getServletContext().getAttribute("server");
+    {
+        submiteeServer = SubmiteeServer.getInstance();
     }
 
     @Override
-    protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
+    public void init() throws ServletException {
+        if (submiteeServer == null)
+            throw new ServletException(new NullPointerException("submitee server instance is null"));
+    }
+
+    @Override
+    protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) {
         HttpSession httpSession = req.getSession();
         SessionImpl session = SessionImpl.getSession(httpSession);
         if (session == null) {
-            SessionImpl.createAnonymous(server, httpSession);
+            session = SessionImpl.fromCookie(req.getCookies());
         }
+        if (session == null) {
+            SessionImpl.createAnonymous(SubmiteeServer.getInstance(), httpSession);
+        }
+    }
+
+    public SubmiteeServer getSubmiteeServer() {
+        return submiteeServer;
     }
 }

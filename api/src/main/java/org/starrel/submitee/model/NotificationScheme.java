@@ -1,9 +1,11 @@
 package org.starrel.submitee.model;
 
+import java.util.concurrent.CompletableFuture;
+
 public interface NotificationScheme {
 
     String getTypeId();
 
-    void send(String address, String message);
+    CompletableFuture<?> send(String literalAddress, String message);
 
 }
