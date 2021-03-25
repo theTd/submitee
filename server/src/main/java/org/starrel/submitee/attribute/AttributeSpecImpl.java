@@ -61,8 +61,8 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     }
 
     @Override
-    public void setSource(AttributeSource controller) {
-        this.owningSource = controller;
+    public void setSource(AttributeSource source) {
+        this.owningSource = source;
     }
 
     @SuppressWarnings("unchecked")

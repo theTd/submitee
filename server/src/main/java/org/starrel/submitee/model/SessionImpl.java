@@ -1,6 +1,6 @@
 package org.starrel.submitee.model;
 
-import org.starrel.submitee.SServer;
+import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeMap;
 
 import javax.servlet.http.Cookie;
@@ -10,26 +10,24 @@ import java.util.Date;
 public class SessionImpl implements Session {
     public final static String HTTP_SESSION_ATTRIBUTE_KEY = "session";
     public final static String TOKEN_COOKIE_KEY = "submitee_token";
-    private final SServer server;
     private final HttpSession httpSession;
-    private final AttributeMap<Session> attributeMap;
+    private final AttributeMap<SessionImpl> attributeMap;
 
     private boolean anonymous;
     private User user;
 
-    public SessionImpl(SServer server, HttpSession httpSession) {
-        this(server, httpSession, null, null);
+    public SessionImpl(HttpSession httpSession) {
+        this(httpSession, null, null);
     }
 
-    public SessionImpl(SServer server, HttpSession httpSession, User user, String sessionToken) {
-        this.server = server;
+    public SessionImpl(HttpSession httpSession, User user, String sessionToken) {
         this.httpSession = httpSession;
         this.user = user;
         this.anonymous = this.user == null;
         if (anonymous || sessionToken == null) {
-            this.attributeMap = server.createAttributeMap(this);
+            this.attributeMap = SubmiteeServer.getInstance().createAttributeMap(this);
         } else {
-            this.attributeMap = server.readAttributeMap(this, Session.ATTRIBUTE_COLLECTION_NAME, sessionToken);
+            this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, Session.ATTRIBUTE_COLLECTION_NAME, sessionToken);
         }
     }
 
@@ -38,14 +36,14 @@ public class SessionImpl implements Session {
         return raw == null ? null : (SessionImpl) raw;
     }
 
-    public static SessionImpl createAnonymous(SServer server, HttpSession httpSession) {
-        SessionImpl instance = new SessionImpl(server, httpSession);
+    public static SessionImpl createAnonymous(HttpSession httpSession) {
+        SessionImpl instance = new SessionImpl(httpSession);
         httpSession.setAttribute(HTTP_SESSION_ATTRIBUTE_KEY, instance);
         return instance;
     }
 
-    public static SessionImpl create(SServer server, HttpSession httpSession, User user) {
-        SessionImpl instance = new SessionImpl(server, httpSession, user, null);
+    public static SessionImpl create(HttpSession httpSession, User user) {
+        SessionImpl instance = new SessionImpl(httpSession, user, null);
         httpSession.setAttribute(HTTP_SESSION_ATTRIBUTE_KEY, instance);
         return instance;
     }
@@ -95,16 +93,17 @@ public class SessionImpl implements Session {
 
     @Override
     public String getAttributePersistKey() {
-        return null;
+        return user.getDescriptor().toString();
     }
 
     @Override
-    public AttributeMap<Session> getAttributeMap() {
-        return null;
+    public AttributeMap<SessionImpl> getAttributeMap() {
+        return attributeMap;
     }
 
     @Override
     public void attributeUpdated(String path) {
+        // TODO: 2021-03-25-0025
     }
 
     @Override

@@ -8,13 +8,19 @@ public interface STemplate extends AttributeHolder<STemplate> {
 
     UUID getUniqueId();
 
+    String getTemplateId();
+
     int getVersion();
 
     int getLatestVersion();
 
     User getCommittedBy();
 
+    void setCommittedBy(User user);
+
     String getComment();
+
+    void setComment(String comment);
 
     @Override
     default String getAttributePersistKey() {

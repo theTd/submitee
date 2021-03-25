@@ -1,11 +1,12 @@
 package org.starrel.submitee.auth;
 
-import javax.servlet.http.HttpServletRequest;
+import com.google.gson.JsonElement;
 
 public interface AuthScheme {
 
     String getBootstrapPath();
 
-    AuthResult auth(HttpServletRequest req);
+    AuthResult auth(JsonElement content);
 
+    String getName();
 }

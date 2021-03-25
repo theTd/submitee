@@ -19,7 +19,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -27,7 +29,7 @@ import java.util.logging.Level;
 public class InternalAccountRealm implements UserRealm {
     public final static String TYPE_ID = "internal";
     private final static Argon2 ARGON2;
-    private final static InternalAccountUser ANONYMOUS = new InternalAccountUser(-1, null, null);
+    private final static InternalAccountUser ANONYMOUS = new InternalAccountUser(-1);
 
     static {
         ARGON2 = Argon2Factory.create();
@@ -35,6 +37,7 @@ public class InternalAccountRealm implements UserRealm {
 
     private final SubmiteeServer server;
     private final List<? extends AuthScheme> authSchemeList;
+    private final Map<String, AuthScheme> authSchemeMap = new HashMap<>();
 
     private final Cache<Integer, InternalAccountUser> cache = CacheBuilder.newBuilder()
             .expireAfterAccess(30, TimeUnit.MINUTES)
@@ -42,9 +45,10 @@ public class InternalAccountRealm implements UserRealm {
 
     public InternalAccountRealm(SubmiteeServer server) throws IOException, SQLException {
         this.server = server;
-        PasswordAuthScheme authScheme = server.createPasswordAuthScheme();
-        authScheme.setHandler(new AuthHandler());
-        authSchemeList = Collections.singletonList(authScheme);
+        PasswordAuthScheme passwordAuthScheme = server.createPasswordAuthScheme();
+        passwordAuthScheme.setHandler(new AuthHandler());
+        authSchemeList = Collections.singletonList(passwordAuthScheme);
+        authSchemeMap.put(passwordAuthScheme.getName(), passwordAuthScheme);
     }
 
     @Override
@@ -72,17 +76,12 @@ public class InternalAccountRealm implements UserRealm {
 
     private InternalAccountUser getUser(int uid) throws ExecutionException {
         return cache.get(uid, () -> {
-            String username;
-            String password;
             try (Connection conn = server.getDataSource().getConnection()) {
-                PreparedStatement stmt = conn.prepareStatement("SELECT `uid`,`username`,`password` FROM `internal_users` WHERE uid=?");
+                PreparedStatement stmt = conn.prepareStatement("SELECT 1 FROM `internal_users` WHERE uid=?");
                 stmt.setInt(1, uid);
                 ResultSet r = stmt.executeQuery();
-                if (!r.next()) return null;
-                username = r.getString(2);
-                password = r.getString(3);
+                return r.next() ? new InternalAccountUser(uid) : null;
             }
-            return new InternalAccountUser(uid, username, password);
         });
     }
 
@@ -94,6 +93,11 @@ public class InternalAccountRealm implements UserRealm {
     @Override
     public List<? extends AuthScheme> getSupportedAuthSchemes() {
         return authSchemeList;
+    }
+
+    @Override
+    public AuthScheme getAuthScheme(String scheme) {
+        return authSchemeMap.get(scheme);
     }
 
     private class AuthHandler implements PasswordAuthScheme.AuthHandler {

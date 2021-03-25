@@ -6,11 +6,11 @@ import org.starrel.submitee.SubmiteeServer;
 
 import java.util.*;
 
-public class JsonTreeSource<TValue> implements AttributeSource {
+public class JsonTreeAttributeSource<TValue> implements AttributeSource {
     private final Class<TValue> rootType;
     private JsonElement jsonRoot;
 
-    public JsonTreeSource(Class<TValue> rootType) {
+    public JsonTreeAttributeSource(Class<TValue> rootType) {
         this.rootType = rootType;
     }
 

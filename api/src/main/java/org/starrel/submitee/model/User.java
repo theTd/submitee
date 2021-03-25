@@ -15,4 +15,6 @@ public interface User extends AttributeHolder<User> {
     String getId();
 
     List<Submission> getSubmissions(Bson query);
+
+    UserDescriptor getDescriptor();
 }

@@ -15,4 +15,6 @@ public interface UserRealm {
 
     List<? extends AuthScheme> getSupportedAuthSchemes();
 
+    AuthScheme getAuthScheme(String scheme);
+
 }

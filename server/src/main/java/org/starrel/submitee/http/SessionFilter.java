@@ -31,7 +31,7 @@ public class SessionFilter extends HttpFilter {
             session = SessionImpl.fromCookie(req.getCookies());
         }
         if (session == null) {
-            SessionImpl.createAnonymous(SubmiteeServer.getInstance(), httpSession);
+            SessionImpl.createAnonymous(httpSession);
         }
     }
 

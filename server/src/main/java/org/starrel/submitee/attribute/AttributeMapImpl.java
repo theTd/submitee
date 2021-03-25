@@ -8,7 +8,7 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
     public AttributeMapImpl(TContext holder) {
         super(null, "", Void.class);
         this.holder = holder;
-        setSource(new JsonTreeSource<>(Void.class));
+        setSource(new JsonTreeAttributeSource<>(Void.class));
     }
 
     @Override
@@ -19,6 +19,6 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
     @SuppressWarnings("unchecked")
     @Override
     public JsonObject serialize() {
-        return ((JsonTreeSource<Void>) owningSource).getJsonRoot().getAsJsonObject();
+        return ((JsonTreeAttributeSource<Void>) owningSource).getJsonRoot().getAsJsonObject();
     }
 }

@@ -1,7 +1,6 @@
 package org.starrel.submitee.model;
 
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import org.starrel.submitee.SubmiteeServer;
 
 public abstract class SFieldString implements SField<String> {

@@ -13,16 +13,13 @@ import org.eclipse.jetty.servlet.ServletHandler;
 import org.starrel.submitee.attribute.AttributeHolder;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSerializer;
+import org.starrel.submitee.attribute.AttributeSpec;
 import org.starrel.submitee.auth.AuthScheme;
+import org.starrel.submitee.auth.InternalAccountRealm;
 import org.starrel.submitee.auth.PasswordAuthScheme;
 import org.starrel.submitee.blob.BlobStorage;
-import org.starrel.submitee.http.AuthServlet;
-import org.starrel.submitee.http.SessionFilter;
-import org.starrel.submitee.http.SubmitServlet;
-import org.starrel.submitee.http.TemplateServlet;
-import org.starrel.submitee.model.NotificationScheme;
-import org.starrel.submitee.model.Session;
-import org.starrel.submitee.model.UserRealm;
+import org.starrel.submitee.http.*;
+import org.starrel.submitee.model.*;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.http.HttpServletRequest;
@@ -32,10 +29,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-public class SubmiteeServer implements SServer {
+public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> {
     public final static Gson GSON = new Gson();
 
     private static SubmiteeServer instance;
@@ -43,6 +41,10 @@ public class SubmiteeServer implements SServer {
     private final DataSource dataSource;
     private final Server jettyServer;
     private final Map<Class<?>, AttributeSerializer<?>> attributeSerializerMap = new HashMap<>();
+
+    private final AttributeMap<SubmiteeServer> attributeMap;
+    private final AttributeSpec<Void> authSettingsSection;
+    private final AttributeSpec<String> defaultLanguage;
 
     public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress listenAddress) {
         this.dataSource = dataSource;
@@ -68,13 +70,18 @@ public class SubmiteeServer implements SServer {
                 response.getWriter().close();
             }
         });
+
+        this.attributeMap = readAttributeMap(this, "management", getAttributePersistKey());
+        this.authSettingsSection = this.attributeMap.of("auth-settings");
+        this.defaultLanguage = this.attributeMap.of("default-language", String.class);
     }
 
     private static Handler initServletHandler() {
         ServletHandler servletHandler = new ServletHandler();
-        servletHandler.addServletWithMapping(SubmitServlet.class, "/submit");
-        servletHandler.addServletWithMapping(TemplateServlet.class, "/template");
         servletHandler.addServletWithMapping(AuthServlet.class, "/auth");
+        servletHandler.addServletWithMapping(CreateServlet.class, "/create");
+        servletHandler.addServletWithMapping(PasteServlet.class, "/paste");
+        servletHandler.addServletWithMapping(InfoServlet.class, "/info");
         servletHandler.addFilterWithMapping(SessionFilter.class, "/", EnumSet.of(DispatcherType.REQUEST));
         return servletHandler;
     }
@@ -99,6 +106,11 @@ public class SubmiteeServer implements SServer {
     @Override
     public void addUserRealm(UserRealm userRealm) {
 
+    }
+
+    @Override
+    public UserRealm getUserRealm(String name) {
+        return null;
     }
 
     @Override
@@ -129,6 +141,41 @@ public class SubmiteeServer implements SServer {
     @Override
     public <TValue> void addAttributeSerializer(Class<TValue> type, AttributeSerializer<TValue> serializer) {
         attributeSerializerMap.put(type, serializer);
+    }
+
+    @Override
+    public User getUser(String realmType, String userId) {
+        return null;
+    }
+
+    @Override
+    public User getUser(UserDescriptor userDescriptor) {
+        return null;
+    }
+
+    @Override
+    public STemplateImpl createTemplate(String templateId) {
+        return null;
+    }
+
+    @Override
+    public STemplateImpl getTemplate(String templateId) {
+        return null;
+    }
+
+    @Override
+    public List<STemplateImpl> getTemplateAllVersion(String templateId) {
+        return null;
+    }
+
+    @Override
+    public List<String> getTemplateIds() {
+        return null;
+    }
+
+    @Override
+    public int getTemplateLatestVersion(String templateId) {
+        return 0;
     }
 
     @SuppressWarnings("unchecked")
@@ -183,5 +230,37 @@ public class SubmiteeServer implements SServer {
 
     public DataSource getDataSource() {
         return dataSource;
+    }
+
+    @Override
+    public String getAttributePersistKey() {
+        return "server";
+    }
+
+    @Override
+    public AttributeMap<? extends SubmiteeServer> getAttributeMap() {
+        return attributeMap;
+    }
+
+    public AttributeSpec<Void> getAuthSettingsSection() {
+        return authSettingsSection;
+    }
+
+    public String getDefaultLanguage() {
+        return defaultLanguage.get();
+    }
+
+    public void setDefaultLanguage(String language) {
+        this.defaultLanguage.set(language);
+    }
+
+    @Override
+    public void attributeUpdated(String path) {
+        // TODO: 2021-03-25-0025
+    }
+
+    public InternalAccountRealm getInternalAccountRealm() {
+        // TODO: 2021-03-25-0025
+        return null;
     }
 }

@@ -44,6 +44,6 @@ public class AbstractAuthResult implements AuthResult {
 
     @Override
     public String getRedirect() {
-        return null;
+        return redirect;
     }
 }
