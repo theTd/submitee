@@ -4,10 +4,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.starrel.submitee.ExceptionReporting;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
@@ -17,6 +14,8 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     private final Cache<String, AttributeSpec<?>> specCache = CacheBuilder.newBuilder().build();
     private final TreeMap<String, AttributeSpec<?>> specTreeMap =
             new TreeMap<>(Comparator.comparingInt(o -> o.split("\\.").length));
+
+    private final List<AttributeFilter<TValue>> filters = Collections.synchronizedList(new LinkedList<>());
 
     protected AttributeSource owningSource;
     private String sourcePath = null;
@@ -65,6 +64,11 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         this.owningSource = source;
     }
 
+    @Override
+    public void addFilter(AttributeFilter<TValue> filter) {
+        this.filters.add(filter);
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public <TSubValue> AttributeSpec<TSubValue> of(String path, Class<TSubValue> type) {
@@ -107,11 +111,22 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     }
 
     @Override
-    public void set(String path, Object value) {
+    public void set(String path, Object value) throws AttributeFilter.FilterException {
         AttributeSpec<?> spec = getSpec(path);
         if (spec != this) {
             spec.set(path.substring(spec.getPath().length()), value);
         } else {
+            if (path.isEmpty()) {
+                for (AttributeFilter<TValue> filter : filters) {
+                    //noinspection unchecked
+                    filter.onSet((TValue) value);
+                }
+            } else {
+                for (AttributeFilter<TValue> filter : filters) {
+                    filter.onSet(path, value);
+                }
+            }
+
             getSource().setAttribute(path, value);
 
             childUpdated(path);
@@ -129,7 +144,10 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     }
 
     @Override
-    public void delete() {
+    public void delete() throws AttributeFilter.FilterException {
+        for (AttributeFilter<TValue> filter : filters) {
+            filter.onDelete("");
+        }
         getSource().delete(path);
     }
 

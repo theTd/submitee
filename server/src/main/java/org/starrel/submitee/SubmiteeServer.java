@@ -11,6 +11,8 @@ import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.session.DefaultSessionIdManager;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.starrel.submitee.attribute.*;
 import org.starrel.submitee.auth.AuthScheme;
 import org.starrel.submitee.auth.InternalAccountRealm;
@@ -26,7 +28,6 @@ import javax.sql.DataSource;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.logging.Logger;
 
 public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> {
     public final static Gson GSON = new Gson();
@@ -40,8 +41,10 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private final AttributeMap<SubmiteeServer> attributeMap;
     private final AttributeSpec<Void> authSettingsSection;
     private final AttributeSpec<String> defaultLanguage;
+    private final Logger logger;
 
     public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress[] listenAddress) {
+        this.logger = LoggerFactory.getLogger(SubmiteeServer.class);
         this.dataSource = dataSource;
         instance = this;
         this.mongoDatabase = mongoDatabase;
@@ -211,12 +214,13 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public void reportException(String activity, Throwable throwable) {
-
+        // TODO: 2021/3/26
+        LoggerFactory.getLogger(SubmiteeServer.class).error(activity + " reported exception", throwable);
     }
 
     @Override
     public Logger getLogger() {
-        return null;
+        return logger;
     }
 
     @Override
@@ -254,7 +258,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         return defaultLanguage.get();
     }
 
-    public void setDefaultLanguage(String language) {
+    public void setDefaultLanguage(String language) throws AttributeFilter.FilterException {
         this.defaultLanguage.set(language);
     }
 

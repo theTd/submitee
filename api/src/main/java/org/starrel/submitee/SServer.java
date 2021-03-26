@@ -1,5 +1,6 @@
 package org.starrel.submitee;
 
+import org.slf4j.Logger;
 import org.starrel.submitee.attribute.AttributeHolder;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSerializer;
@@ -8,7 +9,6 @@ import org.starrel.submitee.blob.BlobStorage;
 import org.starrel.submitee.model.*;
 
 import java.util.List;
-import java.util.logging.Logger;
 
 public interface SServer {
 

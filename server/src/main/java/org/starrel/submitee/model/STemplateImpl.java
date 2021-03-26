@@ -1,6 +1,7 @@
 package org.starrel.submitee.model;
 
 import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.attribute.AttributeFilter;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
 
@@ -61,7 +62,7 @@ public class STemplateImpl implements STemplate {
     }
 
     @Override
-    public void setCommittedBy(User user) {
+    public void setCommittedBy(User user) throws AttributeFilter.FilterException {
         this.committedBy.set(user.getDescriptor());
     }
 
@@ -71,7 +72,7 @@ public class STemplateImpl implements STemplate {
     }
 
     @Override
-    public void setComment(String comment) {
+    public void setComment(String comment) throws AttributeFilter.FilterException {
         this.comment.set(comment);
     }
 

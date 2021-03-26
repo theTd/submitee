@@ -3,6 +3,7 @@ package org.starrel.submitee.auth;
 import org.bson.conversions.Bson;
 import org.starrel.submitee.SServer;
 import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.attribute.AttributeFilter;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
 import org.starrel.submitee.attribute.JdbcAttributeSource;
@@ -67,7 +68,7 @@ public class InternalAccountUser implements User {
         return username.get();
     }
 
-    public void setUsername(String username) {
+    public void setUsername(String username) throws AttributeFilter.FilterException {
         this.username.set(username);
     }
 
@@ -75,7 +76,7 @@ public class InternalAccountUser implements User {
         return password.get();
     }
 
-    public void setPassword(String password) {
+    public void setPassword(String password) throws AttributeFilter.FilterException {
         this.password.set(password);
     }
 
@@ -83,7 +84,7 @@ public class InternalAccountUser implements User {
         return email.get();
     }
 
-    public void setEmail(String email) {
+    public void setEmail(String email) throws AttributeFilter.FilterException {
         this.email.set(email);
     }
 
@@ -91,7 +92,7 @@ public class InternalAccountUser implements User {
         return sms.get();
     }
 
-    public void setSMS(String sms) {
+    public void setSMS(String sms) throws AttributeFilter.FilterException {
         this.sms.set(sms);
     }
 

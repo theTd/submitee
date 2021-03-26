@@ -10,6 +10,8 @@ public interface AttributeSpec<TValue> {
 
     void setSource(AttributeSource controller);
 
+    void addFilter(AttributeFilter<TValue> filter);
+
     <TValue> AttributeSpec<TValue> of(String path, Class<TValue> type);
 
     AttributeSpec<Void> of(String path);
@@ -20,15 +22,15 @@ public interface AttributeSpec<TValue> {
 
     <TSubValue> TSubValue get(String path, Class<TSubValue> type);
 
-    default void set(TValue value) {
+    default void set(TValue value) throws AttributeFilter.FilterException {
         set("", value);
     }
 
-    void set(String path, Object value);
+    void set(String path, Object value) throws AttributeFilter.FilterException;
 
     List<String> getKeys(String path);
 
-    void delete();
+    void delete() throws AttributeFilter.FilterException;
 
     void childUpdated(String path);
 }

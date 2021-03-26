@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 public class InternalAccountRealm implements UserRealm {
     public final static String TYPE_ID = "internal";
@@ -112,7 +111,7 @@ public class InternalAccountRealm implements UserRealm {
             try (Connection conn = server.getDataSource().getConnection()) {
                 ResultSet resultSet = conn.getMetaData().getTables(null, null, "internal_users", null);
                 if (!resultSet.next()) {
-                    server.getLogger().log(Level.INFO, "creating table internal_users");
+                    server.getLogger().info("creating table internal_users");
 
                     Reader scriptReader = new InputStreamReader(
                             getClass().getResourceAsStream("org/starrel/submitee/auth/internal_users.sql"));

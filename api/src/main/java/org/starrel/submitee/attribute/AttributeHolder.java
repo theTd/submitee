@@ -13,7 +13,7 @@ public interface AttributeHolder<THolder extends AttributeHolder<?>> {
         return getAttributeMap().get(path, type);
     }
 
-    default void setAttribute(String path, Object value) {
+    default void setAttribute(String path, Object value) throws AttributeFilter.FilterException {
         getAttributeMap().set(path, value);
     }
 
