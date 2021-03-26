@@ -1,5 +1,6 @@
 package org.starrel.submitee.http;
 
+import org.slf4j.LoggerFactory;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.SessionImpl;
 
@@ -9,6 +10,7 @@ import javax.servlet.http.HttpFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 
 public class SessionFilter extends HttpFilter {
     private final SubmiteeServer submiteeServer;
@@ -24,7 +26,7 @@ public class SessionFilter extends HttpFilter {
     }
 
     @Override
-    protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) {
+    protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
         HttpSession httpSession = req.getSession();
         SessionImpl session = SessionImpl.getSession(httpSession);
         if (session == null) {
@@ -32,7 +34,9 @@ public class SessionFilter extends HttpFilter {
         }
         if (session == null) {
             SessionImpl.createAnonymous(httpSession);
+            LoggerFactory.getLogger(SessionFilter.class).warn("an anonymous session is created, http session id is " + req.getSession().getId());
         }
+        chain.doFilter(req, res);
     }
 
     public SubmiteeServer getSubmiteeServer() {

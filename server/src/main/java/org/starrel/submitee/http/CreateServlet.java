@@ -9,7 +9,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-public class CreateServlet extends JsonServlet {
+public class CreateServlet extends AbstractJsonServlet {
     @Override
     protected void request(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
         if (!body.has("type") ||

@@ -12,7 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-public abstract class JsonServlet extends SubmiteeHttpServlet {
+public abstract class AbstractJsonServlet extends SubmiteeHttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         if (!"application/json".equalsIgnoreCase(req.getContentType())) {
@@ -23,12 +23,12 @@ public abstract class JsonServlet extends SubmiteeHttpServlet {
         try {
             json = JsonParser.parseReader(new InputStreamReader(req.getInputStream()));
         } catch (Exception e) {
-            ExceptionReporting.report("paste servlet parsing input", e);
+            ExceptionReporting.report("parsing post body", e);
             resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
             return;
         }
         if (!json.isJsonObject()) {
-            resp.setStatus(HttpStatus.NOT_ACCEPTABLE_406);
+            resp.setStatus(HttpStatus.BAD_REQUEST_400);
             return;
         }
         request(req, resp, json.getAsJsonObject());

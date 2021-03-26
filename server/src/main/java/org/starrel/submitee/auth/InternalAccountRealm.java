@@ -51,17 +51,17 @@ public class InternalAccountRealm implements UserRealm {
         authSchemeMap.put(passwordAuthScheme.getName(), passwordAuthScheme);
     }
 
-    @Override
-    public String getTypeId() {
-        return TYPE_ID;
-    }
-
     public static boolean verifyPassword(String verify, String stored) {
         return ARGON2.verify(stored, verify.getBytes(StandardCharsets.UTF_8));
     }
 
     public static String hashPassword(String password) {
         return ARGON2.hash(10, 65535, 1, password.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public String getTypeId() {
+        return TYPE_ID;
     }
 
     @Override

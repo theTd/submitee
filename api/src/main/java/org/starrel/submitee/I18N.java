@@ -13,6 +13,7 @@ public interface I18N {
 
     interface Http {
         WrappedI18NKey INVALID_INPUT = new WrappedI18NKey("http.invalid_input");
+        WrappedI18NKey TOO_MANY_REQUEST = new WrappedI18NKey("http.too_many_request");
     }
 
     interface I18NKey {

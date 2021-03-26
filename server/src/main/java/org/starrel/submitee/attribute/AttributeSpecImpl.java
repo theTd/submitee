@@ -130,7 +130,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
 
     @Override
     public void delete() {
-        // TODO: 2021/3/24
+        getSource().delete(path);
     }
 
     @Override

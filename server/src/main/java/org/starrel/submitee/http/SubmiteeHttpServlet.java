@@ -7,6 +7,8 @@ import org.starrel.submitee.model.SessionImpl;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import java.util.LinkedList;
+import java.util.List;
 
 public class SubmiteeHttpServlet extends HttpServlet {
 
@@ -14,6 +16,25 @@ public class SubmiteeHttpServlet extends HttpServlet {
 
     {
         submiteeServer = SubmiteeServer.getInstance();
+    }
+
+    public static String[] parseUri(String uri) {
+        List<String> list = new LinkedList<>();
+        int idx = 1;
+        while (true) {
+            int i = uri.indexOf('/', idx);
+            if (i == -1) {
+                list.add(uri.substring(idx));
+                break;
+            } else if (i == idx) {
+                list.add("");
+                idx++;
+            } else {
+                list.add(uri.substring(idx, i));
+                idx = i + 1;
+            }
+        }
+        return list.toArray(new String[0]);
     }
 
     @Override

@@ -49,6 +49,8 @@ public class SessionImpl implements Session {
     }
 
     public static SessionImpl fromCookie(Cookie[] cookies) {
+        if (cookies == null) return null;
+
         String token = null;
         for (Cookie cookie : cookies) {
             if (TOKEN_COOKIE_KEY.equals(cookie.getName())) {

@@ -9,4 +9,6 @@ public interface AttributeSource {
     void setAttribute(String path, Object value);
 
     List<String> listKeys(String path);
+
+    void delete(String path);
 }

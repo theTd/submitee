@@ -117,4 +117,26 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
         if (node == null) return Collections.emptyList();
         return new ArrayList<>(node.keySet());
     }
+
+    @Override
+    public void delete(String path) {
+        Iterator<String> pathIte = Arrays.stream(path.split("\\.")).iterator();
+        JsonObject currentNode = jsonRoot.getAsJsonObject();
+        JsonElement temp;
+        while (pathIte.hasNext()) {
+            String node = pathIte.next();
+            if (!pathIte.hasNext()) {
+                // delete in this node
+                currentNode.remove(node);
+                return;
+            } else {
+                if (currentNode.has(node) && (temp = currentNode.get(node)).isJsonObject()) {
+                    currentNode = temp.getAsJsonObject();
+                } else {
+                    // ended not found target node
+                    return;
+                }
+            }
+        }
+    }
 }

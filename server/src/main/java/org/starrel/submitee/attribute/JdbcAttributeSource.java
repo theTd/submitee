@@ -61,4 +61,13 @@ public class JdbcAttributeSource implements AttributeSource {
     public List<String> listKeys(String path) {
         return null;
     }
+
+    @Override
+    public void delete(String path) {
+        try (Connection conn = dataSource.getConnection()) {
+            conn.createStatement().executeUpdate(String.format("UPDATE %s SET %s=NULL %s", table, path, whereClause));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

@@ -8,11 +8,13 @@ import org.starrel.submitee.attribute.AttributeSpec;
 import org.starrel.submitee.attribute.JdbcAttributeSource;
 import org.starrel.submitee.model.Submission;
 import org.starrel.submitee.model.User;
+import org.starrel.submitee.model.UserDescriptor;
 
 import java.util.List;
 
 public class InternalAccountUser implements User {
     private final int uid;
+    private final UserDescriptor descriptor;
     private final AttributeMap<InternalAccountUser> attributeMap;
 
     private final AttributeSpec<String> username;
@@ -22,6 +24,8 @@ public class InternalAccountUser implements User {
 
     public InternalAccountUser(int uid) {
         this.uid = uid;
+        this.descriptor = UserDescriptor.builder().realmType(getTypeId()).userId(getAttributePersistKey()).build();
+
         this.attributeMap = SServer.getInstance().readAttributeMap(this,
                 User.ATTRIBUTE_COLLECTION_NAME, getAttributePersistKey());
 
@@ -52,6 +56,11 @@ public class InternalAccountUser implements User {
     @Override
     public List<Submission> getSubmissions(Bson query) {
         return null;
+    }
+
+    @Override
+    public UserDescriptor getDescriptor() {
+        return descriptor;
     }
 
     public String getUsername() {

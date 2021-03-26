@@ -5,15 +5,13 @@ import com.mongodb.client.MongoDatabase;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.session.DefaultSessionIdManager;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
-import org.starrel.submitee.attribute.AttributeHolder;
-import org.starrel.submitee.attribute.AttributeMap;
-import org.starrel.submitee.attribute.AttributeSerializer;
-import org.starrel.submitee.attribute.AttributeSpec;
+import org.starrel.submitee.attribute.*;
 import org.starrel.submitee.auth.AuthScheme;
 import org.starrel.submitee.auth.InternalAccountRealm;
 import org.starrel.submitee.auth.PasswordAuthScheme;
@@ -27,10 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> {
@@ -46,14 +41,21 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private final AttributeSpec<Void> authSettingsSection;
     private final AttributeSpec<String> defaultLanguage;
 
-    public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress listenAddress) {
+    public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress[] listenAddress) {
         this.dataSource = dataSource;
         instance = this;
         this.mongoDatabase = mongoDatabase;
 
-        jettyServer = new Server(listenAddress);
+        jettyServer = new Server();
+        for (InetSocketAddress address : listenAddress) {
+            ServerConnector connector = new ServerConnector(jettyServer);
+            connector.setHost(address.getHostName());
+            connector.setPort(address.getPort());
+            jettyServer.addConnector(connector);
+        }
+
         DefaultSessionIdManager sessionIdManager = new DefaultSessionIdManager(jettyServer);
-        sessionIdManager.setWorkerName("default");
+        sessionIdManager.setWorkerName("def");
         jettyServer.setSessionIdManager(sessionIdManager);
 
         HandlerCollection handlerCollection = new HandlerCollection();
@@ -78,11 +80,12 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     private static Handler initServletHandler() {
         ServletHandler servletHandler = new ServletHandler();
-        servletHandler.addServletWithMapping(AuthServlet.class, "/auth");
-        servletHandler.addServletWithMapping(CreateServlet.class, "/create");
-        servletHandler.addServletWithMapping(PasteServlet.class, "/paste");
-        servletHandler.addServletWithMapping(InfoServlet.class, "/info");
-        servletHandler.addFilterWithMapping(SessionFilter.class, "/", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addFilterWithMapping(ConnectionThrottleFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addFilterWithMapping(SessionFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addServletWithMapping(AuthServlet.class, "/auth/*");
+        servletHandler.addServletWithMapping(CreateServlet.class, "/create/*");
+        servletHandler.addServletWithMapping(PasteServlet.class, "/paste/*");
+        servletHandler.addServletWithMapping(InfoServlet.class, "/info/*");
         return servletHandler;
     }
 
@@ -135,7 +138,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public <TContext extends AttributeHolder<?>> AttributeMap<TContext> readAttributeMap(TContext context, String collection, String id) {
-        return null;
+        return new AttributeMapImpl<>(context);
+        // TODO: 2021/3/26 read from collection
     }
 
     @Override
@@ -261,6 +265,11 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     public InternalAccountRealm getInternalAccountRealm() {
         // TODO: 2021-03-25-0025
+        return null;
+    }
+
+    public Object getObjectFromUUID(UUID uniqueId) {
+        // TODO: 2021/3/26
         return null;
     }
 }

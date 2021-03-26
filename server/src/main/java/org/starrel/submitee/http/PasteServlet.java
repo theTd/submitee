@@ -9,7 +9,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-public class PasteServlet extends JsonServlet {
+public class PasteServlet extends AbstractJsonServlet {
     @Override
     protected void request(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
         if (!body.has("target") ||
