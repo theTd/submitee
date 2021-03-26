@@ -1,13 +1,20 @@
 package org.starrel.submitee.attribute;
 
 import com.google.gson.JsonObject;
-
-import java.util.List;
+import com.mongodb.client.MongoDatabase;
 
 public interface AttributeMap<TContext extends AttributeHolder<?>> extends AttributeSpec<Void> {
 
     TContext getHolder();
 
     JsonObject serialize();
+
+    void setAutoSaveAttribute(boolean autoSaveAttribute);
+
+    boolean getAutoSaveAttribute();
+
+    void saveAttribute(MongoDatabase mongoDatabase);
+
+    void readAttribute(MongoDatabase mongoDatabase);
 
 }

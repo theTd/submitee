@@ -7,8 +7,9 @@ public interface I18N {
         return SServer.getInstance().getI18nKey(key);
     }
 
-    interface Auth {
-        WrappedI18NKey USER_NOT_EXISTS = new WrappedI18NKey("auth.user_not_exists");
+    interface General {
+        WrappedI18NKey INTERNAL_ERROR = new WrappedI18NKey("generic.internal_error");
+        WrappedI18NKey USER_NOT_EXISTS = new WrappedI18NKey("generic.user_not_exists");
     }
 
     interface Http {

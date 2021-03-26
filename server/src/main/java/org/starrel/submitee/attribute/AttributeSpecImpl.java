@@ -2,6 +2,7 @@ package org.starrel.submitee.attribute;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.gson.JsonObject;
 import org.starrel.submitee.ExceptionReporting;
 
 import java.util.*;
@@ -131,6 +132,11 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
 
             childUpdated(path);
         }
+    }
+
+    @Override
+    public void setAll(String path, JsonObject jsonObject) {
+        getSource().setAll(path, jsonObject);
     }
 
     @Override

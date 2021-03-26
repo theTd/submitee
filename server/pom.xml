@@ -10,13 +10,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>submitee-server</artifactId>
-    <version>${version.serverimpl}</version>
+    <version>${submitee.version.server}</version>
 
     <dependencies>
         <dependency>
             <groupId>org.starrel</groupId>
             <artifactId>submitee-api</artifactId>
-            <version>${version.serverapi}</version>
+            <version>${submitee.version.api}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.mongodb/mongo-java-driver -->
         <dependency>

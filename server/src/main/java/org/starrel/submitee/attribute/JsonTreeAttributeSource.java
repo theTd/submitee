@@ -97,6 +97,20 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
         }
     }
 
+    @Override
+    public void setAll(String path, JsonObject object) throws UnsupportedOperationException {
+        if (path.contains(".")) throw new IllegalArgumentException("cannot use high level path on setAll()");
+        // TODO: 2021-03-26-0026
+        if (jsonRoot == null) {
+            jsonRoot = new JsonObject();
+        }
+        if (path.isEmpty()) {
+            jsonRoot = object;
+        } else {
+            jsonRoot.getAsJsonObject().add(path, object);
+        }
+    }
+
     private JsonObject getNode(String path) {
         Iterator<String> pathIte = Arrays.stream(path.split("\\.")).iterator();
         JsonObject currentNode = jsonRoot.getAsJsonObject();

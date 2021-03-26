@@ -27,8 +27,7 @@ public class InternalAccountUser implements User {
         this.uid = uid;
         this.descriptor = UserDescriptor.builder().realmType(getTypeId()).userId(getAttributePersistKey()).build();
 
-        this.attributeMap = SServer.getInstance().readAttributeMap(this,
-                User.ATTRIBUTE_COLLECTION_NAME, getAttributePersistKey());
+        this.attributeMap = SServer.getInstance().readAttributeMap(this, User.ATTRIBUTE_COLLECTION_NAME);
 
         this.email = attributeMap.of("email", String.class);
         this.sms = attributeMap.of("sms", String.class);

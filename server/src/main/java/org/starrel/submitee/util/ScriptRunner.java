@@ -1,5 +1,5 @@
 package org.starrel.submitee.util;/*
- * Slightly modified version of the com.ibatis.common.jdbc.org.starrel.submitee.util.ScriptRunner class
+ * Slightly modified version of the ScriptRunner class
  * from the iBATIS Apache project. Only removed dependency on Resource class
  * and a constructor
  */

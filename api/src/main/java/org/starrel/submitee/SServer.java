@@ -1,5 +1,6 @@
 package org.starrel.submitee;
 
+import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.starrel.submitee.attribute.AttributeHolder;
 import org.starrel.submitee.attribute.AttributeMap;
@@ -9,6 +10,7 @@ import org.starrel.submitee.blob.BlobStorage;
 import org.starrel.submitee.model.*;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface SServer {
 
@@ -20,8 +22,6 @@ public interface SServer {
 
     void shutdown() throws Exception;
 
-    void addAuthScheme(AuthScheme authScheme);
-
     void addUserRealm(UserRealm userRealm);
 
     UserRealm getUserRealm(String name);
@@ -32,9 +32,9 @@ public interface SServer {
 
     <TContext extends AttributeHolder<?>> AttributeMap<TContext> createAttributeMap(TContext context);
 
-    <TContext extends AttributeHolder<?>> AttributeMap<TContext> createAttributeMap(TContext context, String collection, String id);
+    <TContext extends AttributeHolder<?>> AttributeMap<TContext> createAttributeMap(TContext context, String collection);
 
-    <TContext extends AttributeHolder<?>> AttributeMap<TContext> readAttributeMap(TContext context, String collection, String id);
+    <TContext extends AttributeHolder<?>> AttributeMap<TContext> readAttributeMap(TContext context, String collection);
 
     <TValue> void addAttributeSerializer(Class<TValue> type, AttributeSerializer<TValue> serializer);
 
@@ -46,11 +46,19 @@ public interface SServer {
 
     STemplate getTemplate(String templateId);
 
+    STemplate getTemplateFromUUID(UUID templateUUID);
+
     List<? extends STemplate> getTemplateAllVersion(String templateId);
 
     List<String> getTemplateIds();
 
     int getTemplateLatestVersion(String templateId);
+
+    Submission getSubmission(UUID uniqueId);
+
+    List<UUID> getSubmissionIdsOfUser(UserDescriptor userDescriptor);
+
+    Submission createSubmission(UserDescriptor userDescriptor, STemplate template, JsonObject body);
 
     Session getUserSession(String userRealmTypeId, String userId);
 

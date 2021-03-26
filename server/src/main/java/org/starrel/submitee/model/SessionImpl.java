@@ -27,7 +27,7 @@ public class SessionImpl implements Session {
         if (anonymous || sessionToken == null) {
             this.attributeMap = SubmiteeServer.getInstance().createAttributeMap(this);
         } else {
-            this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, Session.ATTRIBUTE_COLLECTION_NAME, sessionToken);
+            this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, Session.ATTRIBUTE_COLLECTION_NAME);
         }
     }
 

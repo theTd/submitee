@@ -1,5 +1,7 @@
 package org.starrel.submitee.attribute;
 
+import com.google.gson.JsonObject;
+
 import java.util.List;
 
 public interface AttributeSpec<TValue> {
@@ -27,6 +29,8 @@ public interface AttributeSpec<TValue> {
     }
 
     void set(String path, Object value) throws AttributeFilter.FilterException;
+
+    void setAll(String path, JsonObject jsonObject);
 
     List<String> getKeys(String path);
 

@@ -51,6 +51,7 @@ public class Bootstrap {
                 e.printStackTrace();
             }
             System.exit(-1);
+            return;
         }
 
         MongoClient client = MongoClients.create(mongoConnectionString.value(parse));

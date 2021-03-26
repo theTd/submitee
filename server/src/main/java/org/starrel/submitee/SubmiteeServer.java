@@ -1,6 +1,7 @@
 package org.starrel.submitee;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.mongodb.client.MongoDatabase;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
@@ -14,9 +15,9 @@ import org.eclipse.jetty.servlet.ServletHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.starrel.submitee.attribute.*;
-import org.starrel.submitee.auth.AuthScheme;
 import org.starrel.submitee.auth.InternalAccountRealm;
 import org.starrel.submitee.auth.PasswordAuthScheme;
+import org.starrel.submitee.auth.PasswordAuthSchemeImpl;
 import org.starrel.submitee.blob.BlobStorage;
 import org.starrel.submitee.http.*;
 import org.starrel.submitee.model.*;
@@ -30,6 +31,7 @@ import java.net.InetSocketAddress;
 import java.util.*;
 
 public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> {
+    public final static String ATTRIBUTE_KEY = "system";
     public final static Gson GSON = new Gson();
 
     private static SubmiteeServer instance;
@@ -76,7 +78,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
             }
         });
 
-        this.attributeMap = readAttributeMap(this, "management", getAttributePersistKey());
+        this.attributeMap = readAttributeMap(this, "management");
         this.authSettingsSection = this.attributeMap.of("auth-settings");
         this.defaultLanguage = this.attributeMap.of("default-language", String.class);
     }
@@ -101,12 +103,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         jettyServer.start();
         // TODO: 2021-03-17-0017  read exists templates
         // TODO: 2021-03-17-0017  initialize auth schemes
-        // TODO: 2021-03-17-0017  initialize user realms
-    }
-
-    @Override
-    public void addAuthScheme(AuthScheme authScheme) {
-
+        addUserRealm(new InternalAccountRealm(this));
     }
 
     @Override
@@ -131,18 +128,19 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public <TContext extends AttributeHolder<?>> AttributeMap<TContext> createAttributeMap(TContext context) {
-        return null;
+        return new AttributeMapImpl<>(context, null);
     }
 
     @Override
-    public <TContext extends AttributeHolder<?>> AttributeMap<TContext> createAttributeMap(TContext context, String collection, String id) {
-        return null;
+    public <TContext extends AttributeHolder<?>> AttributeMap<TContext> createAttributeMap(TContext context, String collection) {
+        return new AttributeMapImpl<>(context, collection);
     }
 
     @Override
-    public <TContext extends AttributeHolder<?>> AttributeMap<TContext> readAttributeMap(TContext context, String collection, String id) {
-        return new AttributeMapImpl<>(context);
-        // TODO: 2021/3/26 read from collection
+    public <TContext extends AttributeHolder<?>> AttributeMap<TContext> readAttributeMap(TContext context, String collection) {
+        AttributeMapImpl<TContext> map = new AttributeMapImpl<>(context, collection);
+        map.readAttribute(getMongoDatabase());
+        return map;
     }
 
     @Override
@@ -152,21 +150,30 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public User getUser(String realmType, String userId) {
-        return null;
+        UserRealm userRealm = getUserRealm(realmType);
+        if (userRealm == null) return null;
+        return userRealm.getUser(userId);
     }
 
     @Override
     public User getUser(UserDescriptor userDescriptor) {
-        return null;
+        return getUser(userDescriptor.getRealmType(), userDescriptor.getUserId());
     }
 
     @Override
     public STemplateImpl createTemplate(String templateId) {
+
         return null;
     }
 
     @Override
     public STemplateImpl getTemplate(String templateId) {
+        return null;
+    }
+
+    @Override
+    public STemplateImpl getTemplateFromUUID(UUID templateUUID) {
+        // TODO: 2021-03-26-0026
         return null;
     }
 
@@ -185,6 +192,21 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         return 0;
     }
 
+    @Override
+    public Submission getSubmission(UUID uniqueId) {
+        return null;
+    }
+
+    @Override
+    public List<UUID> getSubmissionIdsOfUser(UserDescriptor userDescriptor) {
+        return null;
+    }
+
+    @Override
+    public Submission createSubmission(UserDescriptor userDescriptor, STemplate template, JsonObject body) {
+        return null;
+    }
+
     @SuppressWarnings("unchecked")
     public <TValue> AttributeSerializer<TValue> getAttributeSerializer(Class<TValue> type) {
         return (AttributeSerializer<TValue>) attributeSerializerMap.get(type);
@@ -198,8 +220,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public PasswordAuthScheme createPasswordAuthScheme() {
-        // TODO: 2021/3/23
-        return null;
+        return new PasswordAuthSchemeImpl();
     }
 
     @Override
@@ -242,7 +263,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public String getAttributePersistKey() {
-        return "server";
+        return ATTRIBUTE_KEY;
     }
 
     @Override

@@ -21,7 +21,7 @@ public class STemplateImpl implements STemplate {
         this.templateId = templateId;
         this.version = version;
 
-        this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, "templates", uniqueId.toString());
+        this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, "templates");
         this.committedBy = attributeMap.of("committed-by", UserDescriptor.class);
         this.comment = attributeMap.of("comment", String.class);
     }
