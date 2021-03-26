@@ -1,7 +1,6 @@
 package org.starrel.submitee.auth;
 
 import org.bson.conversions.Bson;
-import org.starrel.submitee.SServer;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeFilter;
 import org.starrel.submitee.attribute.AttributeMap;
@@ -27,7 +26,7 @@ public class InternalAccountUser implements User {
         this.uid = uid;
         this.descriptor = UserDescriptor.builder().realmType(getTypeId()).userId(getAttributePersistKey()).build();
 
-        this.attributeMap = SServer.getInstance().readAttributeMap(this, User.ATTRIBUTE_COLLECTION_NAME);
+        this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, User.ATTRIBUTE_COLLECTION_NAME);
 
         this.email = attributeMap.of("email", String.class);
         this.sms = attributeMap.of("sms", String.class);
@@ -97,7 +96,7 @@ public class InternalAccountUser implements User {
 
     @Override
     public String getAttributePersistKey() {
-        return getId();
+        return isAnonymous() ? null : getId();
     }
 
     @Override

@@ -20,12 +20,14 @@ import org.starrel.submitee.auth.PasswordAuthScheme;
 import org.starrel.submitee.auth.PasswordAuthSchemeImpl;
 import org.starrel.submitee.blob.BlobStorage;
 import org.starrel.submitee.http.*;
+import org.starrel.submitee.language.TextContainer;
 import org.starrel.submitee.model.*;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
@@ -38,27 +40,77 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private final MongoDatabase mongoDatabase;
     private final DataSource dataSource;
     private final Server jettyServer;
-    private final Map<Class<?>, AttributeSerializer<?>> attributeSerializerMap = new HashMap<>();
 
+    private final Map<Class<?>, AttributeSerializer<?>> attributeSerializerMap = new HashMap<>();
     private final AttributeMap<SubmiteeServer> attributeMap;
-    private final AttributeSpec<Void> authSettingsSection;
+
+    private final TextContainer textContainer;
+
+    // region settings
     private final AttributeSpec<String> defaultLanguage;
+    // endregion
+
     private final Logger logger;
 
-    public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress[] listenAddress) {
+    public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress[] listenAddresses) throws IOException {
+        instance = this;
+        APIBridge.instance = this;
+
         this.logger = LoggerFactory.getLogger(SubmiteeServer.class);
         this.dataSource = dataSource;
-        instance = this;
         this.mongoDatabase = mongoDatabase;
 
         jettyServer = new Server();
-        for (InetSocketAddress address : listenAddress) {
+        setupJettyConnectors(listenAddresses);
+        setupJettyHandlers();
+
+        setupAttributeSerializers();
+        this.attributeMap = readAttributeMap(this, "management");
+
+        // region setup attribute specs
+        this.defaultLanguage = this.attributeMap.of("default-language", String.class);
+        // endregion
+
+        // region setup language
+        if (this.defaultLanguage.get() == null) {
+            this.defaultLanguage.set("zh-CN");
+        }
+        textContainer = new TextContainer();
+        textContainer.init();
+        try {
+            Class.forName("org.starrel.submitee.I18N");
+        } catch (ClassNotFoundException e) {
+            throw new Error(e);
+        }
+        textContainer.updateTemplate(new File("text" + File.separator + "template.properties"), I18N.ConstantI18NKey.KNOWN_KEYS);
+        // endregion
+    }
+
+    private static Handler initServletHandler() {
+        ServletHandler servletHandler = new ServletHandler();
+        servletHandler.addFilterWithMapping(ConnectionThrottleFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addFilterWithMapping(SessionFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addServletWithMapping(AuthServlet.class, "/auth/*");
+        servletHandler.addServletWithMapping(CreateServlet.class, "/create/*");
+        servletHandler.addServletWithMapping(PasteServlet.class, "/paste/*");
+        servletHandler.addServletWithMapping(InfoServlet.class, "/info/*");
+        return servletHandler;
+    }
+
+    public static SubmiteeServer getInstance() {
+        return instance;
+    }
+
+    private void setupJettyConnectors(InetSocketAddress[] listenAddresses) {
+        for (InetSocketAddress address : listenAddresses) {
             ServerConnector connector = new ServerConnector(jettyServer);
             connector.setHost(address.getHostName());
             connector.setPort(address.getPort());
             jettyServer.addConnector(connector);
         }
+    }
 
+    private void setupJettyHandlers() {
         DefaultSessionIdManager sessionIdManager = new DefaultSessionIdManager(jettyServer);
         sessionIdManager.setWorkerName("def");
         jettyServer.setSessionIdManager(sessionIdManager);
@@ -77,25 +129,14 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
                 response.getWriter().close();
             }
         });
-
-        this.attributeMap = readAttributeMap(this, "management");
-        this.authSettingsSection = this.attributeMap.of("auth-settings");
-        this.defaultLanguage = this.attributeMap.of("default-language", String.class);
     }
 
-    private static Handler initServletHandler() {
-        ServletHandler servletHandler = new ServletHandler();
-        servletHandler.addFilterWithMapping(ConnectionThrottleFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        servletHandler.addFilterWithMapping(SessionFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        servletHandler.addServletWithMapping(AuthServlet.class, "/auth/*");
-        servletHandler.addServletWithMapping(CreateServlet.class, "/create/*");
-        servletHandler.addServletWithMapping(PasteServlet.class, "/paste/*");
-        servletHandler.addServletWithMapping(InfoServlet.class, "/info/*");
-        return servletHandler;
-    }
-
-    public static SubmiteeServer getInstance() {
-        return instance;
+    private void setupAttributeSerializers() {
+        addAttributeSerializer(String.class, AttributeSerializers.STRING);
+        addAttributeSerializer(Integer.class, AttributeSerializers.INTEGER);
+        addAttributeSerializer(Double.class, AttributeSerializers.DOUBLE);
+        addAttributeSerializer(Boolean.class, AttributeSerializers.BOOLEAN);
+        addAttributeSerializer(UserDescriptor.class, AttributeSerializers.USER_DESCRIPTOR);
     }
 
     @Override
@@ -225,18 +266,24 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public I18N.I18NKey getI18nKey(String key) {
-        return null;
+        return textContainer.get(key);
     }
 
     @Override
     public void reportException(Throwable throwable) {
-
+        // TODO: 2021/3/26
     }
 
     @Override
     public void reportException(String activity, Throwable throwable) {
         // TODO: 2021/3/26
         LoggerFactory.getLogger(SubmiteeServer.class).error(activity + " reported exception", throwable);
+    }
+
+    @Override
+    public void reportException(String event) {
+        // TODO: 2021/3/26
+        LoggerFactory.getLogger(SubmiteeServer.class).error("exception event reported: " + event);
     }
 
     @Override
@@ -269,10 +316,6 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     @Override
     public AttributeMap<? extends SubmiteeServer> getAttributeMap() {
         return attributeMap;
-    }
-
-    public AttributeSpec<Void> getAuthSettingsSection() {
-        return authSettingsSection;
     }
 
     public String getDefaultLanguage() {

@@ -1,33 +1,36 @@
 package org.starrel.submitee;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashSet;
+import java.util.Set;
 
-public interface I18N {
-    static I18NKey fromKey(String key) {
+public abstract class I18N {
+    static {
+        try {
+            Class.forName("org.starrel.submitee.I18N$General");
+            Class.forName("org.starrel.submitee.I18N$Http");
+        } catch (Throwable e) {
+            throw new Error(e);
+        }
+    }
+
+    public static I18NKey fromKey(String key) {
         return SServer.getInstance().getI18nKey(key);
     }
 
-    interface General {
-        WrappedI18NKey INTERNAL_ERROR = new WrappedI18NKey("generic.internal_error");
-        WrappedI18NKey USER_NOT_EXISTS = new WrappedI18NKey("generic.user_not_exists");
-    }
-
-    interface Http {
-        WrappedI18NKey INVALID_INPUT = new WrappedI18NKey("http.invalid_input");
-        WrappedI18NKey TOO_MANY_REQUEST = new WrappedI18NKey("http.too_many_request");
-    }
-
-    interface I18NKey {
+    public interface I18NKey {
         String format(String language, Object... parameters);
 
         String format(HttpServletRequest httpServletRequest, Object... parameters);
     }
 
-    class WrappedI18NKey implements I18NKey {
-        final String key;
+    public static class ConstantI18NKey implements I18NKey {
+        public final static Set<String> KNOWN_KEYS = new HashSet<>();
+        private final String key;
 
-        public WrappedI18NKey(String key) {
+        public ConstantI18NKey(String key) {
             this.key = key;
+            KNOWN_KEYS.add(key);
         }
 
         @Override
@@ -44,5 +47,15 @@ public interface I18N {
         public String toString() {
             return SServer.getInstance().getI18nKey(this.key).format((String) null);
         }
+    }
+
+    public static abstract class General {
+        public static ConstantI18NKey INTERNAL_ERROR = new ConstantI18NKey("generic.internal_error");
+        public static ConstantI18NKey USER_NOT_EXISTS = new ConstantI18NKey("generic.user_not_exists");
+    }
+
+    public static abstract class Http {
+        public static ConstantI18NKey INVALID_INPUT = new ConstantI18NKey("http.invalid_input");
+        public static ConstantI18NKey TOO_MANY_REQUEST = new ConstantI18NKey("http.too_many_request");
     }
 }

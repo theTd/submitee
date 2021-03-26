@@ -4,15 +4,15 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import de.mkammerer.argon2.Argon2;
 import de.mkammerer.argon2.Argon2Factory;
+import org.apache.ibatis.jdbc.ScriptRunner;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.User;
 import org.starrel.submitee.model.UserRealm;
-import org.starrel.submitee.util.ScriptRunner;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.Reader;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -28,7 +28,8 @@ import java.util.concurrent.TimeUnit;
 public class InternalAccountRealm implements UserRealm {
     public final static String TYPE_ID = "internal";
     private final static Argon2 ARGON2;
-    private final static InternalAccountUser ANONYMOUS = new InternalAccountUser(-1);
+
+    private static InternalAccountUser ANONYMOUS;
 
     static {
         ARGON2 = Argon2Factory.create();
@@ -44,6 +45,8 @@ public class InternalAccountRealm implements UserRealm {
 
     public InternalAccountRealm(SubmiteeServer server) throws IOException, SQLException {
         this.server = server;
+        ANONYMOUS = new InternalAccountUser(-1);
+
         PasswordAuthScheme passwordAuthScheme = server.createPasswordAuthScheme();
         passwordAuthScheme.setHandler(new AuthHandler());
         authSchemeList = Collections.singletonList(passwordAuthScheme);
@@ -113,9 +116,8 @@ public class InternalAccountRealm implements UserRealm {
                 if (!resultSet.next()) {
                     server.getLogger().info("creating table internal_users");
 
-                    Reader scriptReader = new InputStreamReader(
-                            getClass().getResourceAsStream("org/starrel/submitee/auth/internal_users.sql"));
-                    new ScriptRunner(conn, true, true).runScript(scriptReader);
+                    URL resource = getClass().getResource("/internal_users.sql");
+                    new ScriptRunner(conn).runScript(new InputStreamReader(resource.openStream()));
                 }
             }
         }

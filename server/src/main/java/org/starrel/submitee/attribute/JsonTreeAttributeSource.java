@@ -21,9 +21,11 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
     @Override
     public <TSubValue> TSubValue getAttribute(String path, Class<TSubValue> type) {
         AttributeSerializer<TSubValue> serializer = SubmiteeServer.getInstance().getAttributeSerializer(type);
+        if (serializer == null) throw new RuntimeException("could not find serializer of type " + type.getName());
 
         // self
         if (path.isEmpty()) {
+            if (jsonRoot == null) return null;
             return serializer.parse(jsonRoot);
         }
 
@@ -52,7 +54,9 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
                 pathTrace.append(".");
                 continue;
             }
-            return serializer.parse(currentNode.get(node));
+            JsonElement nodeElement = currentNode.get(node);
+            if (nodeElement == null) return null;
+            return serializer.parse(nodeElement);
         }
         throw new RuntimeException("empty path");
     }
@@ -71,6 +75,8 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
         if (!rootType.equals(Void.class)) {
             throw new RuntimeException("terminal node");
         }
+
+        if (jsonRoot == null) jsonRoot = new JsonObject();
 
         Iterator<String> pathIte = Arrays.stream(path.split("\\.")).iterator();
         JsonObject currentNode = jsonRoot.getAsJsonObject();
@@ -91,7 +97,9 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
                 }
                 pathTrace.append(".");
             } else {
-                currentNode.remove(node);
+                if (currentNode.has(node)) {
+                    currentNode.remove(node);
+                }
                 currentNode.add(node, serializer.write(value));
             }
         }

@@ -22,4 +22,13 @@ public interface ExceptionReporting {
                     "printing stacktrace of reported exception, activity: " + activity, throwable);
         }
     }
+
+    static void report(String event) {
+        try {
+            SServer.getInstance().reportException(event);
+        } catch (Throwable e) {
+            Logger.getLogger(ExceptionReporting.class.getName()).log(Level.SEVERE, "failed reporting exception", e);
+            Logger.getLogger(ExceptionReporting.class.getName()).log(Level.SEVERE, "reported exception is event:" + event);
+        }
+    }
 }

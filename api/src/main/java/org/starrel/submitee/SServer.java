@@ -70,5 +70,7 @@ public interface SServer {
 
     void reportException(String activity, Throwable throwable);
 
+    void reportException(String event);
+
     Logger getLogger();
 }

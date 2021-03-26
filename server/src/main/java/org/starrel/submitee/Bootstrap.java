@@ -8,6 +8,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,7 +37,7 @@ public class Bootstrap {
                 .withOptionalArg().defaultsTo("0.0.0.0:8080")
                 .ofType(String.class);
 
-        OptionSet parse = null;
+        OptionSet parse;
         try {
             parse = optionParser.parse(args);
         } catch (Exception e) {
@@ -63,7 +64,7 @@ public class Bootstrap {
                 listenAddresses.add(parseListenAddress(listenString));
             }
         } catch (IllegalArgumentException e) {
-            System.err.println(e.getMessage());
+            LoggerFactory.getLogger(Bootstrap.class).error("failed initializing listen addresses: " + e.getMessage());
             return;
         }
 
@@ -71,14 +72,16 @@ public class Bootstrap {
         hikariConfig.setJdbcUrl(jdbcConnectionString.value(parse));
         HikariDataSource dataSource = new HikariDataSource(hikariConfig);
 
-        SubmiteeServer server = new SubmiteeServer(database, dataSource, listenAddresses.toArray(new InetSocketAddress[0]));
+        SubmiteeServer server;
         try {
-            server.start();
-        } catch (Exception exception) {
-            exception.printStackTrace();
+            server = new SubmiteeServer(database, dataSource, listenAddresses.toArray(new InetSocketAddress[0]));
+        } catch (IOException e) {
+            LoggerFactory.getLogger(Bootstrap.class).error("failed initializing server", e);
+            System.exit(-1);
             return;
         }
         try {
+            server.start();
             server.join();
         } catch (Exception exception) {
             exception.printStackTrace();

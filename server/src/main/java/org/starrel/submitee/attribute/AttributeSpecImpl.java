@@ -65,6 +65,11 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         this.owningSource = source;
     }
 
+    private String getFullPath(String path) {
+        if (parent == null) return path;
+        return parent.getFullPath(this.path) + (path.isEmpty() ? "" : "." + path);
+    }
+
     @Override
     public void addFilter(AttributeFilter<TValue> filter) {
         this.filters.add(filter);
@@ -74,8 +79,10 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     @Override
     public <TSubValue> AttributeSpec<TSubValue> of(String path, Class<TSubValue> type) {
         try {
-            return (AttributeSpec<TSubValue>) specTreeMap.put(path, specCache.get(path,
-                    () -> new AttributeSpecImpl<>(AttributeSpecImpl.this, path, type)));
+            AttributeSpec<TSubValue> spec = (AttributeSpec<TSubValue>) specCache.get(path,
+                    () -> new AttributeSpecImpl<>(AttributeSpecImpl.this, path, type));
+            specTreeMap.put(path, spec);
+            return spec;
         } catch (ExecutionException e) {
             throw new RuntimeException(e);
         }
@@ -107,7 +114,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         if (spec != this) {
             return spec.get(path.substring(spec.getPath().length()), type);
         } else {
-            return getSource().getAttribute(sourcePath, type);
+            return getSource().getAttribute(getFullPath(path), type);
         }
     }
 
@@ -128,7 +135,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
                 }
             }
 
-            getSource().setAttribute(path, value);
+            getSource().setAttribute(getFullPath(path), value);
 
             childUpdated(path);
         }
