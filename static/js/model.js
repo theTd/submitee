@@ -76,6 +76,22 @@ class STemplate {
         if (!this.propertyMap) this.propertyMap = new PropertyMap();
     }
 
+    get name() {
+        return this.propertyMap.get("name");
+    }
+
+    set name(val) {
+        this.propertyMap.set("name", val);
+    }
+
+    get comment() {
+        return this.propertyMap.get("comment");
+    }
+
+    set comment(val) {
+        this.propertyMap.set("comment", val);
+    }
+
     /**
      *
      * @param {SField} field
@@ -100,4 +116,46 @@ class STemplate {
         }
         return arr;
     }
+}
+
+function getQueryVariable(name, queryString) {
+    queryString = queryString || window.location.search;
+
+    let query = queryString.substring(1);
+    let vars = query.split('&');
+    for (let i = 0; i < vars.length; i++) {
+        const pair = vars[i].split('=');
+        if (decodeURIComponent(pair[0]) === name) {
+            return decodeURIComponent(pair[1]);
+        }
+    }
+    return null;
+}
+
+async function fetchTemplateInfo(templateId) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: "info/" + templateId,
+            method: "GET",
+            success: function (data) {
+                if (!data.hasOwnProperty("scheme")) {
+                    reject("invalid response");
+                    return;
+                }
+                if (data['scheme'] !== 'STemplate') {
+                    reject("invalid response");
+                    return;
+                }
+                resolve(new STemplate(data['uniqueId'], data['propertyMap']));
+            },
+            error: function (reason) {
+                // noinspection EqualityComparisonWithCoercionJS
+                if (reason.status == '404') {
+                    reject("cannot find target template");
+                } else {
+                    reject(reason.status);
+                }
+            }
+        });
+    });
 }

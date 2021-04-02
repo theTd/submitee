@@ -47,6 +47,10 @@
 </template>
 
 <div class="container main">
+    <nav class="row breadcrumb">
+        <div class="breadcrumb-item">所有模板</div>
+        <div class="breadcrumb-item editing-template"></div>
+    </nav>
     <div class="row" id="row-header">
         <div class="col col-2">类型</div>
         <div class="col col-2">名称</div>
@@ -56,7 +60,15 @@
     <hr/>
     <form onsubmit="createNewField()" id="row-append-field">
         <div class="row">
-            <div class="col col-2 s-field-type"><input type="text"/></div>
+            <div class="col col-2 s-field-type">
+                <!--suppress HtmlFormInputWithoutLabel -->
+                <select name="type" class="w-100 h-100">
+                    <option value="">------</option>
+                    <option value="text">文本</option>
+                    <option value="number">数字</option>
+                    <option value="binary">文件</option>
+                </select>
+            </div>
             <div class="col col-2 s-field-name"><input type="text"/></div>
             <div class="col col-6 s-field-comment"><input type="text"/></div>
             <div class="col col-2">
@@ -65,20 +77,43 @@
             <input type="submit" style="display: none"/>
         </div>
     </form>
+    <hr/>
+    <div class="row col">
+        <h4 class="w-100">模板状态：</h4>
+        <p>尚未发布，使用发布模板按钮来获取公开链接</p>
+        <hr class="w-100"/>
+        <h4 class="w-100">模板状态：</h4>
+        <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交</p><a class="pl-2" href="#">查看提交列表</a>
+        <hr class="w-100"/>
+        <h4 class="w-100">模板状态：</h4>
+        <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交，其中 2 个尚未阅读</p><a class="pl-2" href="#">查看提交列表</a>
+        <hr class="w-100"/>
+        <h4 class="w-100">模板状态：</h4>
+        <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交，其中 2 个尚未阅读</p><a class="pl-2" href="#">查看提交列表</a>
+        <div class="w-100"></div>
+        <p class="alert alert-warning">模板发布后已经被修改，使用修订模板按钮来发布修订后的模板</p>
+        <hr class="w-100"/>
+        <form onsubmit="this.preventDefault()">
+            <button class="btn btn-primary disabled" id="btn-publish-template">发布模板</button>
+            <button class="btn btn-danger disabled" id="btn-cancel-template">停止发布模板</button>
+            <button class="btn btn-secondary disabled" id="btn-republish-template">修订模板</button>
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown">
+                    其他
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#">导出到CSV</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="#">归档模板</a>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
-<!-- jQuery first, then Popper.js, then Bootstrap JS -->
-<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
-        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
-        crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
-        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
-        crossorigin="anonymous"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
-        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
-        crossorigin="anonymous"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
 <script src="js/model.js"></script>
+
 <script>
     function findFieldIdByElement(element) {
         let node = element;
@@ -194,12 +229,12 @@
     function createNewField() {
         let id = uuidv4();
         let container = $("#row-append-field");
-        let type = container.find(".s-field-type").find("input").val();
+        let type = container.find(".s-field-type").find("select option:selected").val();
         let name = container.find(".s-field-name").find("input").val();
         let comment = container.find(".s-field-comment").find("input").val();
 
         if (!type || !name) {
-            alert("no type or no name provided");
+            alert("字段类型和名称是必填项目");
             return;
         }
 
@@ -214,29 +249,16 @@
         $(".main")[0].insertBefore(createPresentFieldRow(field), relative);
     }
 
-    /**
-     * TODO REMOVE THIS
-     * @return {STemplate}
-     * @private
-     */
-    function __generateTestTemplate() {
-        let t = new STemplate("neverwannaletyoudown", null);
-        let f = new SField("neverwannamakeyoucry", null);
-        f.type = "文本";
-        f.name = "测试用字段";
-        f.comment = "这是一个测试用的字段，写的比较长看起来像注释";
-        t.addField(f);
+    let currentTemplate;
+    let currentTemplateId = getQueryVariable("target");
 
-        f = new SField("neverwannagoaroundanddesertyou", null);
-        f.type = "数字";
-        f.name = "另一测试字段";
-        f.comment = "这是另一个测试字段，同样看起来比较长";
-        t.addField(f);
-        return t;
-    }
-
-    const currentTemplate = __generateTestTemplate();
-    addPresentFieldRows();
+    fetchTemplateInfo(currentTemplateId).then(value => {
+        currentTemplate = value;
+        $(".editing-template")[0].textContent = currentTemplate.name;
+        addPresentFieldRows();
+    }, reason => {
+        alert(reason);
+    });
 </script>
 </body>
 </html>

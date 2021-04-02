@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <title></title>
+</head>
+<body>
+
+<template id="template-s-template-row">
+    <div class="row template-container" data-submitee-template-id>
+        <div class="col col-2 s-template-name"></div>
+        <div class="col col-8 s-template-comment"></div>
+        <div class="col col-2">
+            <a class="btn btn-primary" href="#" onclick="editTemplate(this)">编辑</a>
+        </div>
+    </div>
+</template>
+
+<div class="container">
+    <div class="row">
+        <div class="col col-2">
+            模板编号
+        </div>
+        <div class="col col-8">
+            模板标题
+        </div>
+        <!--        <div class="col col-2">-->
+        <!--        </div>-->
+    </div>
+    <hr/>
+    <hr id="insert-template-before"/>
+    <nav class="row col">
+        <ul class="pagination">
+            <li class="page-item"><a class="page-link" href="#">Previous</a></li>
+            <li class="page-item"><a class="page-link" href="#">1</a></li>
+            <li class="page-item active"><a class="page-link" href="#">2</a></li>
+            <li class="page-item"><a class="page-link" href="#">3</a></li>
+            <li class="page-item"><a class="page-link" href="#">Next</a></li>
+        </ul>
+    </nav>
+    <hr/>
+    <div class="row col justify-content-end">
+        <a class="btn btn-primary" href="#" onclick="createTemplate()">创建模板</a>
+    </div>
+</div>
+
+<!--<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>-->
+<!--<script src="js/model.js"></script>-->
+<script>
+
+    /**
+     * TODO REMOVE THIS
+     * @return {STemplate}
+     * @private
+     */
+    function __generateTestTemplate() {
+        let t = new STemplate(uuidv4(), null);
+        t.name = "测试用模板";
+        t.comment = "这是一个测试用的模板，写的很长看起来像注释";
+
+        let f = new SField(uuidv4(), null);
+        f.type = "文本";
+        f.name = "测试用字段";
+        f.comment = "这是一个测试用的字段，写的比较长看起来像注释";
+        t.addField(f);
+
+        f = new SField(uuidv4(), null);
+        f.type = "数字";
+        f.name = "另一测试字段";
+        f.comment = "这是另一个测试字段，同样看起来比较长";
+        t.addField(f);
+        return t;
+    }
+
+    async function fetchTemplates(page) {
+        // todo select pages
+        return new Promise((resolve, reject) => {
+            resolve([__generateTestTemplate()])
+        });
+    }
+
+    function createTemplate() {
+        // todo apply new template then switch to editing template page
+    }
+
+    function findTemplateIdByElement(element) {
+        let node = element;
+        let fieldId;
+        while (node) {
+            if (node.hasAttribute("data-submitee-template-id")) {
+                fieldId = node.getAttribute("data-submitee-template-id");
+                break;
+            }
+            node = node.parentNode;
+        }
+        return fieldId;
+    }
+
+    function editTemplate(element) {
+        let templateId = findTemplateIdByElement(element);
+        window.location.href = "?method=edit-template&target=" + templateId;
+    }
+
+    /**
+     *
+     * @param {STemplate} template
+     */
+    function createTemplateElement(template) {
+        let element = document.querySelector("#template-s-template-row");
+        element.content.querySelector(".template-container").setAttribute("data-submitee-template-id", template.uniqueId);
+        element.content.querySelector(".s-template-name").textContent = template.name;
+        element.content.querySelector(".s-template-comment").textContent = template.comment;
+        return document.importNode(element.content, true);
+    }
+
+    function buildTemplateList() {
+        let relative = $("#insert-template-before")[0];
+        currentTemplateList.forEach(function (value, key) {
+            relative.parentNode.insertBefore(createTemplateElement(value), relative);
+        })
+    }
+
+    let page = getQueryVariable("page") || 0;
+
+    fetchTemplates(page).then(value => {
+        currentTemplateList = value;
+        buildTemplateList();
+    }, rejectReason => {
+        alert("failed: " + rejectReason);
+        window.location.refresh();
+    });
+</script>
+</body>
+</html>
