@@ -5,6 +5,8 @@ import java.io.OutputStream;
 import java.util.Date;
 
 public interface Blob {
+    int getBlobId();
+
     String getKey();
 
     String getFilename();

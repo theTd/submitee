@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <title></title>
+
+    <style>
+        .main .col {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        .main input {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<template id="template-present-field">
+    <div class="row s-field" data-submitee-field-id>
+        <div class="col col-2 s-field-type"></div>
+        <div class="col col-2 s-field-name"></div>
+        <div class="col col-6 s-field-comment"></div>
+        <div class="col col-2">
+            <a href="#" onclick="editField(this)" class="btn btn-secondary btn-sm">编辑</a>
+            <a href="#" onclick="deleteField(this)" class="btn btn-danger btn-sm">删除</a>
+        </div>
+    </div>
+</template>
+<template id="template-editing-field">
+    <div class="row s-field-editing" data-submitee-field-id>
+        <div class="col col-2 s-field-type"></div>
+        <div class="col col-2 s-field-name"></div>
+        <div class="col col-6 s-field-comment"></div>
+        <div class="col col-2">
+            <a href="#" onclick="applyField(this)" class="btn btn-success btn-sm">完成</a>
+        </div>
+    </div>
+</template>
+
+<div class="container main">
+    <div class="row" id="row-header">
+        <div class="col col-2">类型</div>
+        <div class="col col-2">名称</div>
+        <div class="col col-6">注释</div>
+        <div class="col col-2">行为</div>
+    </div>
+    <hr/>
+    <form onsubmit="createNewField()" id="row-append-field">
+        <div class="row">
+            <div class="col col-2 s-field-type"><input type="text"/></div>
+            <div class="col col-2 s-field-name"><input type="text"/></div>
+            <div class="col col-6 s-field-comment"><input type="text"/></div>
+            <div class="col col-2">
+                <a href="#" onclick="createNewField()" class="btn btn-sm btn-success">添加字段</a>
+            </div>
+            <input type="submit" style="display: none"/>
+        </div>
+    </form>
+</div>
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>
+<script src="js/model.js"></script>
+<script>
+    function findFieldIdByElement(element) {
+        let node = element;
+        let fieldId;
+        while (node) {
+            if (node.hasAttribute("data-submitee-field-id")) {
+                fieldId = node.getAttribute("data-submitee-field-id");
+                break;
+            }
+            node = node.parentNode;
+        }
+        return fieldId;
+    }
+
+    /**
+     * @param {string} fieldId
+     * @return {ChildNode}
+     */
+    function findFieldContainer(fieldId) {
+        let container = null;
+        $(".main")[0].childNodes.forEach(value => {
+            if (value.hasAttribute) {
+                if (value.hasAttribute("data-submitee-field-id")) {
+                    if (value.getAttribute("data-submitee-field-id") === fieldId) {
+                        container = value;
+                    }
+                }
+            }
+        });
+        return container;
+    }
+
+    function editField(element) {
+        let fieldId = findFieldIdByElement(element);
+
+        if (!fieldId) {
+            console.warn("no field id found");
+            return;
+        }
+        let container = findFieldContainer(fieldId);
+
+        let field = currentTemplate.getField(fieldId);
+        if (!field) {
+            console.warn("no field \"" + fieldId + "\" found in current template");
+            return;
+        }
+        container.parentNode.replaceChild(createEditingFieldRows(field), container);
+    }
+
+    function deleteField(element) {
+        let fieldId = findFieldIdByElement(element);
+        let field = currentTemplate.getField(fieldId);
+        let container = findFieldContainer(fieldId);
+
+        container.parentNode.removeChild(container);
+    }
+
+    function applyField(element) {
+        let fieldId = findFieldIdByElement(element);
+        let field = currentTemplate.getField(fieldId);
+        let container = findFieldContainer(fieldId);
+
+        field.name = container.querySelector(".s-field-name").querySelector("input").value;
+        field.comment = container.querySelector(".s-field-comment").querySelector("input").value;
+
+        container.parentNode.replaceChild(createPresentFieldRow(field), container);
+    }
+
+    /**
+     *
+     * @param {SField} field
+     * @return {string|string|DocumentFragment|*}
+     */
+    function createPresentFieldRow(field) {
+        let domTemplate = $("#template-present-field")[0];
+
+        domTemplate.content.querySelector(".s-field").setAttribute("data-submitee-field-id", field.uniqueId);
+        domTemplate.content.querySelector(".s-field-type").textContent = field.type;
+        domTemplate.content.querySelector(".s-field-name").textContent = field.name;
+        domTemplate.content.querySelector(".s-field-comment").textContent = field.comment;
+        return document.importNode(domTemplate.content, true);
+    }
+
+    /**
+     * insert present field dom elements depending on current template
+     */
+    function addPresentFieldRows() {
+        let nodes = Array();
+        currentTemplate.getAllFields().forEach(value => {
+            nodes.push(createPresentFieldRow(value));
+        });
+        let relative = $("#row-append-field")[0];
+        nodes.forEach(value => {
+            $(".main")[0].insertBefore(value, relative);
+        })
+    }
+
+    /**
+     *
+     * @param {SField} field
+     * @return {string|string|DocumentFragment|*}
+     */
+    function createEditingFieldRows(field) {
+        let template = $("#template-editing-field")[0];
+
+        template.content.querySelector(".s-field-editing").setAttribute("data-submitee-field-id", field.uniqueId);
+        template.content.querySelector(".s-field-type").innerHTML = `<span class="disabled" style="cursor: not-allowed">${field.type}</span>`;
+        template.content.querySelector(".s-field-name").innerHTML = `<input type="text" value="${field.name}"/>`;
+        template.content.querySelector(".s-field-comment").innerHTML = `<input type="text" value="${field.comment}"/>`
+        return document.importNode(template.content, true);
+    }
+
+    function createNewField() {
+        let id = uuidv4();
+        let container = $("#row-append-field");
+        let type = container.find(".s-field-type").find("input").val();
+        let name = container.find(".s-field-name").find("input").val();
+        let comment = container.find(".s-field-comment").find("input").val();
+
+        if (!type || !name) {
+            alert("no type or no name provided");
+            return;
+        }
+
+        let field = new SField(id, null);
+        field.type = type;
+        field.name = name;
+        field.comment = comment;
+
+        currentTemplate.addField(field);
+
+        let relative = container[0];
+        $(".main")[0].insertBefore(createPresentFieldRow(field), relative);
+    }
+
+    /**
+     * TODO REMOVE THIS
+     * @return {STemplate}
+     * @private
+     */
+    function __generateTestTemplate() {
+        let t = new STemplate("neverwannaletyoudown", null);
+        let f = new SField("neverwannamakeyoucry", null);
+        f.type = "文本";
+        f.name = "测试用字段";
+        f.comment = "这是一个测试用的字段，写的比较长看起来像注释";
+        t.addField(f);
+
+        f = new SField("neverwannagoaroundanddesertyou", null);
+        f.type = "数字";
+        f.name = "另一测试字段";
+        f.comment = "这是另一个测试字段，同样看起来比较长";
+        t.addField(f);
+        return t;
+    }
+
+    const currentTemplate = __generateTestTemplate();
+    addPresentFieldRows();
+</script>
+</body>
+</html>

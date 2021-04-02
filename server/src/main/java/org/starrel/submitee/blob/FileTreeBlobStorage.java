@@ -8,19 +8,35 @@ import org.starrel.submitee.attribute.AttributeSpec;
 
 import java.io.*;
 import java.util.Date;
-import java.util.UUID;
 
 public class FileTreeBlobStorage implements BlobStorage {
+    public final static BlobStorageProvider PROVIDER = new BlobStorageProvider() {
+        @Override
+        public String getTypeId() {
+            return TYPE_ID;
+        }
+
+        @Override
+        public BlobStorage createNewStorage(String name) {
+            return new FileTreeBlobStorage(name);
+        }
+
+        @Override
+        public BlobStorage accessStorage(String name) {
+            return new FileTreeBlobStorage(name);
+        }
+    };
+
     public final static String TYPE_ID = "file-tree";
     public final static String ATTRIBUTE_COLLECTION_NAME = "file-tree-blob-storages";
 
-    private final String id;
+    private final String name;
     private final AttributeMap<FileTreeBlobStorage> attributeMap;
     private final AttributeSpec<String> uriSpec;
     private File directory;
 
-    public FileTreeBlobStorage(String id) {
-        this.id = id;
+    public FileTreeBlobStorage(String name) {
+        this.name = name;
 
         this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, ATTRIBUTE_COLLECTION_NAME);
         this.uriSpec = this.attributeMap.of("uri", String.class);
@@ -39,6 +55,7 @@ public class FileTreeBlobStorage implements BlobStorage {
                 directory = null;
             }
         });
+
         try {
             initializeDirectory(uriSpec.get());
         } catch (IOException e) {
@@ -52,28 +69,30 @@ public class FileTreeBlobStorage implements BlobStorage {
     }
 
     @Override
-    public String getId() {
-        return id;
+    public String getName() {
+        return name;
     }
 
     @Override
-    public Blob create(String fileName) throws IOException {
+    public Blob create(int blobId, String key, String fileName) throws IOException {
         if (directory == null) {
             throw new IOException("blob storage directory not set yet");
         }
-        UUID uniqueId = UUID.randomUUID();
-        String key = uniqueId.toString().replace("-", "");
-        return new FileTreeBlob(fileName, key);
+        return new FileTreeBlob(blobId, fileName, key);
     }
 
     @Override
-    public Blob get(String key) {
-        return null;
+    public Blob access(int blobId, String key, String fileName, Date createTime) throws IOException {
+        FileTreeBlob blob = new FileTreeBlob(blobId, fileName, key, createTime);
+        if (!(blob.file.exists() && blob.file.isFile())) {
+            throw new IOException("target file missing");
+        }
+        return blob;
     }
 
     @Override
     public String getAttributePersistKey() {
-        return getId();
+        return getName();
     }
 
     @Override
@@ -111,21 +130,32 @@ public class FileTreeBlobStorage implements BlobStorage {
     }
 
     private class FileTreeBlob implements Blob {
+        private final int blobId;
         private final String fileName;
         private final String key;
         private final Date createTime;
         private final File file;
 
-        private FileTreeBlob(String fileName, String key) throws IOException {
-            this.fileName = fileName;
-            this.key = key;
-            this.createTime = new Date();
-            this.file = new File(directory + File.separator + key.substring(0, 2) + key);
+        private FileTreeBlob(int blobId, String fileName, String key) throws IOException {
+            this(blobId, fileName, key, new Date());
             if (!file.getParentFile().mkdirs() || !this.file.createNewFile()) {
                 throw new IOException("failed to create file");
             }
             //noinspection ResultOfMethodCallIgnored
             this.file.setExecutable(false);
+        }
+
+        private FileTreeBlob(int blobId, String fileName, String key, Date createTime) {
+            this.blobId = blobId;
+            this.fileName = fileName;
+            this.key = key;
+            this.createTime = createTime;
+            this.file = new File(directory + File.separator + key.substring(0, 2) + File.separator + key);
+        }
+
+        @Override
+        public int getBlobId() {
+            return blobId;
         }
 
         @Override

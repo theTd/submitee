@@ -6,7 +6,7 @@ import org.starrel.submitee.attribute.AttributeHolder;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSerializer;
 import org.starrel.submitee.auth.AuthScheme;
-import org.starrel.submitee.blob.BlobStorage;
+import org.starrel.submitee.blob.BlobStorageProvider;
 import org.starrel.submitee.model.*;
 
 import java.util.List;
@@ -28,7 +28,7 @@ public interface SServer {
 
     void addNotificationScheme(NotificationScheme notificationScheme);
 
-    void addBlobStorage(BlobStorage blobStorage);
+    void addBlobStorageProvider(BlobStorageProvider provider);
 
     <TContext extends AttributeHolder<?>> AttributeMap<TContext> createAttributeMap(TContext context);
 

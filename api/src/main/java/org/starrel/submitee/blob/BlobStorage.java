@@ -3,14 +3,15 @@ package org.starrel.submitee.blob;
 import org.starrel.submitee.attribute.AttributeHolder;
 
 import java.io.IOException;
+import java.util.Date;
 
 public interface BlobStorage extends AttributeHolder<BlobStorage> {
 
     String getTypeId();
 
-    String getId();
+    String getName();
 
-    Blob create(String fileName) throws IOException;
+    Blob create(int blobId, String key, String fileName) throws IOException;
 
-    Blob get(String key);
+    Blob access(int blobId, String key, String fileName, Date createTime) throws IOException;
 }

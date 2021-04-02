@@ -31,6 +31,7 @@ public class InfoServlet extends SubmiteeHttpServlet {
 
         resp.setStatus(200);
         resp.setContentType("application/json");
+
         JsonWriter jsonWriter = new JsonWriter(resp.getWriter());
         jsonWriter.beginObject();
         // TODO: 2021/3/26 check permissions

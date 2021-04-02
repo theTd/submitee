@@ -18,7 +18,9 @@ import org.starrel.submitee.attribute.*;
 import org.starrel.submitee.auth.InternalAccountRealm;
 import org.starrel.submitee.auth.PasswordAuthScheme;
 import org.starrel.submitee.auth.PasswordAuthSchemeImpl;
-import org.starrel.submitee.blob.BlobStorage;
+import org.starrel.submitee.blob.BlobStorageController;
+import org.starrel.submitee.blob.BlobStorageProvider;
+import org.starrel.submitee.blob.FileTreeBlobStorage;
 import org.starrel.submitee.http.*;
 import org.starrel.submitee.language.TextContainer;
 import org.starrel.submitee.model.*;
@@ -30,6 +32,7 @@ import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.sql.SQLException;
 import java.util.*;
 
 public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> {
@@ -40,6 +43,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private final MongoDatabase mongoDatabase;
     private final DataSource dataSource;
     private final Server jettyServer;
+    private final BlobStorageController blobStorageController;
 
     private final Map<Class<?>, AttributeSerializer<?>> attributeSerializerMap = new HashMap<>();
     private final AttributeMap<SubmiteeServer> attributeMap;
@@ -83,6 +87,17 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
             throw new Error(e);
         }
         textContainer.updateTemplate(new File("text" + File.separator + "template.properties"), I18N.ConstantI18NKey.KNOWN_KEYS);
+        // endregion
+
+        // region setup blob storage
+        addBlobStorageProvider(FileTreeBlobStorage.PROVIDER);
+
+        blobStorageController = new BlobStorageController(this);
+        try {
+            blobStorageController.init();
+        } catch (SQLException e) {
+            throw new IOException("failed initializing blob storage controller", e);
+        }
         // endregion
     }
 
@@ -163,8 +178,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public void addBlobStorage(BlobStorage blobStorage) {
-
+    public void addBlobStorageProvider(BlobStorageProvider provider) {
+        // TODO: 2021-03-30-0030
     }
 
     @Override
