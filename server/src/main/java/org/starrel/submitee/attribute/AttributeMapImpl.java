@@ -9,6 +9,10 @@ import com.mongodb.client.model.Updates;
 import org.bson.Document;
 import org.starrel.submitee.SubmiteeServer;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Predicate;
+
 public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends AttributeSpecImpl<Void> implements AttributeMap<TContext> {
     private final TContext holder;
     private boolean autoSaveAttribute;
@@ -29,8 +33,23 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
 
     @SuppressWarnings("unchecked")
     @Override
-    public JsonObject serialize() {
-        return ((JsonTreeAttributeSource<Void>) owningSource).getJsonRoot().getAsJsonObject();
+    public JsonObject toJson(Predicate<String> pathFilter) {
+        List<String> removes = new ArrayList<>(0);
+        JsonObject obj = ((JsonTreeAttributeSource<Void>) owningSource).getJsonRoot().getAsJsonObject();
+        for (String path : obj.keySet()) {
+            if (!pathFilter.test(path)) {
+                removes.add(path);
+            }
+        }
+        if (removes.isEmpty()) return obj;
+        obj = obj.deepCopy();
+        removes.forEach(obj::remove);
+        return obj;
+    }
+
+    @Override
+    public JsonObject toJson() {
+        return toJson(path -> true);
     }
 
     @Override
@@ -47,7 +66,7 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
     public void saveAttribute(MongoDatabase mongoDatabase) {
         if (collectionName == null) throw new RuntimeException("this attribute map cannot be saved");
         MongoCollection<Document> collection = mongoDatabase.getCollection(collectionName);
-        Document body = Document.parse(SubmiteeServer.GSON.toJson(serialize()));
+        Document body = Document.parse(SubmiteeServer.GSON.toJson(toJson()));
         Document document = new Document();
         document.put("id", holder.getAttributePersistKey());
         document.put("body", body);

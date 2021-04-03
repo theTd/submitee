@@ -4,6 +4,7 @@ import org.starrel.submitee.attribute.AttributeFilter;
 import org.starrel.submitee.attribute.AttributeHolder;
 
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 public interface STemplate extends AttributeHolder<STemplate> {
 
@@ -13,7 +14,7 @@ public interface STemplate extends AttributeHolder<STemplate> {
 
     int getVersion();
 
-    int getLatestVersion();
+    int getLatestVersion() throws ExecutionException;
 
     User getCommittedBy();
 
@@ -26,5 +27,10 @@ public interface STemplate extends AttributeHolder<STemplate> {
     @Override
     default String getAttributePersistKey() {
         return getUniqueId().toString();
+    }
+
+    @Override
+    default String getAttributeScheme() {
+        return "STemplate";
     }
 }

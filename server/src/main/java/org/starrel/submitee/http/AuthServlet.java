@@ -44,13 +44,13 @@ public class AuthServlet extends AbstractJsonServlet {
         try {
             result = authScheme.auth(body.get("content"));
         } catch (Exception exception) {
-            resp.setStatus(500);
+            resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
             ExceptionReporting.report("authenticating user, request body is "
                     + SubmiteeServer.GSON.toJson(body), exception);
             return;
         }
 
-        resp.setStatus(200);
+        resp.setStatus(HttpStatus.OK_200);
         resp.setContentType("application/json");
 
         JsonWriter writer = new JsonWriter(resp.getWriter());

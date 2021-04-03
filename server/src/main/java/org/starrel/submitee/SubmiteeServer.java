@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> {
     public final static String ATTRIBUTE_KEY = "system";
@@ -43,7 +44,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private final MongoDatabase mongoDatabase;
     private final DataSource dataSource;
     private final Server jettyServer;
-    private final BlobStorageController blobStorageController;
+    private final BlobStorageController blobStorageController = new BlobStorageController(this);
+    private final TemplateKeeper templateKeeper = new TemplateKeeper(this);
 
     private final Map<Class<?>, AttributeSerializer<?>> attributeSerializerMap = new HashMap<>();
     private final AttributeMap<SubmiteeServer> attributeMap;
@@ -87,17 +89,6 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
             throw new Error(e);
         }
         textContainer.updateTemplate(new File("text" + File.separator + "template.properties"), I18N.ConstantI18NKey.KNOWN_KEYS);
-        // endregion
-
-        // region setup blob storage
-        addBlobStorageProvider(FileTreeBlobStorage.PROVIDER);
-
-        blobStorageController = new BlobStorageController(this);
-        try {
-            blobStorageController.init();
-        } catch (SQLException e) {
-            throw new IOException("failed initializing blob storage controller", e);
-        }
         // endregion
     }
 
@@ -157,8 +148,23 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     @Override
     public void start() throws Exception {
         jettyServer.start();
-        // TODO: 2021-03-17-0017  read exists templates
-        // TODO: 2021-03-17-0017  initialize auth schemes
+        // region setup blob storage
+        addBlobStorageProvider(FileTreeBlobStorage.PROVIDER);
+
+        try {
+            blobStorageController.init();
+        } catch (SQLException e) {
+            throw new IOException("failed initializing blob storage controller", e);
+        }
+        // endregion
+
+        // region init template keeper
+        try {
+            templateKeeper.init();
+        } catch (Exception e) {
+            throw new IOException("failed initializing template keeper", e);
+        }
+        // endregion
         addUserRealm(new InternalAccountRealm(this));
     }
 
@@ -217,9 +223,13 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public STemplateImpl createTemplate(String templateId) {
+    public STemplateImpl createTemplate() throws Exception {
+        return createTemplate(TemplateKeeper.DEFAULT_GROUPING);
+    }
 
-        return null;
+    @Override
+    public STemplateImpl createTemplate(String grouping) throws Exception {
+        return templateKeeper.createNewTemplate(grouping);
     }
 
     @Override
@@ -228,29 +238,30 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public STemplateImpl getTemplateFromUUID(UUID templateUUID) {
-        // TODO: 2021-03-26-0026
-        return null;
+    public STemplateImpl getTemplateFromUUID(UUID templateUUID) throws ExecutionException {
+        return templateKeeper.getTemplate(templateUUID);
     }
 
     @Override
     public List<STemplateImpl> getTemplateAllVersion(String templateId) {
-        return null;
+        return templateKeeper.getTemplateAllVersions(templateId);
     }
 
     @Override
     public List<String> getTemplateIds() {
-        return null;
+        // TODO: 2021/4/4 implement
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public int getTemplateLatestVersion(String templateId) {
-        return 0;
+    public STemplateImpl getTemplateLatestVersion(String templateId) throws ExecutionException {
+        return templateKeeper.getTemplateLatestVersion(templateId);
     }
 
     @Override
     public Submission getSubmission(UUID uniqueId) {
-        return null;
+        // TODO: 2021/4/4 implement
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -285,20 +296,15 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public void reportException(Throwable throwable) {
-        // TODO: 2021/3/26
+    public void reportException(String entity, String activity, String event) {
+        // TODO: 2021/4/4
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void reportException(String activity, Throwable throwable) {
-        // TODO: 2021/3/26
-        LoggerFactory.getLogger(SubmiteeServer.class).error(activity + " reported exception", throwable);
-    }
-
-    @Override
-    public void reportException(String event) {
-        // TODO: 2021/3/26
-        LoggerFactory.getLogger(SubmiteeServer.class).error("exception event reported: " + event);
+    public void reportException(String entity, String activity, Throwable stacktrace) {
+        // TODO: 2021/4/4
+        throw new UnsupportedOperationException();
     }
 
     @Override

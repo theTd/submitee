@@ -7,6 +7,7 @@ import org.starrel.submitee.attribute.AttributeSpec;
 
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 public class SubmissionImpl implements Submission {
     private final UUID uniqueId;
@@ -55,7 +56,7 @@ public class SubmissionImpl implements Submission {
     }
 
     @Override
-    public STemplateImpl getTemplate() {
+    public STemplateImpl getTemplate() throws ExecutionException {
         UUID id;
         if ((id = templateUUIDSpec.get()) == null) {
             return null;
@@ -70,11 +71,7 @@ public class SubmissionImpl implements Submission {
 
     @Override
     public JsonObject getBody() {
-        JsonObject att = attributeMap.serialize();
-        if (att.has("body")) {
-            return att.get("body").getAsJsonObject();
-        }
-        return null;
+        return attributeMap.get("body", JsonObject.class);
     }
 
     @Override

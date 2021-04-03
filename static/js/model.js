@@ -159,3 +159,65 @@ async function fetchTemplateInfo(templateId) {
         });
     });
 }
+
+fieldControllers = {};
+
+class FieldController {
+    constructor(fieldType) {
+        this.fieldType = fieldType;
+    }
+
+    generateResolveFunction(field) {
+
+    }
+
+    generateHtml(field) {
+
+    }
+
+    validateResolveResult(field, resolveResult) {
+    }
+}
+
+class TextFieldController extends FieldController {
+    constructor() {
+        super("text");
+    }
+
+    generateResolveFunction(field) {
+        let inputId = 'text-input-for-' + field.uniqueId;
+        return function () {
+            return $("#" + inputId).val();
+        }
+    }
+
+    /**
+     *
+     * @param {SField} field
+     * @returns {string}
+     */
+    generateHtml(field) {
+        let inputId = 'text-input-for-' + field.uniqueId;
+        let placeholder = field.propertyMap.get("placeholder") || "";
+
+        return `<label for="${inputId}">${field.name}</label><input type="text" placeholder="${placeholder}" id="${inputId}"/>`;
+    }
+
+    /**
+     *
+     * @param {SField} field
+     * @param resolveResult
+     */
+    validateResolveResult(field, resolveResult) {
+        let constraints = field.propertyMap.get("constraints");
+        if (constraints) {
+
+            for (let i = 0; i < constraints.length; i++) {
+                let c = constraints[i];
+                c();
+            }
+        }
+    }
+}
+
+fieldControllers['text'] = new TextFieldController();

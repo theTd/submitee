@@ -6,31 +6,31 @@ import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
 
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class STemplateImpl implements STemplate {
+    private final TemplateKeeper keeper;
     private final UUID uniqueId;
+    private final String grouping;
     private final String templateId;
     private final int version;
+    AtomicInteger latestVersion;
     private final AttributeMap<STemplateImpl> attributeMap;
 
     private final AttributeSpec<UserDescriptor> committedBy;
     private final AttributeSpec<String> comment;
 
-    public STemplateImpl(UUID uniqueId, String templateId, int version) {
+    public STemplateImpl(TemplateKeeper keeper, UUID uniqueId, String grouping, String templateId, int version, int latestVersion, boolean createAttributeMap) {
+        this.keeper = keeper;
         this.uniqueId = uniqueId;
+        this.grouping = grouping;
         this.templateId = templateId;
         this.version = version;
+        this.latestVersion = new AtomicInteger(latestVersion);
 
-        this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, "templates");
-        this.committedBy = attributeMap.of("committed-by", UserDescriptor.class);
-        this.comment = attributeMap.of("comment", String.class);
-    }
-
-    public STemplateImpl(UUID uniqueId, String templateId, int version, AttributeMap<STemplateImpl> attributeMap) {
-        this.uniqueId = uniqueId;
-        this.templateId = templateId;
-        this.version = version;
-        this.attributeMap = attributeMap;
+        this.attributeMap = createAttributeMap ? SubmiteeServer.getInstance().readAttributeMap(this, "templates") :
+                SubmiteeServer.getInstance().readAttributeMap(this, "templates");
         this.committedBy = attributeMap.of("committed-by", UserDescriptor.class);
         this.comment = attributeMap.of("comment", String.class);
     }
@@ -38,6 +38,10 @@ public class STemplateImpl implements STemplate {
     @Override
     public UUID getUniqueId() {
         return uniqueId;
+    }
+
+    public String getGrouping() {
+        return grouping;
     }
 
     @Override
@@ -51,9 +55,9 @@ public class STemplateImpl implements STemplate {
     }
 
     @Override
-    public int getLatestVersion() {
-        // TODO: 2021-03-25-0025 query latest version
-        return 0;
+    public int getLatestVersion() throws ExecutionException {
+        STemplateImpl latest = keeper.getTemplateLatestVersion(templateId);
+        return latest == this ? latestVersion.get() : latest.latestVersion.get();
     }
 
     @Override

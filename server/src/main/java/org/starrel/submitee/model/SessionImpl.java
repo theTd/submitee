@@ -94,11 +94,6 @@ public class SessionImpl implements Session {
     }
 
     @Override
-    public String getAttributePersistKey() {
-        return user.getDescriptor().toString();
-    }
-
-    @Override
     public AttributeMap<SessionImpl> getAttributeMap() {
         return attributeMap;
     }

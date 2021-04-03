@@ -5,6 +5,7 @@ import org.starrel.submitee.attribute.AttributeHolder;
 
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 public interface Submission extends AttributeHolder<Submission> {
     String ATTRIBUTE_COLLECTION_NAME = "submissions";
@@ -15,7 +16,7 @@ public interface Submission extends AttributeHolder<Submission> {
 
     UUID getTemplateUUID();
 
-    STemplate getTemplate();
+    STemplate getTemplate() throws ExecutionException;
 
     Date getSubmitTime();
 
@@ -26,5 +27,10 @@ public interface Submission extends AttributeHolder<Submission> {
     @Override
     default String getAttributePersistKey() {
         return getUniqueId().toString();
+    }
+
+    @Override
+    default String getAttributeScheme() {
+        return "Submission";
     }
 }

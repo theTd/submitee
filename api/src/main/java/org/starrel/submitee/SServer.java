@@ -11,6 +11,7 @@ import org.starrel.submitee.model.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 public interface SServer {
 
@@ -42,17 +43,19 @@ public interface SServer {
 
     User getUser(UserDescriptor userDescriptor);
 
-    STemplate createTemplate(String templateId);
+    STemplate createTemplate() throws Exception;
+
+    STemplate createTemplate(String grouping) throws Exception;
 
     STemplate getTemplate(String templateId);
 
-    STemplate getTemplateFromUUID(UUID templateUUID);
+    STemplate getTemplateFromUUID(UUID templateUUID) throws ExecutionException;
 
     List<? extends STemplate> getTemplateAllVersion(String templateId);
 
     List<String> getTemplateIds();
 
-    int getTemplateLatestVersion(String templateId);
+    STemplate getTemplateLatestVersion(String templateId) throws ExecutionException;
 
     Submission getSubmission(UUID uniqueId);
 
@@ -66,11 +69,13 @@ public interface SServer {
 
     I18N.I18NKey getI18nKey(String key);
 
-    void reportException(Throwable throwable);
+//    void reportException(Throwable throwable);
+//
+//    void reportException(String activity, Throwable throwable);
 
-    void reportException(String activity, Throwable throwable);
+    void reportException(String entity, String activity, String detail);
 
-    void reportException(String event);
+    void reportException(String entity, String activity, Throwable stacktrace);
 
     Logger getLogger();
 }

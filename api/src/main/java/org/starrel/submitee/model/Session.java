@@ -18,4 +18,14 @@ public interface Session extends AttributeHolder<Session> {
     Date getLastActive();
 
     void close();
+
+    @Override
+    default String getAttributePersistKey() {
+        return getUser() == null ? null : getUser().getDescriptor().toString();
+    }
+
+    @Override
+    default String getAttributeScheme() {
+        return "Session";
+    }
 }

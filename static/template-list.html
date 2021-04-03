@@ -86,6 +86,25 @@
     }
 
     function createTemplate() {
+        $.ajax({
+            url: "../create/",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                type: 'template'
+            }),
+            success: function (data) {
+                window.location.href = "?method=edit-template?target=" + data;
+            },
+            error: function (error) {
+                console.log(Object.keys(error));
+                if (error.responseText) {
+                    alert(error.responseText);
+                } else {
+                    alert(error.status);
+                }
+            }
+        });
         // todo apply new template then switch to editing template page
     }
 
