@@ -21,7 +21,8 @@
     <div class="row">
         <div class="col col-3">
             <div class="list-group" id="management-methods">
-                <a href="?method=template-list" class="list-group-item list-group-item-action">编辑模板</a>
+                <a href="?method=template-list" data-submitee-management-method-alt="edit-template"
+                   class="list-group-item list-group-item-action">编辑模板</a>
                 <a href="?method=published-templates" class="list-group-item list-group-item-action">已发布的模板</a>
                 <a href="?method=unread-submissions" class="list-group-item list-group-item-action">未读提交</a>
                 <a href="?method=all-submissions" class="list-group-item list-group-item-action">提交列表</a>
@@ -43,8 +44,18 @@
     function highlightCurrentMethod(method) {
         let links = $("#management-methods a");
         links.each(function (index) {
-            if (getQueryVariable("method", new URL(links[index].href).search) === method) {
-                $(links[index]).addClass("active");
+            let link = links[index];
+            let matches = Array();
+            if (link.hasAttribute("data-submitee-management-method-alt")) {
+                matches.push(link.getAttribute("data-submitee-management-method-alt"));
+            }
+
+            matches.push(getQueryVariable("method", new URL(link.href).search));
+
+            console.log(matches);
+
+            if (matches.includes(method)) {
+                $(link).addClass("active");
             }
         })
     }
@@ -71,6 +82,9 @@
                 method: "GET",
                 success: function (data) {
                     $("#management-container").html(data);
+                },
+                error: function (error) {
+                    alert(error.statusCode);
                 }
             });
             break;

@@ -91,10 +91,10 @@
             method: "POST",
             contentType: "application/json",
             data: JSON.stringify({
-                type: 'template'
+                type: 'STemplate'
             }),
             success: function (data) {
-                window.location.href = "?method=edit-template?target=" + data;
+                window.location.href = "?method=edit-template&target=" + data;
             },
             error: function (error) {
                 console.log(Object.keys(error));
@@ -144,6 +144,8 @@
             relative.parentNode.insertBefore(createTemplateElement(value), relative);
         })
     }
+
+    let currentTemplateList;
 
     let page = getQueryVariable("page") || 0;
 

@@ -7,10 +7,26 @@ import java.util.logging.Logger;
 
 public interface ExceptionReporting {
 
+    static void shrinkStackTrace(Throwable throwable) {
+        StackTraceElement[] original = throwable.getStackTrace();
+        int shrinkLength = 0;
+        for (StackTraceElement stackTraceElement : original) {
+            if (!stackTraceElement.getClassName().equals(ExceptionReporting.class.getName())) {
+                shrinkLength++;
+            }else{
+                break;
+            }
+        }
+        StackTraceElement[] shrink = new StackTraceElement[shrinkLength];
+        System.arraycopy(original, 0, shrink, 0, shrinkLength);
+        throwable.setStackTrace(shrink);
+    }
+
     static void report(String entity, String activity, String detail) {
         try {
             SServer.getInstance().reportException(entity, activity, detail);
         } catch (Throwable e) {
+            shrinkStackTrace(e);
             LoggerFactory.getLogger(ExceptionReporting.class).error("failed reporting exception", e);
             LoggerFactory.getLogger(ExceptionReporting.class).error(String.format("reported: entity=%s, activity=%s, detail=%s", entity, activity, detail));
         }
@@ -20,6 +36,7 @@ public interface ExceptionReporting {
         try {
             SServer.getInstance().reportException(entity, activity, stacktrace);
         } catch (Throwable e) {
+            shrinkStackTrace(e);
             LoggerFactory.getLogger(ExceptionReporting.class).error("failed reporting exception", e);
             LoggerFactory.getLogger(ExceptionReporting.class).error(String.format("reported: entity=%s, activity=%s, stacktrace=", entity, activity), stacktrace);
         }

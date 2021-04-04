@@ -3,15 +3,16 @@ package org.starrel.submitee.http;
 import com.google.gson.stream.JsonWriter;
 import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.ExceptionReporting;
-import org.starrel.submitee.I18N;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeHolder;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.swing.*;
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 public class InfoServlet extends SubmiteeHttpServlet {
 
@@ -20,30 +21,61 @@ public class InfoServlet extends SubmiteeHttpServlet {
         String[] uri = parseUri(req.getRequestURI());
         if (uri.length != 2) {
             resp.setStatus(HttpStatus.BAD_REQUEST_400);
-            ExceptionReporting.report("invalid request uri in InfoServlet uri=" + req.getRequestURI());
+            ExceptionReporting.report(InfoServlet.class, "parsing parameter", "unexpected uri: " + req.getRequestURI());
             return;
         }
-        String uuid = uri[1];
-        UUID uniqueId;
+        String uuidString = uri[1];
+        UUID uuid;
         try {
-            uniqueId = UUID.fromString(uuid);
+            uuid = UUID.fromString(uuidString);
         } catch (IllegalArgumentException e) {
-            resp.setStatus(HttpStatus.BAD_REQUEST_400);
-            ExceptionReporting.report("invalid request parameter in InfoServlet uuid=" + uuid);
+            ExceptionReporting.report(InfoServlet.class, "parsing parameter", "unexpected uuidString: " + uuidString);
+            responseBadRequest(req, resp);
             return;
         }
-        Object object = SubmiteeServer.getInstance().getObjectFromUUID(uniqueId);
-        if (object == null) {
-            resp.setStatus(HttpStatus.NOT_FOUND_404);
-            ExceptionReporting.report("invalid request parameter in InfoServlet uuid=" + uuid);
+        String type;
+        try {
+            type = SubmiteeServer.getInstance().getObjectMapController().getType(uuid);
+        } catch (ExecutionException e) {
+            ExceptionReporting.report(InfoServlet.class, "querying object type from uuid", e);
+            responseInternalError(req, resp);
+            return;
+        }
+        if (type == null) {
+            ExceptionReporting.report(InfoServlet.class, "fetching resource", "missing object, uuid=" + uuid);
+            responseNotFound(req, resp);
+            return;
+        }
+
+        Object object = null;
+        try {
+            switch (type) {
+                case "template": {
+                    object = SubmiteeServer.getInstance().getTemplateFromUUID(uuid);
+                    break;
+                }
+                case "submission": {
+                    // TODO: 2021-04-05-0005
+                    break;
+                }
+                default: {
+                    ExceptionReporting.report(InfoServlet.class, "fetching object from uuid", "unknown type: " + type);
+                    responseInternalError(req, resp);
+                    return;
+                }
+            }
+            if (object == null) throw new NullPointerException("unable to fetch object, type=" + type);
+        } catch (Exception e) {
+            ExceptionReporting.report(InfoServlet.class, "fetching object from uuid", e);
+            responseInternalError(req, resp);
             return;
         }
 
         String scheme;
         if (!(object instanceof AttributeHolder) || (scheme = ((AttributeHolder<?>) object).getAttributeScheme()) == null) {
-            resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
-            resp.getWriter().println(I18N.Http.INTERNAL_ERROR.format(req));
-            ExceptionReporting.report("unexpected object received in InfoServlet uuid=" + uniqueId + ", object=" + object);
+            ExceptionReporting.report(InfoServlet.class, "serializing resource",
+                    "requested object is not instance of attribute holder or attribute holder returns null scheme, uuidString=" + uuid);
+            responseInternalError(req, resp);
             return;
         }
 
@@ -55,7 +87,7 @@ public class InfoServlet extends SubmiteeHttpServlet {
         // TODO: 2021/3/26 check ACLs
         jsonWriter.name("scheme").value(scheme);
         jsonWriter.name("attributes").jsonValue(SubmiteeServer.GSON.toJson(((AttributeHolder<?>) object)
-                .getAttributeMap().toJson(path -> !path.equalsIgnoreCase("protected"))));
+                .getAttributeMap().toJsonTree(path -> !path.equalsIgnoreCase("protected"))));
         jsonWriter.endObject();
         jsonWriter.close();
     }

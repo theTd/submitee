@@ -1,6 +1,6 @@
-class PropertyMap {
-    constructor() {
-        this.root = {};
+class AttributeMap {
+    constructor(root) {
+        this.root = root || {};
     }
 
     get(path) {
@@ -40,7 +40,7 @@ class SField {
     constructor(uniqueId, propertyMap) {
         this.uniqueId = uniqueId;
         this.propertyMap = propertyMap;
-        if (!this.propertyMap) this.propertyMap = new PropertyMap();
+        if (!this.propertyMap) this.propertyMap = new AttributeMap();
     }
 
     get type() {
@@ -69,27 +69,34 @@ class SField {
 }
 
 class STemplate {
-    constructor(uniqueId, propertyMap) {
+    constructor(uniqueId, attributes) {
         this.uniqueId = uniqueId;
-        this.propertyMap = propertyMap;
+        this.attributeMap = new AttributeMap(attributes);
         this.fields = {};
-        if (!this.propertyMap) this.propertyMap = new PropertyMap();
+    }
+
+    get templateId() {
+        return this.attributeMap.get("template-id");
+    }
+
+    get version() {
+        return this.attributeMap.get("version");
     }
 
     get name() {
-        return this.propertyMap.get("name");
+        return this.attributeMap.get("name");
     }
 
     set name(val) {
-        this.propertyMap.set("name", val);
+        this.attributeMap.set("name", val);
     }
 
     get comment() {
-        return this.propertyMap.get("comment");
+        return this.attributeMap.get("comment");
     }
 
     set comment(val) {
-        this.propertyMap.set("comment", val);
+        this.attributeMap.set("comment", val);
     }
 
     /**
@@ -135,7 +142,7 @@ function getQueryVariable(name, queryString) {
 async function fetchTemplateInfo(templateId) {
     return new Promise((resolve, reject) => {
         $.ajax({
-            url: "info/" + templateId,
+            url: "../info/" + templateId,
             method: "GET",
             success: function (data) {
                 if (!data.hasOwnProperty("scheme")) {
@@ -146,7 +153,7 @@ async function fetchTemplateInfo(templateId) {
                     reject("invalid response");
                     return;
                 }
-                resolve(new STemplate(data['uniqueId'], data['propertyMap']));
+                resolve(new STemplate(data['uniqueId'], data['attributes']));
             },
             error: function (reason) {
                 // noinspection EqualityComparisonWithCoercionJS

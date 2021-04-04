@@ -68,6 +68,11 @@ public class TextContainer {
     }
 
     public void updateTemplate(File templateFile, Set<String> knownKeys) throws IOException {
+        if (!templateFile.isFile()) {
+            if (!(templateFile.getParentFile().mkdirs() && templateFile.createNewFile()))
+                throw new IOException("failed creating template file " + templateFile);
+        }
+
         Properties properties = new Properties();
         List<String> keyList = new ArrayList<>(knownKeys);
         Collections.sort(keyList);
@@ -104,7 +109,7 @@ public class TextContainer {
                 value = defaultLanguage.getProperty(key);
             }
             if (value == null) {
-                ExceptionReporting.report("could not find any value of language key: " + key);
+                ExceptionReporting.report(TextContainer.class, "missing language key", "missing language key: " + key);
                 return key;
             }
             return value;

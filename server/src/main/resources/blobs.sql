@@ -5,6 +5,6 @@ CREATE TABLE blobs (
     `file_name` VARCHAR(128) NULL,
     `create_time` TIMESTAMP NOT NULL DEFAULT now(),
     PRIMARY KEY(`blob_id`),
-    FOREIGN KEY(`storage_id`) REFERENCES `blob_storages`.`id`,
+    FOREIGN KEY(`storage_id`) REFERENCES `blob_storages`(`id`),
     UNIQUE KEY(`blob_key`)
 ) CHARSET UTF8 COLLATE utf8_unicode_ci;

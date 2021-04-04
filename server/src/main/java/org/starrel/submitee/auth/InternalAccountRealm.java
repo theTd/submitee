@@ -4,8 +4,8 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import de.mkammerer.argon2.Argon2;
 import de.mkammerer.argon2.Argon2Factory;
-import org.apache.ibatis.jdbc.ScriptRunner;
 import org.starrel.submitee.ExceptionReporting;
+import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.User;
 import org.starrel.submitee.model.UserRealm;
@@ -117,7 +117,7 @@ public class InternalAccountRealm implements UserRealm {
                     server.getLogger().info("creating table internal_users");
 
                     URL resource = getClass().getResource("/internal_users.sql");
-                    new ScriptRunner(conn).runScript(new InputStreamReader(resource.openStream()));
+                    new ScriptRunner(conn, true, true).runScript(new InputStreamReader(resource.openStream()));
                 }
             }
         }
@@ -136,7 +136,7 @@ public class InternalAccountRealm implements UserRealm {
                     return RESULT_INCORRECT_PASSWORD;
                 }
             } catch (Exception e) {
-                ExceptionReporting.report(e);
+                ExceptionReporting.report(AuthHandler.class, "handle login request", e);
                 return RESULT_INTERNAL_ERROR;
             }
         }

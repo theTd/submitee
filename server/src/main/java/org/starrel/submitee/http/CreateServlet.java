@@ -24,7 +24,7 @@ public class CreateServlet extends AbstractJsonServlet {
         String type = body.get("type").getAsString();
 
         switch (type) {
-            case "template": {
+            case "STemplate": {
                 try {
                     STemplate template = SubmiteeServer.getInstance().createTemplate();
                     resp.setStatus(HttpStatus.OK_200);
@@ -36,7 +36,7 @@ public class CreateServlet extends AbstractJsonServlet {
                     return;
                 }
             }
-            case "submit": {
+            case "Submission": {
                 JsonElement ele;
                 if (!body.has("content") || !(ele = body.get("content")).isJsonObject()) {
                     ExceptionReporting.report(CreateServlet.class, "parsing submit request",

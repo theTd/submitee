@@ -33,7 +33,7 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
 
     @SuppressWarnings("unchecked")
     @Override
-    public JsonObject toJson(Predicate<String> pathFilter) {
+    public JsonObject toJsonTree(Predicate<String> pathFilter) {
         List<String> removes = new ArrayList<>(0);
         JsonObject obj = ((JsonTreeAttributeSource<Void>) owningSource).getJsonRoot().getAsJsonObject();
         for (String path : obj.keySet()) {
@@ -48,12 +48,15 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
     }
 
     @Override
-    public JsonObject toJson() {
-        return toJson(path -> true);
+    public JsonObject toJsonTree() {
+        return toJsonTree(path -> true);
     }
 
     @Override
     public void setAutoSaveAttribute(boolean autoSaveAttribute) {
+        if (!this.autoSaveAttribute && autoSaveAttribute) {
+            saveAttribute(SubmiteeServer.getInstance().getMongoDatabase());
+        }
         this.autoSaveAttribute = autoSaveAttribute;
     }
 
@@ -66,7 +69,7 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
     public void saveAttribute(MongoDatabase mongoDatabase) {
         if (collectionName == null) throw new RuntimeException("this attribute map cannot be saved");
         MongoCollection<Document> collection = mongoDatabase.getCollection(collectionName);
-        Document body = Document.parse(SubmiteeServer.GSON.toJson(toJson()));
+        Document body = Document.parse(SubmiteeServer.GSON.toJson(toJsonTree()));
         Document document = new Document();
         document.put("id", holder.getAttributePersistKey());
         document.put("body", body);
@@ -85,6 +88,8 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
         if (found != null) {
             Document body = (Document) found.get("body");
             setAll("", JsonParser.parseString(body.toJson()).getAsJsonObject());
+        } else {
+            setAll("", new JsonObject());
         }
     }
 

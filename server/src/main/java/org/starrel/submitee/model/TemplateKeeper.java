@@ -2,8 +2,13 @@ package org.starrel.submitee.model;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.model.Projections;
 import lombok.SneakyThrows;
-import org.apache.ibatis.jdbc.ScriptRunner;
+import org.bson.Document;
+import org.bson.conversions.Bson;
+import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
 
 import javax.sql.DataSource;
@@ -12,6 +17,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -41,12 +47,13 @@ public class TemplateKeeper {
         }
     }
 
-    private void initTable() throws SQLException {
+    private void initTable() throws Exception {
         try (Connection conn = dataSource.getConnection()) {
             ResultSet r = conn.getMetaData().getTables(null, null, "templates", null);
             if (!r.next()) {
                 SubmiteeServer.getInstance().getLogger().info("creating table templates");
-                new ScriptRunner(conn).runScript(new InputStreamReader(getClass().getResourceAsStream("/templates.sql")));
+                new ScriptRunner(conn, true, true).runScript(new InputStreamReader(getClass().getResourceAsStream("/templates.sql")));
+
             }
         }
     }
@@ -57,17 +64,12 @@ public class TemplateKeeper {
         grouping = grouping.toUpperCase();
         UUID uniqueId = UUID.randomUUID();
         try (Connection conn = dataSource.getConnection()) {
-            PreparedStatement stmt = conn.prepareStatement("INSERT INTO `templates`(`uuid`,`grouping`) VALUES (?,?)");
+            String templateId = allocateTemplateId(grouping);
+
+            PreparedStatement stmt = conn.prepareStatement("INSERT INTO `templates`(`uuid`,`grouping`,`template_id`,`version`) VALUES (?,?,?,0)");
             stmt.setString(1, uniqueId.toString());
             stmt.setString(2, grouping);
-            stmt.executeUpdate();
-            ResultSet r = stmt.executeQuery("SELECT LAST_INSERT_ID()");
-            r.next();
-            int insertedId = r.getInt(1);
-            String templateId = allocateTemplateId(grouping);
-            stmt = conn.prepareStatement("UPDATE `templates` SET `template_id`=? WHERE `id`=?");
-            stmt.setString(1, templateId);
-            stmt.setInt(2, insertedId);
+            stmt.setString(3, templateId);
             stmt.executeUpdate();
 
             STemplateImpl t = new STemplateImpl(this, uniqueId, grouping, templateId, 0, 0, true);
@@ -105,8 +107,11 @@ public class TemplateKeeper {
                 PreparedStatement stmt = conn.prepareStatement("SELECT count(*) FROM `templates` WHERE `grouping`=? GROUP BY `template_id`");
                 stmt.setString(1, grouping);
                 ResultSet r = stmt.executeQuery();
-                r.next();
-                return new AtomicInteger(r.getInt(1));
+                if (r.next()){
+                    return new AtomicInteger(r.getInt(1));
+                }else{
+                    return new AtomicInteger(0);
+                }
             }
         });
         return grouping + "-" + id.incrementAndGet();
@@ -120,12 +125,12 @@ public class TemplateKeeper {
                     PreparedStatement stmt = conn.prepareStatement("SELECT `uuid` FROM `templates` WHERE `template_id`=? ORDER BY `version` DESC LIMIT 1");
                     stmt.setString(1, templateId);
                     ResultSet r = stmt.executeQuery();
-                    if (!r.next()) throw TemplateNotExistsSignal.INSTANCE;
+                    if (!r.next()) throw NotExistsSignal.INSTANCE;
                     return UUID.fromString(r.getString(1));
                 }
             });
         } catch (ExecutionException e) {
-            if (e.getCause() instanceof TemplateNotExistsSignal) {
+            if (e.getCause() instanceof NotExistsSignal) {
                 return null;
             } else {
                 throw e;
@@ -134,9 +139,15 @@ public class TemplateKeeper {
         return getTemplate(latestVersion);
     }
 
-    public List<STemplateImpl> getTemplateAllVersions(String templateId) {
-        // TODO: 2021/4/4
-        return null;
+    public List<STemplateImpl> getByQuery(Bson filters) throws ExecutionException {
+        MongoCollection<Document> templates = SubmiteeServer.getInstance().getMongoDatabase().getCollection("templates");
+        MongoCursor<Document> cursor = templates.find(filters).projection(Projections.fields(Projections.include("uuid"))).cursor();
+
+        List<STemplateImpl> list = new LinkedList<>();
+        while (cursor.hasNext()) {
+            list.add(getTemplate(UUID.fromString(cursor.next().getString("uuid"))));
+        }
+        return list;
     }
 
     public STemplateImpl getTemplate(UUID uniqueId) throws ExecutionException {
@@ -147,7 +158,7 @@ public class TemplateKeeper {
                     stmt.setString(1, uniqueId.toString());
                     ResultSet r = stmt.executeQuery();
                     if (!r.next()) {
-                        throw TemplateNotExistsSignal.INSTANCE;
+                        throw NotExistsSignal.INSTANCE;
                     }
                     String grouping = r.getString(1);
                     String templateId = r.getString(2);
@@ -170,7 +181,7 @@ public class TemplateKeeper {
                 }
             });
         } catch (ExecutionException e) {
-            if (e.getCause() instanceof TemplateNotExistsSignal) {
+            if (e.getCause() instanceof NotExistsSignal) {
                 return null;
             } else {
                 throw e;

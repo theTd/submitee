@@ -59,7 +59,7 @@ public class FileTreeBlobStorage implements BlobStorage {
         try {
             initializeDirectory(uriSpec.get());
         } catch (IOException e) {
-            ExceptionReporting.report("initializing blob storage " + getAttributePersistKey(), e);
+            ExceptionReporting.report(FileTreeBlobStorage.class, "initializing directory", e);
         }
     }
 

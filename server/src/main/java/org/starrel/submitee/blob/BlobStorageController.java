@@ -2,7 +2,7 @@ package org.starrel.submitee.blob;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import org.apache.ibatis.jdbc.ScriptRunner;
+import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
 
 import java.io.IOException;
@@ -41,7 +41,7 @@ public class BlobStorageController {
             if (!r.next()) {
                 server.getLogger().info("creating table blob_storages");
                 try {
-                    new ScriptRunner(conn).runScript(new InputStreamReader(getClass().getResourceAsStream("/blob_storages.sql")));
+                    new ScriptRunner(conn, true, true).runScript(new InputStreamReader(getClass().getResourceAsStream("/blob_storages.sql")));
                 } catch (Exception e) {
                     throw new RuntimeException("failed creating table blob_storages", e);
                 }
@@ -50,7 +50,7 @@ public class BlobStorageController {
             if (!r.next()) {
                 server.getLogger().info("creating table blobs");
                 try {
-                    new ScriptRunner(conn).runScript(new InputStreamReader(getClass().getResourceAsStream("/blobs.sql")));
+                    new ScriptRunner(conn, true, true).runScript(new InputStreamReader(getClass().getResourceAsStream("/blobs.sql")));
                 } catch (Exception e) {
                     throw new RuntimeException("failed creating table blobs", e);
                 }

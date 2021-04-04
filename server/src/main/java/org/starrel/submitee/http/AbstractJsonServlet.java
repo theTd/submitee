@@ -29,6 +29,7 @@ public abstract class AbstractJsonServlet extends SubmiteeHttpServlet {
             return;
         }
         if (!json.isJsonObject()) {
+            ExceptionReporting.report(AbstractJsonServlet.class, "parsing request body", "unexpected request body: " + json);
             responseBadRequest(req, resp);
             return;
         }
@@ -36,14 +37,4 @@ public abstract class AbstractJsonServlet extends SubmiteeHttpServlet {
     }
 
     protected abstract void request(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException;
-
-    protected void responseBadRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        resp.setStatus(HttpStatus.BAD_REQUEST_400);
-        resp.getWriter().println(I18N.Http.INVALID_INPUT.format(req));
-    }
-
-    protected void responseInternalError(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
-        resp.getWriter().println(I18N.Http.INTERNAL_ERROR.format(req));
-    }
 }

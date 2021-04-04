@@ -45,8 +45,7 @@ public class AuthServlet extends AbstractJsonServlet {
             result = authScheme.auth(body.get("content"));
         } catch (Exception exception) {
             resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
-            ExceptionReporting.report("authenticating user, request body is "
-                    + SubmiteeServer.GSON.toJson(body), exception);
+            ExceptionReporting.report(AuthServlet.class, "authenticating user", exception);
             return;
         }
 

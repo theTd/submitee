@@ -170,6 +170,6 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
             parent.childUpdated(this.path + "." + path);
             return;
         }
-        ExceptionReporting.report("unhandled top level child update", new Throwable());
+        ExceptionReporting.report(AttributeSpecImpl.class, "unhandled top level child update", "");
     }
 }

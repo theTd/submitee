@@ -3,14 +3,15 @@ package org.starrel.submitee;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.handler.ErrorHandler;
-import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.handler.*;
 import org.eclipse.jetty.server.session.DefaultSessionIdManager;
 import org.eclipse.jetty.server.session.SessionHandler;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,7 @@ import org.starrel.submitee.language.TextContainer;
 import org.starrel.submitee.model.*;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.RequestDispatcher;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
@@ -41,66 +43,63 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     public final static Gson GSON = new Gson();
 
     private static SubmiteeServer instance;
+
+    private final InetSocketAddress[] listenAddresses;
+
     private final MongoDatabase mongoDatabase;
     private final DataSource dataSource;
     private final Server jettyServer;
-    private final BlobStorageController blobStorageController = new BlobStorageController(this);
-    private final TemplateKeeper templateKeeper = new TemplateKeeper(this);
-
     private final Map<Class<?>, AttributeSerializer<?>> attributeSerializerMap = new HashMap<>();
-    private final AttributeMap<SubmiteeServer> attributeMap;
 
     private final TextContainer textContainer;
+    private final BlobStorageController blobStorageController;
+    private final TemplateKeeper templateKeeper;
+    private final ObjectMapController objectMapController;
 
+    private AttributeMap<SubmiteeServer> attributeMap;
     // region settings
-    private final AttributeSpec<String> defaultLanguage;
+    private AttributeSpec<String> defaultLanguage;
     // endregion
-
     private final Logger logger;
 
     public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress[] listenAddresses) throws IOException {
         instance = this;
         APIBridge.instance = this;
 
+        this.listenAddresses = listenAddresses;
         this.logger = LoggerFactory.getLogger(SubmiteeServer.class);
         this.dataSource = dataSource;
         this.mongoDatabase = mongoDatabase;
 
         jettyServer = new Server();
-        setupJettyConnectors(listenAddresses);
-        setupJettyHandlers();
-
-        setupAttributeSerializers();
-        this.attributeMap = readAttributeMap(this, "management");
-
-        // region setup attribute specs
-        this.defaultLanguage = this.attributeMap.of("default-language", String.class);
-        // endregion
-
-        // region setup language
-        if (this.defaultLanguage.get() == null) {
-            this.defaultLanguage.set("zh-CN");
-        }
+        blobStorageController = new BlobStorageController(this);
+        templateKeeper = new TemplateKeeper(this);
         textContainer = new TextContainer();
-        textContainer.init();
-        try {
-            Class.forName("org.starrel.submitee.I18N");
-        } catch (ClassNotFoundException e) {
-            throw new Error(e);
-        }
-        textContainer.updateTemplate(new File("text" + File.separator + "template.properties"), I18N.ConstantI18NKey.KNOWN_KEYS);
-        // endregion
+        objectMapController = new ObjectMapController(this);
     }
 
     private static Handler initServletHandler() {
-        ServletHandler servletHandler = new ServletHandler();
-        servletHandler.addFilterWithMapping(ConnectionThrottleFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        servletHandler.addFilterWithMapping(SessionFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        servletHandler.addServletWithMapping(AuthServlet.class, "/auth/*");
-        servletHandler.addServletWithMapping(CreateServlet.class, "/create/*");
-        servletHandler.addServletWithMapping(PasteServlet.class, "/paste/*");
-        servletHandler.addServletWithMapping(InfoServlet.class, "/info/*");
+        ServletContextHandler servletHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
+
+//        servletHandler.addFilter(UncaughtExceptionFilter.class, "/*", EnumSet.allOf(DispatcherType.class));
+        servletHandler.addFilter(ConnectionThrottleFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addFilter(SessionFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addServlet(AuthServlet.class, "/auth/*");
+        servletHandler.addServlet(CreateServlet.class, "/create/*");
+        servletHandler.addServlet(PasteServlet.class, "/paste/*");
+        servletHandler.addServlet(InfoServlet.class, "/info/*");
         return servletHandler;
+    }
+
+    private static Handler initStaticHandler() {
+        ResourceHandler resourceHandler = new ResourceHandler();
+        resourceHandler.setDirectoriesListed(false);
+        resourceHandler.setWelcomeFiles(new String[]{"index.html"});
+        resourceHandler.setResourceBase("static");
+        ContextHandler contextHandler = new ContextHandler();
+        contextHandler.setContextPath("/static");
+        contextHandler.setHandler(resourceHandler);
+        return contextHandler;
     }
 
     public static SubmiteeServer getInstance() {
@@ -121,17 +120,18 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         sessionIdManager.setWorkerName("def");
         jettyServer.setSessionIdManager(sessionIdManager);
 
-        HandlerCollection handlerCollection = new HandlerCollection();
-        handlerCollection.addHandler(initServletHandler());
-
-        SessionHandler sessionHandler = new SessionHandler();
-        sessionHandler.setHandler(handlerCollection);
-
-        jettyServer.setHandler(sessionHandler);
+        HandlerList handlerList = new HandlerList();
+        handlerList.addHandler(initStaticHandler());
+        handlerList.addHandler(initServletHandler());
+        jettyServer.setHandler(handlerList);
         jettyServer.setErrorHandler(new ErrorHandler() {
             @Override
             public void handle(String target, Request baseRequest,
                                HttpServletRequest request, HttpServletResponse response) throws IOException {
+                Throwable stacktrace = (Throwable) request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
+                if (stacktrace != null) {
+                    ExceptionReporting.report("error handler", "uncaught error occurred", stacktrace);
+                }
                 response.getWriter().close();
             }
         });
@@ -147,7 +147,27 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public void start() throws Exception {
-        jettyServer.start();
+
+        setupAttributeSerializers();
+        this.attributeMap = readAttributeMap(this, "management");
+
+        // region setup attribute specs
+        this.defaultLanguage = this.attributeMap.of("default-language", String.class);
+        // endregion
+
+        // region setup language
+        if (this.defaultLanguage.get() == null) {
+            this.defaultLanguage.set("zh-CN");
+        }
+        textContainer.init();
+        try {
+            Class.forName("org.starrel.submitee.I18N");
+        } catch (ClassNotFoundException e) {
+            throw new Error(e);
+        }
+        textContainer.updateTemplate(new File("text" + File.separator + "template.properties"), I18N.ConstantI18NKey.KNOWN_KEYS);
+        // endregion
+
         // region setup blob storage
         addBlobStorageProvider(FileTreeBlobStorage.PROVIDER);
 
@@ -158,14 +178,29 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         }
         // endregion
 
-        // region init template keeper
+        // region setup template keeper
         try {
             templateKeeper.init();
         } catch (Exception e) {
             throw new IOException("failed initializing template keeper", e);
         }
         // endregion
+
+        // region setup object map
+        try {
+            objectMapController.init();
+        } catch (SQLException e) {
+            throw new IOException("failed initializing object map controller", e);
+        }
+        // endregion
+
         addUserRealm(new InternalAccountRealm(this));
+
+        // region setup jetty connectors and start jetty server
+        setupJettyConnectors(listenAddresses);
+        setupJettyHandlers();
+        jettyServer.start();
+        // endregion
     }
 
     @Override
@@ -243,8 +278,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public List<STemplateImpl> getTemplateAllVersion(String templateId) {
-        return templateKeeper.getTemplateAllVersions(templateId);
+    public List<STemplateImpl> getTemplateAllVersion(String templateId) throws ExecutionException {
+        return templateKeeper.getByQuery(Filters.eq("template-id", templateId));
     }
 
     @Override
@@ -357,8 +392,11 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         return null;
     }
 
-    public Object getObjectFromUUID(UUID uniqueId) {
-        // TODO: 2021/3/26
-        return null;
+    public TemplateKeeper getTemplateKeeper() {
+        return templateKeeper;
+    }
+
+    public ObjectMapController getObjectMapController() {
+        return objectMapController;
     }
 }

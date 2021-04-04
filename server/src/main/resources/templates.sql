@@ -7,5 +7,15 @@ CREATE TABLE templates (
     INDEX(`template_id`),
     INDEX(`grouping`,`version`),
     INDEX(`uuid`),
-    PRIMARY KEY(`id`),
+    PRIMARY KEY(`id`)
 ) CHARSET utf8 COLLATE utf8_unicode_ci;
+
+DELIMITER $$
+CREATE TRIGGER object_map_update
+    AFTER INSERT
+    ON templates
+    FOR EACH ROW
+BEGIN
+    INSERT INTO object_map(uuid, type) VALUES (NEW.uuid, 'template');
+END$$
+DELIMITER ;

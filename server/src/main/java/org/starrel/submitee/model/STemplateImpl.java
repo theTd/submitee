@@ -5,6 +5,7 @@ import org.starrel.submitee.attribute.AttributeFilter;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
 
+import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,8 +32,20 @@ public class STemplateImpl implements STemplate {
 
         this.attributeMap = createAttributeMap ? SubmiteeServer.getInstance().readAttributeMap(this, "templates") :
                 SubmiteeServer.getInstance().readAttributeMap(this, "templates");
+
         this.committedBy = attributeMap.of("committed-by", UserDescriptor.class);
         this.comment = attributeMap.of("comment", String.class);
+
+        if (createAttributeMap) {
+            boolean save = this.attributeMap.getAutoSaveAttribute();
+            this.attributeMap.setAutoSaveAttribute(false);
+            this.attributeMap.set("uuid", uniqueId.toString());
+            this.attributeMap.set("grouping", grouping);
+            this.attributeMap.set("template-id", templateId);
+            this.attributeMap.set("version", version);
+
+            this.attributeMap.setAutoSaveAttribute(save);
+        }
     }
 
     @Override

@@ -51,7 +51,7 @@ public interface SServer {
 
     STemplate getTemplateFromUUID(UUID templateUUID) throws ExecutionException;
 
-    List<? extends STemplate> getTemplateAllVersion(String templateId);
+    List<? extends STemplate> getTemplateAllVersion(String templateId) throws ExecutionException;
 
     List<String> getTemplateIds();
 
@@ -68,10 +68,6 @@ public interface SServer {
     AuthScheme createPasswordAuthScheme();
 
     I18N.I18NKey getI18nKey(String key);
-
-//    void reportException(Throwable throwable);
-//
-//    void reportException(String activity, Throwable throwable);
 
     void reportException(String entity, String activity, String detail);
 

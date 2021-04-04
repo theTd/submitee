@@ -58,5 +58,6 @@ public abstract class I18N {
         public final static ConstantI18NKey INTERNAL_ERROR = new ConstantI18NKey("http.internal_error");
         public final static ConstantI18NKey INVALID_INPUT = new ConstantI18NKey("http.invalid_input");
         public final static ConstantI18NKey TOO_MANY_REQUEST = new ConstantI18NKey("http.too_many_request");
+        public final static ConstantI18NKey NOT_FOUND = new ConstantI18NKey("http.not_found");
     }
 }

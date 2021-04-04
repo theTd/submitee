@@ -9,9 +9,9 @@ public interface AttributeMap<TContext extends AttributeHolder<?>> extends Attri
 
     TContext getHolder();
 
-    JsonObject toJson(Predicate<String> pathFilter);
+    JsonObject toJsonTree(Predicate<String> pathFilter);
 
-    JsonObject toJson();
+    JsonObject toJsonTree();
 
     void setAutoSaveAttribute(boolean autoSaveAttribute);
 
