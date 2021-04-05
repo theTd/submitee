@@ -88,6 +88,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         servletHandler.addServlet(CreateServlet.class, "/create/*");
         servletHandler.addServlet(PasteServlet.class, "/paste/*");
         servletHandler.addServlet(InfoServlet.class, "/info/*");
+        servletHandler.addServlet(BatchGetServlet.class, "/batch-get/*");
         return servletHandler;
     }
 

@@ -25,7 +25,7 @@ public abstract class AbstractJsonServlet extends SubmiteeHttpServlet {
             json = JsonParser.parseReader(new InputStreamReader(req.getInputStream()));
         } catch (Exception e) {
             ExceptionReporting.report(AbstractJsonServlet.class, "parsing request body", e);
-            responseInternalError(req, resp);
+            responseBadRequest(req, resp);
             return;
         }
         if (!json.isJsonObject()) {

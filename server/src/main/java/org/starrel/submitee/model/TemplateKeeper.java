@@ -107,9 +107,9 @@ public class TemplateKeeper {
                 PreparedStatement stmt = conn.prepareStatement("SELECT count(*) FROM `templates` WHERE `grouping`=? GROUP BY `template_id`");
                 stmt.setString(1, grouping);
                 ResultSet r = stmt.executeQuery();
-                if (r.next()){
+                if (r.next()) {
                     return new AtomicInteger(r.getInt(1));
-                }else{
+                } else {
                     return new AtomicInteger(0);
                 }
             }
@@ -141,11 +141,11 @@ public class TemplateKeeper {
 
     public List<STemplateImpl> getByQuery(Bson filters) throws ExecutionException {
         MongoCollection<Document> templates = SubmiteeServer.getInstance().getMongoDatabase().getCollection("templates");
-        MongoCursor<Document> cursor = templates.find(filters).projection(Projections.fields(Projections.include("uuid"))).cursor();
+        MongoCursor<Document> cursor = templates.find(filters).projection(Projections.fields(Projections.include("id"))).cursor();
 
         List<STemplateImpl> list = new LinkedList<>();
         while (cursor.hasNext()) {
-            list.add(getTemplate(UUID.fromString(cursor.next().getString("uuid"))));
+            list.add(getTemplate(UUID.fromString(cursor.next().getString("id"))));
         }
         return list;
     }

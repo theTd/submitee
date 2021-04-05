@@ -139,29 +139,26 @@ function getQueryVariable(name, queryString) {
     return null;
 }
 
-async function fetchTemplateInfo(templateId) {
+async function fetchTemplateInfo(filter, latest) {
     return new Promise((resolve, reject) => {
         $.ajax({
-            url: "../info/" + templateId,
-            method: "GET",
+            url: "../batch-get",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                scheme: "STemplate",
+                latest: latest,
+                filter: filter
+            }),
             success: function (data) {
-                if (!data.hasOwnProperty("scheme")) {
-                    reject("invalid response");
-                    return;
+                let all = Array();
+                for (let val of data) {
+                    all.push(new STemplate(val['uniqueId'], val['attributes']));
                 }
-                if (data['scheme'] !== 'STemplate') {
-                    reject("invalid response");
-                    return;
-                }
-                resolve(new STemplate(data['uniqueId'], data['attributes']));
+                resolve(all);
             },
-            error: function (reason) {
-                // noinspection EqualityComparisonWithCoercionJS
-                if (reason.status == '404') {
-                    reject("cannot find target template");
-                } else {
-                    reject(reason.status);
-                }
+            error: function (error) {
+                reject(error.responseText);
             }
         });
     });

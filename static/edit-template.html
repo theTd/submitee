@@ -111,8 +111,8 @@
     </div>
 </div>
 
-<!--<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>-->
-<!--<script src="js/model.js"></script>-->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="js/model.js"></script>
 
 <script>
     function findFieldIdByElement(element) {
@@ -252,8 +252,8 @@
     let currentTemplate;
     let currentTemplateId = getQueryVariable("target");
 
-    fetchTemplateInfo(currentTemplateId).then(value => {
-        currentTemplate = value;
+    fetchTemplateInfo({uuid: currentTemplateId}, true).then(value => {
+        currentTemplate = value[0];
         $(".editing-template")[0].textContent = currentTemplate.name || currentTemplate.templateId;
         addPresentFieldRows();
     }, reason => {

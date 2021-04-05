@@ -20,6 +20,9 @@
         </div>
     </div>
 </template>
+<template id="template-list-page-item">
+    <li class="page-item"><a class="page-link" href="#">3</a></li>
+</template>
 
 <div class="container">
     <div class="row">
@@ -35,12 +38,7 @@
     <hr/>
     <hr id="insert-template-before"/>
     <nav class="row col">
-        <ul class="pagination">
-            <li class="page-item"><a class="page-link" href="#">Previous</a></li>
-            <li class="page-item"><a class="page-link" href="#">1</a></li>
-            <li class="page-item active"><a class="page-link" href="#">2</a></li>
-            <li class="page-item"><a class="page-link" href="#">3</a></li>
-            <li class="page-item"><a class="page-link" href="#">Next</a></li>
+        <ul class="pagination" id="template-list-pagination">
         </ul>
     </nav>
     <hr/>
@@ -49,9 +47,9 @@
     </div>
 </div>
 
-<!--<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>-->
-<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>-->
-<!--<script src="js/model.js"></script>-->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>
+<script src="js/model.js"></script>
 <script>
 
     /**
@@ -76,13 +74,6 @@
         f.comment = "这是另一个测试字段，同样看起来比较长";
         t.addField(f);
         return t;
-    }
-
-    async function fetchTemplates(page) {
-        // todo select pages
-        return new Promise((resolve, reject) => {
-            resolve([__generateTestTemplate()])
-        });
     }
 
     function createTemplate() {
@@ -123,7 +114,7 @@
 
     function editTemplate(element) {
         let templateId = findTemplateIdByElement(element);
-        window.location.href = "?method=edit-template&target=" + templateId;
+        window.location.href = "management.html?method=edit-template&target=" + templateId;
     }
 
     /**
@@ -138,22 +129,67 @@
         return document.importNode(element.content, true);
     }
 
-    function buildTemplateList() {
+    function buildTemplateList(templateList) {
         let relative = $("#insert-template-before")[0];
-        currentTemplateList.forEach(function (value, key) {
+        templateList.forEach(function (value, key) {
             relative.parentNode.insertBefore(createTemplateElement(value), relative);
         })
     }
 
+    function buildPagination(currentPage, maxPages) {
+        let paginationContainer = $("#template-list-pagination")[0];
+        let prevPage = currentPage - 1;
+        if (prevPage < 1) prevPage = null;
+        let nextPage = currentPage + 1;
+        if (nextPage > maxPages) nextPage = null;
+
+        let node;
+        node = createPageItem("上一页", prevPage ? "?method=template-list&page=" + prevPage : "");
+        if (!prevPage) {
+            $(node).addClass("disabled");
+        }
+        paginationContainer.appendChild(node);
+
+        for (let i = 1; i <= maxPages; i++) {
+            paginationContainer.appendChild(createPageItem(i, "?method=template-list&page=" + i, i === currentPage));
+        }
+
+        node = createPageItem("下一页", nextPage ? "?method=template-list&page=" + nextPage : "");
+        if (!nextPage) {
+            $(node).addClass("disabled");
+        }
+        paginationContainer.appendChild(node);
+    }
+
+    function createPageItem(text, href, active) {
+        let t = $("#template-list-page-item")[0];
+        t.content.querySelector(".page-link").href = href;
+        t.content.querySelector(".page-link").textContent = text;
+        if (active) {
+            $(t.content.querySelector(".page-item")).addClass("active");
+        } else {
+            $(t.content.querySelector(".page-item")).removeClass("active");
+        }
+        return document.importNode(t.content, true);
+    }
+
     let currentTemplateList;
 
-    let page = getQueryVariable("page") || 0;
+    const pageSize = 10;
+    let page = getQueryVariable("page") || 1;
+    fetchTemplateInfo({}, true).then(array => {
+        let maxPages = Math.ceil(array.length / pageSize);
+        if (page > maxPages) page = maxPages;
+        buildPagination(page, maxPages);
 
-    fetchTemplates(page).then(value => {
-        currentTemplateList = value;
-        buildTemplateList();
-    }, rejectReason => {
-        alert("failed: " + rejectReason);
+        let shown = Array();
+        for (let i = pageSize * (page - 1); i < pageSize * page && i < array.length; i++) {
+            shown.push(array[i]);
+        }
+
+        buildTemplateList(shown);
+    }, reject => {
+        alert(reject);
         window.location.refresh();
     });
 </script>
