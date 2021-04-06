@@ -50,6 +50,10 @@ class SField {
         this.attributeMap.set("type", val);
     }
 
+    getTypeDisplayName() {
+        return getFieldTypeDisplayName(this.type);
+    }
+
     get name() {
         return this.attributeMap.get("name");
     }
@@ -115,6 +119,14 @@ class STemplate {
 
     set comment(val) {
         this.attributeMap.set("comment", val);
+    }
+
+    get desc() {
+        return this.attributeMap.get("desc");
+    }
+
+    set desc(val) {
+        this.attributeMap.set("desc", val);
     }
 
     /**
@@ -252,14 +264,32 @@ class FieldController {
         this.displayName = fieldType;
     }
 
-    generateResolveFunction(field) {
+    resolveSubmission(field) {
 
     }
 
-    generateHtml(field) {
+    generateSubmissionHtml(field) {
+        return `<div class="alert alert-warning">存在问题的字段: ${field.name}</div>`
+    }
+
+    generateConfigurationHtml(field) {
+
+    }
+
+    applyConfiguration(field) {
 
     }
 
     validateResolveResult(field, resolveResult) {
+
     }
+
+    getContainerId(field) {
+        return "field-container-for-" + field.name;
+    }
+}
+
+function getFieldTypeDisplayName(type) {
+    let c = fieldControllers[type];
+    return c ? c.displayName : type;
 }

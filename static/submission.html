@@ -9,41 +9,123 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
-    <title></title>
+    <title>正在载入</title>
+
+    <style>
+        #template-desc {
+            margin-top: 2rem;
+            padding-left: 1rem;
+            box-shadow: inset 4px 0 0 #797979;
+            margin-bottom: 2rem;
+        }
+
+        #field-container .row {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-    <hr id="insert-fields-before"/>
+<template id="template-field-container">
+    <div class="row field-container">
+        <div class="col col-2 container-field-name"></div>
+        <div class="col col-10 container-field-input"></div>
+    </div>
+</template>
+<div class="container mt-3" id="main">
+    <div class="row">
+        <h4 id="template-name"></h4>
+    </div>
+    <div class="row">
+        <div id="template-desc"></div>
+    </div>
+
+    <hr/>
+    <form onsubmit="createSubmission();return false" id="field-container">
+        <hr id="insert-fields-before"/>
+        <button class="btn btn-primary" onclick="createSubmission()">提交</button>
+    </form>
 </div>
 <!-- Optional JavaScript -->
 <!-- jQuery first, then Popper.js, then Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>-->
+<script src="https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js"></script>
 <script src="js/model.js"></script>
 <script src="js/field-controllers.js"></script>
 <script>
+
+    function createSubmission() {
+        let result = "";
+        currentTemplate.fields.forEach(value => {
+            let controller = fieldControllers[value.fieldType];
+            if (!controller) {
+                result += "unable to resolve " + value.fieldType; // todo
+            } else {
+                let resolve = controller.resolveSubmission(value);
+                result += resolve;
+                result += "\n";
+            }
+        })
+        alert(result);
+    }
+
     /**
-     *
-     * @param {STemplate} template
+     * @param {SField} field
      */
-    function buildFields(template) {
-        // todo
+    function createErrorLine(field) {
+        let node = document.createElement("div");
+        node.classList.add("alert");
+        node.classList.add("alert-warning");
+        node.innerText = "未知字段：" + field.type;
+        return node;
+    }
+
+    function createFieldContainer(field, html) {
+        let template = $("#template-field-container")[0];
+        template.content.querySelector(".container-field-name").textContent = field.name;
+        template.content.querySelector(".container-field-input").innerHTML = html;
+        template.content.querySelector(".field-container").setAttribute("submitee-field-name", field.name);
+        return document.importNode(template.content, true);
+    }
+
+    function loadMetadata() {
+        document.title = currentTemplate.name;
+        $("#template-name").text(currentTemplate.name);
+        $("#template-desc").html(currentTemplate.desc);
+    }
+
+    function buildFields() {
+        let relative = $("#insert-fields-before")[0];
+        currentTemplate.fields.forEach((value, index) => {
+            let typeController = fieldControllers[value.type];
+            if (!typeController) {
+                relative.parentNode.insertBefore(createErrorLine(value), relative);
+            } else {
+                relative.parentNode.insertBefore(createFieldContainer(value,
+                    typeController.generateSubmissionHtml(value)), relative);
+                // value.resolveFunction = typeController.generateResolveFunction(value);
+            }
+        })
     }
 
     let target = getQueryVariable("target");
+    let currentTemplate;
+
     if (!target) {
         alert("invalid target");
         window.history.back();
     } else {
-        let templateInfo = fetchSingleTemplateInfo(target);
-        if (!templateInfo) {
+        fetchSingleTemplateInfo(target).then(value => {
+            currentTemplate = value;
+
+            loadMetadata();
+            buildFields();
+        }, error => {
             alert("invalid target");
             window.history.back();
-        } else {
-            buildFields(templateInfo);
-        }
+        });
     }
 </script>
 </body>

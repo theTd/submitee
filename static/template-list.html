@@ -8,6 +8,13 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <title></title>
+
+    <style>
+        .template-container {
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
 </head>
 <body>
 
@@ -148,7 +155,7 @@
     }
 
     const pageSize = 10;
-    let page = getQueryVariable("page") || 1;
+    let page = parseInt(getQueryVariable("page")) || 1;
     fetchTemplateInfo({}, true).then(array => {
         let maxPages = Math.ceil(array.length / pageSize);
         if (page > maxPages) page = maxPages;

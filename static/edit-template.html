@@ -13,19 +13,33 @@
     <title></title>
 
     <style>
-        .main .col {
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-        }
-
         .main input {
             width: 100%;
         }
+
+        .main .container {
+            box-shadow: inset 4px 0 0 #797979;
+            margin-bottom: 2rem;
+        }
+
+        .field-configuration {
+            box-shadow: inset 4px 0 0 #797979;
+            margin-left: 0.8rem;
+        }
+
+        .s-field {
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .s-field-editing {
+            background-color: rgba(255, 212, 127, 0.5);
+        }
     </style>
 </head>
-<body>
+<body onbeforeunload="return currentTemplate?true:currentTemplate.latest">
 <template id="template-present-field">
-    <div class="row s-field" data-submitee-field-name>
+    <div class="row s-field" draggable="true" data-submitee-field-name>
         <div class="col col-2 s-field-type"></div>
         <div class="col col-2 s-field-name"></div>
         <div class="col col-6 s-field-comment"></div>
@@ -36,80 +50,135 @@
     </div>
 </template>
 <template id="template-editing-field">
-    <div class="row s-field-editing" data-submitee-field-id>
+    <div class="row s-field s-field-editing" draggable="true" data-submitee-field-id>
         <div class="col col-2 s-field-type"></div>
         <div class="col col-2 s-field-name"></div>
         <div class="col col-6 s-field-comment"></div>
         <div class="col col-2">
             <a href="#" onclick="applyField(this)" class="btn btn-success btn-sm">完成</a>
         </div>
+        <div class="field-configuration no-gutters">
+        </div>
     </div>
 </template>
+<template id="template-toast">
+    <div class="toast" style="position: absolute; top: 0; right: 0;">
+        <div class="toast-header">
+            <strong class="mr-auto"></strong>
+            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                <span>&times;</span>
+            </button>
+        </div>
+        <div class="toast-body">
+        </div>
+    </div>
+</template>
+<!--region toast-->
+<div class="position-fixed w-100" style="min-height:0; top:0;right:0;z-index: 999">
+    <!--    <div aria-live="polite" aria-atomic="true" style="position: relative; min-height: 200px;">-->
+    <div id="insert-toast-before"></div>
+    <!--    </div>-->
+</div>
+<!--endregion toast-->
 
 <div class="container main">
-    <nav class="row breadcrumb">
+    <nav class="row col breadcrumb">
         <div class="breadcrumb-item">所有模板</div>
-        <div class="breadcrumb-item editing-template"></div>
+        <div class="breadcrumb-item" id="breadcrumb-template-name"></div>
     </nav>
-    <div class="row" id="row-header">
-        <div class="col col-2">类型</div>
-        <div class="col col-2">名称</div>
-        <div class="col col-6">注释</div>
-        <div class="col col-2">行为</div>
-    </div>
-    <hr/>
-    <form onsubmit="createNewField();return false;" id="row-append-field">
-        <div class="row">
-            <div class="col col-2 s-field-type">
-                <!--suppress HtmlFormInputWithoutLabel -->
-                <select name="type" class="w-100 h-100" id="field-type-container">
-                </select>
+    <div class="row col" id="template-fields">
+        <h4>字段</h4>
+        <div class="container left-shadow" id="container-field">
+            <div class="row">
+                <div class="col col-2">类型</div>
+                <div class="col col-2">标题</div>
+                <div class="col col-6">注释</div>
+                <div class="col col-2"></div>
             </div>
-            <div class="col col-2 s-field-name"><input type="text"/></div>
-            <div class="col col-6 s-field-comment"><input type="text"/></div>
-            <div class="col col-2">
-                <a href="#" onclick="createNewField()" class="btn btn-sm btn-success">添加字段</a>
-            </div>
-            <input type="submit" style="display: none"/>
+            <hr/>
+            <div id="insert-fields-before"></div>
+            <hr/>
+            <form onsubmit="createNewField();return false;" id="create-template-form">
+                <div class="row">
+                    <div class="col col-2 s-field-type">
+                        <!--suppress HtmlFormInputWithoutLabel -->
+                        <select name="type" class="w-100 h-100" id="field-type-container">
+                        </select>
+                    </div>
+                    <div class="col col-2 s-field-name">
+                        <!--suppress HtmlFormInputWithoutLabel -->
+                        <input type="text"/></div>
+                    <div class="col col-6 s-field-comment">
+                        <!--suppress HtmlFormInputWithoutLabel -->
+                        <input type="text"/></div>
+                    <div class="col col-2">
+                        <a href="#" onclick="createNewField()" class="btn btn-sm btn-success">添加字段</a>
+                    </div>
+                    <input type="submit" style="display: none"/>
+                </div>
+            </form>
         </div>
-    </form>
-    <hr/>
-    <div class="row col">
-        <h4 class="w-100">模板状态：</h4>
-        <p>尚未发布，使用发布模板按钮来获取公开链接</p>
-        <hr class="w-100"/>
-        <h4 class="w-100">模板状态：</h4>
-        <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交</p><a class="pl-2" href="#">查看提交列表</a>
-        <hr class="w-100"/>
-        <h4 class="w-100">模板状态：</h4>
-        <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交，其中 2 个尚未阅读</p><a class="pl-2" href="#">查看提交列表</a>
-        <hr class="w-100"/>
-        <h4 class="w-100">模板状态：</h4>
-        <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交，其中 2 个尚未阅读</p><a class="pl-2" href="#">查看提交列表</a>
-        <div class="w-100"></div>
-        <p class="alert alert-warning">模板发布后已经被修改，使用修订模板按钮来发布修订后的模板</p>
-        <hr class="w-100"/>
-        <form onsubmit="return false">
-            <button class="btn btn-primary disabled" id="btn-publish-template">发布模板</button>
-            <button class="btn btn-danger disabled" id="btn-cancel-template">停止发布模板</button>
-            <button class="btn btn-secondary disabled" id="btn-republish-template">修订模板</button>
-            <div class="btn-group">
-                <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown">
-                    其他
-                </button>
-                <div class="dropdown-menu">
-                    <a class="dropdown-item" href="#">导出到CSV</a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item text-danger" href="#">归档模板</a>
+    </div>
+    <div class="row col" id="template-metadata">
+        <h4>标题</h4>
+        <div class="container left-shadow">
+            <div class="row">
+                <div class="col col-2"><label for="template-metadata-name">名称</label></div>
+                <div class="col col-8">
+                    <label for="template-metadata-comment">注释</label>
+                    <span class="ml-2 d-inline"
+                          style="color:gray;align-self:flex-end;font-style: italic; font-size: 0.7rem">该段文字仅展示在模板列表</span>
                 </div>
             </div>
-        </form>
+            <div class="row">
+                <div class="col col-2"><input type="text" id="template-metadata-name"/></div>
+                <div class="col col-10"><input type="text" id="template-metadata-comment"/></div>
+            </div>
+        </div>
+    </div>
+    <h4>描述</h4>
+    <span class="d-inline-block"
+          style="color:gray;align-self:flex-end;font-style: italic; font-size: 0.7rem">该段文字会公布到填写页面</span>
+    <div class="container left-shadow">
+        <div id="template-desc"></div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="js/model.js"></script>
-<script src="js/field-controllers.js"></script>
+<div class="row col mb-4">
+    <h4 class="w-100">模板状态：</h4>
+    <p>尚未发布，使用发布模板按钮来获取公开链接</p>
+    <hr class="w-100"/>
+    <h4 class="w-100">模板状态：</h4>
+    <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交</p><a class="pl-2" href="#">查看提交列表</a>
+    <hr class="w-100"/>
+    <h4 class="w-100">模板状态：</h4>
+    <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交，其中 2 个尚未阅读</p><a class="pl-2" href="#">查看提交列表</a>
+    <hr class="w-100"/>
+    <h4 class="w-100">模板状态：</h4>
+    <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交，其中 2 个尚未阅读</p><a class="pl-2" href="#">查看提交列表</a>
+    <div class="w-100"></div>
+    <p class="alert alert-warning">模板发布后已经被修改，使用修订模板按钮来发布修订后的模板</p>
+    <hr class="w-100"/>
+    <form onsubmit="return false">
+        <button class="btn btn-primary disabled" id="btn-publish-template">发布模板</button>
+        <button class="btn btn-danger disabled" id="btn-cancel-template">停止发布模板</button>
+        <button class="btn btn-secondary disabled" id="btn-republish-template">修订模板</button>
+        <div class="btn-group">
+            <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown">
+                其他
+            </button>
+            <div class="dropdown-menu">
+                <a class="dropdown-item" href="#">导出到CSV</a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger" href="#">归档模板</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!--<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>-->
+<!--<script src="js/model.js"></script>-->
+<!--<script src="js/field-controllers.js"></script>-->
 
 <script>
     function findFieldByElement(element) {
@@ -133,7 +202,7 @@
      */
     function findFieldContainer(field) {
         let container = null;
-        $(".main")[0].childNodes.forEach(value => {
+        $("#container-field")[0].childNodes.forEach(value => {
             if (value.hasAttribute) {
                 if (value.hasAttribute("data-submitee-field-name")) {
                     if (value.getAttribute("data-submitee-field-name") === field.name) {
@@ -170,13 +239,13 @@
 
         field.name = container.querySelector(".s-field-name").querySelector("input").value;
         field.comment = container.querySelector(".s-field-comment").querySelector("input").value
+        let controller = fieldControllers[field.type];
+        if (controller) {
+            controller.applyConfiguration(field);
+        }
 
-        field.owner.sync().then(function () {
-            container.parentNode.replaceChild(createPresentFieldRow(field), container);
-        }, error => {
-            alert(error);
-            window.location.reload();
-        });
+        container.parentNode.replaceChild(createFieldRow(field), container);
+        dirty();
     }
 
     /**
@@ -184,12 +253,11 @@
      * @param {SField} field
      * @return {string|string|DocumentFragment|*}
      */
-    function createPresentFieldRow(field) {
+    function createFieldRow(field) {
         let domTemplate = $("#template-present-field")[0];
 
         domTemplate.content.querySelector(".s-field").setAttribute("data-submitee-field-name", field.name);
-        let fieldController = fieldControllers[field.type];
-        domTemplate.content.querySelector(".s-field-type").textContent = fieldController ? fieldController.displayName : field.type;
+        domTemplate.content.querySelector(".s-field-type").textContent = field.getTypeDisplayName();
         domTemplate.content.querySelector(".s-field-name").textContent = field.name;
         domTemplate.content.querySelector(".s-field-comment").textContent = field.comment;
         return document.importNode(domTemplate.content, true);
@@ -198,14 +266,15 @@
     /**
      * insert present field dom elements depending on current template
      */
-    function addPresentFieldRows() {
+    function loadFieldRows() {
         let nodes = Array();
         currentTemplate.fields.forEach(value => {
-            nodes.push(createPresentFieldRow(value));
+            nodes.push(createFieldRow(value));
         });
-        let relative = $("#row-append-field")[0];
+
+        let relative = $("#insert-fields-before")[0];
         nodes.forEach(value => {
-            $(".main")[0].insertBefore(value, relative);
+            relative.parentNode.insertBefore(value, relative);
         })
     }
 
@@ -218,20 +287,29 @@
         let template = $("#template-editing-field")[0];
 
         template.content.querySelector(".s-field-editing").setAttribute("data-submitee-field-name", field.name);
-        template.content.querySelector(".s-field-type").innerHTML = `<span class="disabled" style="cursor: not-allowed">${field.type}</span>`;
+        template.content.querySelector(".s-field-type").innerHTML = `<span class="disabled" style="cursor: not-allowed">${field.getTypeDisplayName()}</span>`;
         template.content.querySelector(".s-field-name").innerHTML = `<input type="text" value="${field.name}"/>`;
         template.content.querySelector(".s-field-comment").innerHTML = `<input type="text" value="${field.comment}"/>`
+
+        let controller = fieldControllers[field.type];
+        let confHtml;
+        if (controller && (confHtml = controller.generateConfigurationHtml(field))) {
+            template.content.querySelector(".field-configuration").innerHTML = confHtml;
+        } else {
+            template.content.querySelector(".field-configuration").innerHTML = "";
+        }
+
         return document.importNode(template.content, true);
     }
 
     function createNewField(evt) {
-        let container = $("#row-append-field");
+        let container = $("#create-template-form");
         let type = container.find(".s-field-type").find("select option:selected").val();
         let name = container.find(".s-field-name").find("input").val();
         let comment = container.find(".s-field-comment").find("input").val();
 
         if (!type || !name) {
-            alert("字段类型和名称是必填项目");
+            createToast("重要提示", "字段类型和名称是必填项目");
         } else {
             let field = new SField(currentTemplate, null);
             field.type = type;
@@ -239,8 +317,8 @@
             field.comment = comment;
 
             currentTemplate.addField(field).then(() => {
-                let relative = container[0];
-                $(".main")[0].insertBefore(createPresentFieldRow(field), relative);
+                let relative = $("#insert-fields-before")[0];
+                relative.parentNode.insertBefore(createEditingFieldRows(field), relative);
             }, error => {
                 alert(error);
             })
@@ -263,8 +341,63 @@
         element.appendChild(createFieldTypeOption("", "--------"));
         Object.keys(fieldControllers).forEach(value => {
             let c = fieldControllers[value];
-            element.appendChild(createFieldTypeOption(c.fieldType, c.displayName));
+            element.appendChild(createFieldTypeOption(c.fieldType, getFieldTypeDisplayName(c.fieldType)));
         })
+    }
+
+    function loadTemplateMetadata() {
+        $("#breadcrumb-template-name")[0].textContent = currentTemplate.name || currentTemplate.templateId;
+        $("#template-metadata-name").val(currentTemplate.name).on("keyup", dirty)
+        $("#template-metadata-comment").val(currentTemplate.comment).on("keyup", dirty);
+
+        let descContainer = $("#template-desc")[0];
+        descContainer.innerHTML = currentTemplate.desc;
+        let editor = new window.wangEditor('#template-desc');
+        editor.config.excludeMenus = ['todo'];
+        editor.config.onchange = dirty;
+        editor.create();
+        currentTemplate.descEditor = editor;
+    }
+
+    function checkAndSync() {
+        if (!currentTemplate.latest) {
+            currentTemplate.name = $("#template-metadata-name").val();
+            currentTemplate.comment = $("#template-metadata-comment").val();
+            currentTemplate.desc = currentTemplate.descEditor.txt.html();
+
+            currentTemplate.latest = true;
+            currentTemplate.sync().then(() => {
+                createToast("提示", "对模板的更改已保存");
+                console.log("fired toast?")
+            }, error => {
+                currentTemplate.latest = false;
+                createToast("重要提示", "保存模板时出现问题: " + error);
+            });
+        }
+    }
+
+    function createToast(title, content) {
+        let template = $("#template-toast")[0];
+
+        template.content.querySelector("strong").textContent = title;
+        template.content.querySelector(".toast-body").innerHTML = content;
+
+        let node = document.importNode(template.content, true);
+        let relative = $("#insert-toast-before")[0];
+        node = relative.parentNode.insertBefore(node, relative);
+
+        $(node.querySelector(".toast")).toast('show');
+        // $(".toast").toast('show');
+        // setTimeout(function () {
+        //     relative.parentNode.removeChild(node);
+        // }, 2000);
+        setTimeout(function () {
+            relative.parentNode.removeChild(node);
+        }, 2200);
+    }
+
+    function dirty() {
+        currentTemplate.latest = false;
     }
 
     buildFieldTypeSelect();
@@ -274,8 +407,13 @@
 
     fetchSingleTemplateInfo(currentTemplateId).then(value => {
         currentTemplate = value;
-        $(".editing-template")[0].textContent = currentTemplate.name || currentTemplate.templateId;
-        addPresentFieldRows();
+        currentTemplate.latest = true;
+
+        loadTemplateMetadata();
+        loadFieldRows();
+
+        // check changes made every 2 seconds
+        setInterval(checkAndSync, 2000);
     }, reject => {
         alert(reject.message);
         window.history.back();
