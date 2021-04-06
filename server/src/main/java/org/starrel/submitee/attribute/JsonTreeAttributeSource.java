@@ -65,6 +65,8 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
     @Override
     public void setAttribute(String path, Object value) {
         AttributeSerializer serializer = SubmiteeServer.getInstance().getAttributeSerializer(value.getClass());
+        if (serializer == null)
+            throw new RuntimeException("could not find serializer of type " + value.getClass().getName());
 
         // self
         if (path.isEmpty()) {

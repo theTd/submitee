@@ -13,8 +13,9 @@
 
 <template id="template-s-template-row">
     <div class="row template-container" data-submitee-template-id>
+        <div class="col col-2 s-template-id"></div>
         <div class="col col-2 s-template-name"></div>
-        <div class="col col-8 s-template-comment"></div>
+        <div class="col col-6 s-template-comment"></div>
         <div class="col col-2">
             <a class="btn btn-primary" href="#" onclick="editTemplate(this)">编辑</a>
         </div>
@@ -26,14 +27,10 @@
 
 <div class="container">
     <div class="row">
-        <div class="col col-2">
-            模板编号
-        </div>
-        <div class="col col-8">
-            模板标题
-        </div>
-        <!--        <div class="col col-2">-->
-        <!--        </div>-->
+        <div class="col col-2">编号</div>
+        <div class="col col-2">名称</div>
+        <div class="col col-6">标题</div>
+        <div class="col col-2"></div>
     </div>
     <hr/>
     <hr id="insert-template-before"/>
@@ -51,30 +48,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>
 <script src="js/model.js"></script>
 <script>
-
-    /**
-     * TODO REMOVE THIS
-     * @return {STemplate}
-     * @private
-     */
-    function __generateTestTemplate() {
-        let t = new STemplate(uuidv4(), null);
-        t.name = "测试用模板";
-        t.comment = "这是一个测试用的模板，写的很长看起来像注释";
-
-        let f = new SField(uuidv4(), null);
-        f.type = "文本";
-        f.name = "测试用字段";
-        f.comment = "这是一个测试用的字段，写的比较长看起来像注释";
-        t.addField(f);
-
-        f = new SField(uuidv4(), null);
-        f.type = "数字";
-        f.name = "另一测试字段";
-        f.comment = "这是另一个测试字段，同样看起来比较长";
-        t.addField(f);
-        return t;
-    }
 
     function createTemplate() {
         $.ajax({
@@ -124,6 +97,7 @@
     function createTemplateElement(template) {
         let element = document.querySelector("#template-s-template-row");
         element.content.querySelector(".template-container").setAttribute("data-submitee-template-id", template.uniqueId);
+        element.content.querySelector(".s-template-id").textContent = template.templateId;
         element.content.querySelector(".s-template-name").textContent = template.name;
         element.content.querySelector(".s-template-comment").textContent = template.comment;
         return document.importNode(element.content, true);
@@ -146,7 +120,7 @@
         let node;
         node = createPageItem("上一页", prevPage ? "?method=template-list&page=" + prevPage : "");
         if (!prevPage) {
-            $(node).addClass("disabled");
+            $(node.querySelector(".page-item")).addClass("disabled");
         }
         paginationContainer.appendChild(node);
 
@@ -156,7 +130,7 @@
 
         node = createPageItem("下一页", nextPage ? "?method=template-list&page=" + nextPage : "");
         if (!nextPage) {
-            $(node).addClass("disabled");
+            $(node.querySelector(".page-item")).addClass("disabled");
         }
         paginationContainer.appendChild(node);
     }
@@ -172,8 +146,6 @@
         }
         return document.importNode(t.content, true);
     }
-
-    let currentTemplateList;
 
     const pageSize = 10;
     let page = getQueryVariable("page") || 1;

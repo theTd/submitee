@@ -37,42 +37,60 @@ class AttributeMap {
 }
 
 class SField {
-    constructor(uniqueId, propertyMap) {
-        this.uniqueId = uniqueId;
-        this.propertyMap = propertyMap;
-        if (!this.propertyMap) this.propertyMap = new AttributeMap();
+    constructor(owner, attributes) {
+        this.owner = owner;
+        this.attributeMap = attributes ? new AttributeMap(attributes) : new AttributeMap();
     }
 
     get type() {
-        return this.propertyMap.get("type");
+        return this.attributeMap.get("type");
     }
 
     set type(val) {
-        this.propertyMap.set("type", val);
+        this.attributeMap.set("type", val);
     }
 
     get name() {
-        return this.propertyMap.get("name");
+        return this.attributeMap.get("name");
     }
 
     set name(val) {
-        this.propertyMap.set("name", val);
+        this.attributeMap.set("name", val);
     }
 
     get comment() {
-        return this.propertyMap.get("comment");
+        return this.attributeMap.get("comment");
     }
 
     set comment(val) {
-        this.propertyMap.set("comment", val);
+        this.attributeMap.set("comment", val);
+    }
+
+    async sync() {
+        return this.owner.sync();
     }
 }
 
 class STemplate {
-    constructor(uniqueId, attributes) {
-        this.uniqueId = uniqueId;
+    constructor(attributes) {
         this.attributeMap = new AttributeMap(attributes);
-        this.fields = {};
+
+        let t = this;
+
+        let fieldsSection = this.attributeMap.get("fields");
+        let fields = Array();
+        if (fieldsSection) {
+            fieldsSection.forEach(function (val) {
+                let f = new SField(t, val);
+                fields.push(f);
+            })
+        }
+
+        this.fields = fields;
+    }
+
+    get uniqueId() {
+        return this.attributeMap.get("uuid");
     }
 
     get templateId() {
@@ -104,24 +122,71 @@ class STemplate {
      * @param {SField} field
      */
     addField(field) {
-        this.fields[field.uniqueId] = field;
-    }
+        let names = Array();
+        this.fields.forEach(val => {
+            names.push(val.name);
+        });
 
-    /**
-     *
-     * @param uniqueId
-     * @return {SField}
-     */
-    getField(uniqueId) {
-        return this.fields[uniqueId];
-    }
-
-    getAllFields() {
-        let arr = Array();
-        for (let key in this.fields) {
-            if (this.fields.hasOwnProperty(key)) arr.push(this.fields[key]);
+        if (names.includes(field.name)) {
+            throw new Error("name conflict");
         }
-        return arr;
+        this.fields.push(field);
+        return this.sync();
+    }
+
+    removeField(field) {
+        this.fields.filter(value => {
+            return value !== field;
+        })
+        return this.sync();
+    }
+
+    getFieldByName(name) {
+        for (let value of this.fields) {
+            if (value.name === name) return value;
+        }
+    }
+
+    moveField(field, order) {
+        this.fields.filter(value => {
+            return value !== field;
+        })
+        this.fields.splice(order, 0, field);
+        return this.sync();
+    }
+
+    updateAttributeMap() {
+        let fieldsSection = Array();
+        this.fields.forEach(function (val) {
+            fieldsSection.push(val.attributeMap.root);
+        });
+        this.attributeMap.set("fields", fieldsSection);
+    }
+
+    async sync() {
+        this.updateAttributeMap();
+        return new Promise((resolve, reject) => {
+            console.log(JSON.stringify({
+                "target": this.uniqueId,
+                "content": this.attributeMap.root
+            }));
+
+            $.ajax({
+                url: "../paste",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    "target": this.uniqueId,
+                    "content": this.attributeMap.root
+                }),
+                success: function (data) {
+                    resolve();
+                },
+                error: function (error) {
+                    reject(error.statusCode());
+                }
+            })
+        })
     }
 }
 
@@ -153,7 +218,7 @@ async function fetchTemplateInfo(filter, latest) {
             success: function (data) {
                 let all = Array();
                 for (let val of data) {
-                    all.push(new STemplate(val['uniqueId'], val['attributes']));
+                    all.push(new STemplate(val['attributes']));
                 }
                 resolve(all);
             },
@@ -164,11 +229,27 @@ async function fetchTemplateInfo(filter, latest) {
     });
 }
 
+async function fetchSingleTemplateInfo(uuid) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: "../info/" + uuid,
+            method: "GET",
+            success: function (data) {
+                resolve(new STemplate(data["attributes"]));
+            },
+            error: function (error) {
+                reject(error.statusCode);
+            }
+        });
+    });
+}
+
 fieldControllers = {};
 
 class FieldController {
     constructor(fieldType) {
         this.fieldType = fieldType;
+        this.displayName = fieldType;
     }
 
     generateResolveFunction(field) {
@@ -182,46 +263,3 @@ class FieldController {
     validateResolveResult(field, resolveResult) {
     }
 }
-
-class TextFieldController extends FieldController {
-    constructor() {
-        super("text");
-    }
-
-    generateResolveFunction(field) {
-        let inputId = 'text-input-for-' + field.uniqueId;
-        return function () {
-            return $("#" + inputId).val();
-        }
-    }
-
-    /**
-     *
-     * @param {SField} field
-     * @returns {string}
-     */
-    generateHtml(field) {
-        let inputId = 'text-input-for-' + field.uniqueId;
-        let placeholder = field.propertyMap.get("placeholder") || "";
-
-        return `<label for="${inputId}">${field.name}</label><input type="text" placeholder="${placeholder}" id="${inputId}"/>`;
-    }
-
-    /**
-     *
-     * @param {SField} field
-     * @param resolveResult
-     */
-    validateResolveResult(field, resolveResult) {
-        let constraints = field.propertyMap.get("constraints");
-        if (constraints) {
-
-            for (let i = 0; i < constraints.length; i++) {
-                let c = constraints[i];
-                c();
-            }
-        }
-    }
-}
-
-fieldControllers['text'] = new TextFieldController();

@@ -1,6 +1,8 @@
 package org.starrel.submitee;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
@@ -144,6 +146,28 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         addAttributeSerializer(Double.class, AttributeSerializers.DOUBLE);
         addAttributeSerializer(Boolean.class, AttributeSerializers.BOOLEAN);
         addAttributeSerializer(UserDescriptor.class, AttributeSerializers.USER_DESCRIPTOR);
+        addAttributeSerializer(JsonObject.class, new AttributeSerializer<JsonObject>() {
+            @Override
+            public JsonObject parse(JsonElement json) {
+                return json.getAsJsonObject();
+            }
+
+            @Override
+            public JsonElement write(JsonObject jsonObject) {
+                return jsonObject;
+            }
+        });
+        addAttributeSerializer(JsonArray.class, new AttributeSerializer<JsonArray>() {
+            @Override
+            public JsonArray parse(JsonElement json) {
+                return json.getAsJsonArray();
+            }
+
+            @Override
+            public JsonElement write(JsonArray jsonElements) {
+                return jsonElements;
+            }
+        });
     }
 
     @Override

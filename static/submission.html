@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title></title>
+</head>
+<body>
+<div class="container">
+    <hr id="insert-fields-before"/>
+</div>
+<!-- Optional JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>-->
+<script src="js/model.js"></script>
+<script src="js/field-controllers.js"></script>
+<script>
+    /**
+     *
+     * @param {STemplate} template
+     */
+    function buildFields(template) {
+        // todo
+    }
+
+    let target = getQueryVariable("target");
+    if (!target) {
+        alert("invalid target");
+        window.history.back();
+    } else {
+        let templateInfo = fetchSingleTemplateInfo(target);
+        if (!templateInfo) {
+            alert("invalid target");
+            window.history.back();
+        } else {
+            buildFields(templateInfo);
+        }
+    }
+</script>
+</body>
+</html>

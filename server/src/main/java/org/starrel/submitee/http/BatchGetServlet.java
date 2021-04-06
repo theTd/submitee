@@ -66,7 +66,6 @@ public class BatchGetServlet extends AbstractJsonServlet {
                     for (STemplateImpl template : list) {
                         jsonWriter.beginObject();
                         jsonWriter.name("scheme").value(template.getAttributeScheme());
-                        jsonWriter.name("uniqueId").value(template.getUniqueId().toString());
                         jsonWriter.name("attributes").jsonValue(SubmiteeServer.GSON.toJson(template.getAttributeMap().toJsonTree()));
                         jsonWriter.endObject();
                     }

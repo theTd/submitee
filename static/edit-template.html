@@ -25,7 +25,7 @@
 </head>
 <body>
 <template id="template-present-field">
-    <div class="row s-field" data-submitee-field-id>
+    <div class="row s-field" data-submitee-field-name>
         <div class="col col-2 s-field-type"></div>
         <div class="col col-2 s-field-name"></div>
         <div class="col col-6 s-field-comment"></div>
@@ -58,15 +58,11 @@
         <div class="col col-2">行为</div>
     </div>
     <hr/>
-    <form onsubmit="createNewField()" id="row-append-field">
+    <form onsubmit="createNewField();return false;" id="row-append-field">
         <div class="row">
             <div class="col col-2 s-field-type">
                 <!--suppress HtmlFormInputWithoutLabel -->
-                <select name="type" class="w-100 h-100">
-                    <option value="">------</option>
-                    <option value="text">文本</option>
-                    <option value="number">数字</option>
-                    <option value="binary">文件</option>
+                <select name="type" class="w-100 h-100" id="field-type-container">
                 </select>
             </div>
             <div class="col col-2 s-field-name"><input type="text"/></div>
@@ -93,7 +89,7 @@
         <div class="w-100"></div>
         <p class="alert alert-warning">模板发布后已经被修改，使用修订模板按钮来发布修订后的模板</p>
         <hr class="w-100"/>
-        <form onsubmit="this.preventDefault()">
+        <form onsubmit="return false">
             <button class="btn btn-primary disabled" id="btn-publish-template">发布模板</button>
             <button class="btn btn-danger disabled" id="btn-cancel-template">停止发布模板</button>
             <button class="btn btn-secondary disabled" id="btn-republish-template">修订模板</button>
@@ -113,31 +109,34 @@
 
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
 <script src="js/model.js"></script>
+<script src="js/field-controllers.js"></script>
 
 <script>
-    function findFieldIdByElement(element) {
+    function findFieldByElement(element) {
         let node = element;
-        let fieldId;
+        let name;
         while (node) {
-            if (node.hasAttribute("data-submitee-field-id")) {
-                fieldId = node.getAttribute("data-submitee-field-id");
+            if (node.hasAttribute("data-submitee-field-name")) {
+                name = node.getAttribute("data-submitee-field-name");
                 break;
             }
             node = node.parentNode;
         }
-        return fieldId;
+        if (name) {
+            return currentTemplate.getFieldByName(name);
+        }
     }
 
     /**
-     * @param {string} fieldId
+     * @param {SField} field
      * @return {ChildNode}
      */
-    function findFieldContainer(fieldId) {
+    function findFieldContainer(field) {
         let container = null;
         $(".main")[0].childNodes.forEach(value => {
             if (value.hasAttribute) {
-                if (value.hasAttribute("data-submitee-field-id")) {
-                    if (value.getAttribute("data-submitee-field-id") === fieldId) {
+                if (value.hasAttribute("data-submitee-field-name")) {
+                    if (value.getAttribute("data-submitee-field-name") === field.name) {
                         container = value;
                     }
                 }
@@ -147,39 +146,37 @@
     }
 
     function editField(element) {
-        let fieldId = findFieldIdByElement(element);
-
-        if (!fieldId) {
-            console.warn("no field id found");
-            return;
-        }
-        let container = findFieldContainer(fieldId);
-
-        let field = currentTemplate.getField(fieldId);
+        let field = findFieldByElement(element);
         if (!field) {
-            console.warn("no field \"" + fieldId + "\" found in current template");
+            alert("unexpected element");
             return;
         }
+
+        let container = findFieldContainer(field);
         container.parentNode.replaceChild(createEditingFieldRows(field), container);
     }
 
     function deleteField(element) {
-        let fieldId = findFieldIdByElement(element);
-        let field = currentTemplate.getField(fieldId);
-        let container = findFieldContainer(fieldId);
+        let field = findFieldByElement(element);
+        let container = findFieldContainer(field);
+        field.owner.removeField(field);
 
         container.parentNode.removeChild(container);
     }
 
     function applyField(element) {
-        let fieldId = findFieldIdByElement(element);
-        let field = currentTemplate.getField(fieldId);
-        let container = findFieldContainer(fieldId);
+        let field = findFieldByElement(element);
+        let container = findFieldContainer(field);
 
         field.name = container.querySelector(".s-field-name").querySelector("input").value;
-        field.comment = container.querySelector(".s-field-comment").querySelector("input").value;
+        field.comment = container.querySelector(".s-field-comment").querySelector("input").value
 
-        container.parentNode.replaceChild(createPresentFieldRow(field), container);
+        field.owner.sync().then(function () {
+            container.parentNode.replaceChild(createPresentFieldRow(field), container);
+        }, error => {
+            alert(error);
+            window.location.reload();
+        });
     }
 
     /**
@@ -190,8 +187,9 @@
     function createPresentFieldRow(field) {
         let domTemplate = $("#template-present-field")[0];
 
-        domTemplate.content.querySelector(".s-field").setAttribute("data-submitee-field-id", field.uniqueId);
-        domTemplate.content.querySelector(".s-field-type").textContent = field.type;
+        domTemplate.content.querySelector(".s-field").setAttribute("data-submitee-field-name", field.name);
+        let fieldController = fieldControllers[field.type];
+        domTemplate.content.querySelector(".s-field-type").textContent = fieldController ? fieldController.displayName : field.type;
         domTemplate.content.querySelector(".s-field-name").textContent = field.name;
         domTemplate.content.querySelector(".s-field-comment").textContent = field.comment;
         return document.importNode(domTemplate.content, true);
@@ -202,7 +200,7 @@
      */
     function addPresentFieldRows() {
         let nodes = Array();
-        currentTemplate.getAllFields().forEach(value => {
+        currentTemplate.fields.forEach(value => {
             nodes.push(createPresentFieldRow(value));
         });
         let relative = $("#row-append-field")[0];
@@ -219,15 +217,14 @@
     function createEditingFieldRows(field) {
         let template = $("#template-editing-field")[0];
 
-        template.content.querySelector(".s-field-editing").setAttribute("data-submitee-field-id", field.uniqueId);
+        template.content.querySelector(".s-field-editing").setAttribute("data-submitee-field-name", field.name);
         template.content.querySelector(".s-field-type").innerHTML = `<span class="disabled" style="cursor: not-allowed">${field.type}</span>`;
         template.content.querySelector(".s-field-name").innerHTML = `<input type="text" value="${field.name}"/>`;
         template.content.querySelector(".s-field-comment").innerHTML = `<input type="text" value="${field.comment}"/>`
         return document.importNode(template.content, true);
     }
 
-    function createNewField() {
-        let id = uuidv4();
+    function createNewField(evt) {
         let container = $("#row-append-field");
         let type = container.find(".s-field-type").find("select option:selected").val();
         let name = container.find(".s-field-name").find("input").val();
@@ -235,29 +232,52 @@
 
         if (!type || !name) {
             alert("字段类型和名称是必填项目");
-            return;
+        } else {
+            let field = new SField(currentTemplate, null);
+            field.type = type;
+            field.name = name;
+            field.comment = comment;
+
+            currentTemplate.addField(field).then(() => {
+                let relative = container[0];
+                $(".main")[0].insertBefore(createPresentFieldRow(field), relative);
+            }, error => {
+                alert(error);
+            })
         }
-
-        let field = new SField(id, null);
-        field.type = type;
-        field.name = name;
-        field.comment = comment;
-
-        currentTemplate.addField(field);
-
-        let relative = container[0];
-        $(".main")[0].insertBefore(createPresentFieldRow(field), relative);
+        if (evt) {
+            evt.preventDefault();
+            return false;
+        }
     }
+
+    function createFieldTypeOption(value, text) {
+        let node = document.createElement("option");
+        node.value = value;
+        node.textContent = text;
+        return node;
+    }
+
+    function buildFieldTypeSelect() {
+        let element = $("#field-type-container")[0];
+        element.appendChild(createFieldTypeOption("", "--------"));
+        Object.keys(fieldControllers).forEach(value => {
+            let c = fieldControllers[value];
+            element.appendChild(createFieldTypeOption(c.fieldType, c.displayName));
+        })
+    }
+
+    buildFieldTypeSelect();
 
     let currentTemplate;
     let currentTemplateId = getQueryVariable("target");
 
-    fetchTemplateInfo({uuid: currentTemplateId}, true).then(value => {
-        currentTemplate = value[0];
+    fetchSingleTemplateInfo(currentTemplateId).then(value => {
+        currentTemplate = value;
         $(".editing-template")[0].textContent = currentTemplate.name || currentTemplate.templateId;
         addPresentFieldRows();
-    }, reason => {
-        alert(reason);
+    }, reject => {
+        alert(reject.message);
         window.history.back();
     });
 </script>
