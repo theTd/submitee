@@ -147,9 +147,7 @@ class STemplate {
     }
 
     removeField(field) {
-        this.fields.filter(value => {
-            return value !== field;
-        })
+        this.fields = this.fields.filter(value => value !== field);
         return this.sync();
     }
 
@@ -159,11 +157,10 @@ class STemplate {
         }
     }
 
-    moveField(field, order) {
-        this.fields.filter(value => {
-            return value !== field;
-        })
-        this.fields.splice(order, 0, field);
+    moveField(field, index) {
+        let first = this.fields[0] === field;
+        this.fields = this.fields.filter(value => value !== field);
+        this.fields.splice(first ? --index : index, 0, field);
         return this.sync();
     }
 
@@ -292,4 +289,20 @@ class FieldController {
 function getFieldTypeDisplayName(type) {
     let c = fieldControllers[type];
     return c ? c.displayName : type;
+}
+
+/**
+ * https://stackoverflow.com/questions/1349404/generate-random-string-characters-in-javascript
+ * @param length
+ * @returns {string}
+ */
+function makeid(length) {
+    var result = [];
+    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for (var i = 0; i < length; i++) {
+        result.push(characters.charAt(Math.floor(Math.random() *
+            charactersLength)));
+    }
+    return result.join('');
 }

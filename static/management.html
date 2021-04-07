@@ -41,6 +41,7 @@
 <script src="https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js"></script>
 <script src="js/model.js"></script>
 <script src="js/field-controllers.js"></script>
+<script src="js/toast.js"></script>
 
 <script>
     function highlightCurrentMethod(method) {
@@ -53,8 +54,6 @@
             }
 
             matches.push(getQueryVariable("method", new URL(link.href).search));
-
-            console.log(matches);
 
             if (matches.includes(method)) {
                 $(link).addClass("active");

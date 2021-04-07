@@ -70,12 +70,12 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
         if (collectionName == null) throw new RuntimeException("this attribute map cannot be saved");
         MongoCollection<Document> collection = mongoDatabase.getCollection(collectionName);
         Document body = Document.parse(SubmiteeServer.GSON.toJson(toJsonTree()));
-        Document document = new Document();
-        document.put("id", holder.getAttributePersistKey());
-        document.put("body", body);
         if (collection.find(Filters.eq("id", holder.getAttributePersistKey())).first() != null) {
             collection.updateOne(Filters.eq("id", holder.getAttributePersistKey()), Updates.set("body", body));
         } else {
+            Document document = new Document();
+            document.put("id", holder.getAttributePersistKey());
+            document.put("body", body);
             collection.insertOne(document);
         }
     }

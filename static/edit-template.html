@@ -35,11 +35,47 @@
         .s-field-editing {
             background-color: rgba(255, 212, 127, 0.5);
         }
+
+        .drag-mark-top {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .drag-mark-top div {
+            position: absolute;
+            width: 100%;
+            top: -0.5rem;
+            /*border: 1px solid green;*/
+            height: 1rem;
+        }
+
+        .drag-mark-bottom {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .drag-mark-bottom div {
+            position: absolute;
+            width: 100%;
+            top: -0.6rem;
+            /*border: 1px solid red;*/
+            height: 1rem;
+        }
+
+        .drag-hover {
+            background-color: rgba(0, 255, 0, 0.2);
+        }
     </style>
 </head>
-<body onbeforeunload="return currentTemplate?true:currentTemplate.latest">
+<body>
 <template id="template-present-field">
-    <div class="row s-field" draggable="true" data-submitee-field-name>
+    <div class="row s-field" draggable="true" ondragstart=fieldDragStart(event) data-submitee-field-name>
+        <div class="drag-mark-top" ondragenter=fieldDragEnter(event) ondragleave=fieldDragLeave(event)
+             ondrop=fieldDrop(event)>
+            <div></div>
+        </div>
         <div class="col col-2 s-field-type"></div>
         <div class="col col-2 s-field-name"></div>
         <div class="col col-6 s-field-comment"></div>
@@ -47,10 +83,14 @@
             <a href="#" onclick="editField(this)" class="btn btn-secondary btn-sm">编辑</a>
             <a href="#" onclick="deleteField(this)" class="btn btn-danger btn-sm">删除</a>
         </div>
+        <div class="drag-mark-bottom" ondragenter=fieldDragEnter(event) ondragleave=fieldDragLeave(event)
+             ondrop=fieldDrop(event)>
+            <div></div>
+        </div>
     </div>
 </template>
 <template id="template-editing-field">
-    <div class="row s-field s-field-editing" draggable="true" data-submitee-field-id>
+    <div class="row s-field s-field-editing" data-submitee-field-name>
         <div class="col col-2 s-field-type"></div>
         <div class="col col-2 s-field-name"></div>
         <div class="col col-6 s-field-comment"></div>
@@ -61,25 +101,6 @@
         </div>
     </div>
 </template>
-<template id="template-toast">
-    <div class="toast" style="position: absolute; top: 0; right: 0;">
-        <div class="toast-header">
-            <strong class="mr-auto"></strong>
-            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
-                <span>&times;</span>
-            </button>
-        </div>
-        <div class="toast-body">
-        </div>
-    </div>
-</template>
-<!--region toast-->
-<div class="position-fixed w-100" style="min-height:0; top:0;right:0;z-index: 999">
-    <!--    <div aria-live="polite" aria-atomic="true" style="position: relative; min-height: 200px;">-->
-    <div id="insert-toast-before"></div>
-    <!--    </div>-->
-</div>
-<!--endregion toast-->
 
 <div class="container main">
     <nav class="row col breadcrumb">
@@ -177,8 +198,10 @@
 </div>
 
 <!--<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>-->
+<!--<script src="https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js"></script>-->
 <!--<script src="js/model.js"></script>-->
 <!--<script src="js/field-controllers.js"></script>-->
+<!--<script src="js/toast.js"></script>-->
 
 <script>
     function findFieldByElement(element) {
@@ -228,9 +251,12 @@
     function deleteField(element) {
         let field = findFieldByElement(element);
         let container = findFieldContainer(field);
-        field.owner.removeField(field);
-
-        container.parentNode.removeChild(container);
+        field.owner.removeField(field).then(() => {
+            container.parentNode.removeChild(container);
+            create_toast("提示", "已删除字段", 2000);
+        }, error => {
+            create_toast("重要提示", "操作失败: " + error, 2000);
+        });
     }
 
     function applyField(element) {
@@ -309,7 +335,7 @@
         let comment = container.find(".s-field-comment").find("input").val();
 
         if (!type || !name) {
-            createToast("重要提示", "字段类型和名称是必填项目");
+            create_toast("重要提示", "<span style='color: red'>字段类型和名称是必填项目</span>", 2000);
         } else {
             let field = new SField(currentTemplate, null);
             field.type = type;
@@ -367,39 +393,98 @@
 
             currentTemplate.latest = true;
             currentTemplate.sync().then(() => {
-                createToast("提示", "对模板的更改已保存");
-                console.log("fired toast?")
+                create_toast("提示", "对模板的更改已保存", 2000);
             }, error => {
                 currentTemplate.latest = false;
-                createToast("重要提示", "保存模板时出现问题: " + error);
+                create_toast("重要提示", "保存模板时出现问题: " + error, 2000);
             });
         }
-    }
-
-    function createToast(title, content) {
-        let template = $("#template-toast")[0];
-
-        template.content.querySelector("strong").textContent = title;
-        template.content.querySelector(".toast-body").innerHTML = content;
-
-        let node = document.importNode(template.content, true);
-        let relative = $("#insert-toast-before")[0];
-        node = relative.parentNode.insertBefore(node, relative);
-
-        $(node.querySelector(".toast")).toast('show');
-        // $(".toast").toast('show');
-        // setTimeout(function () {
-        //     relative.parentNode.removeChild(node);
-        // }, 2000);
-        setTimeout(function () {
-            relative.parentNode.removeChild(node);
-        }, 2200);
     }
 
     function dirty() {
         currentTemplate.latest = false;
     }
 
+    function fieldDragStart(evt) {
+        let field = findFieldByElement(evt.target);
+        if (!field) return false;
+
+        evt.dataTransfer.dropEffect = "move";
+        evt.dataTransfer.setData("submitee-drag", field.name);
+    }
+
+    function fieldDragEnter(evt) {
+        evt.target.classList.add("drag-hover");
+    }
+
+    function fieldDragLeave(evt) {
+        evt.target.classList.remove("drag-hover");
+    }
+
+    function fieldDrop(evt) {
+        // reset style
+        evt.target.classList.remove("drag-hover");
+        let top = evt.target.parentNode.classList.contains("drag-mark-top");
+
+        // find out target index
+        let relativeField = findFieldByElement(evt.target);
+        let relativeIndex = findFieldIndex(relativeField);
+        let targetIndex = top ? relativeIndex : ++relativeIndex;
+
+        let field = currentTemplate.getFieldByName(evt.dataTransfer.getData("submitee-drag"));
+        if (targetIndex === findFieldIndex(field) + 1) {
+            console.log("move to next");
+            return;
+        }
+
+        if (targetIndex >= currentTemplate.fields.length) {
+            targetIndex = currentTemplate.fields.length - 1;
+        }
+
+
+        if (targetIndex === findFieldIndex(field)) {
+            console.log("no changes");
+            return;
+        }
+
+
+        moveFieldRow(field, targetIndex);
+        field.owner.moveField(field, targetIndex).then(() => {
+            create_toast("提示", "对模板的更改已保存", 2000);
+        }, error => {
+            create_toast("重要提示", `<span style="color:red">修改模板失败： ${error}</span>`, 10000);
+        });
+    }
+
+    function moveFieldRow(field, targetIndex) {
+        let first = field.owner.fields[0] === field;
+
+        // determine insert place
+        let insertBefore;
+        if (targetIndex === currentTemplate.fields.length) {
+            insertBefore = $("#insert-fields-before")[0];
+        } else {
+            insertBefore = $(`.s-field[data-submitee-field-name=${currentTemplate.fields[targetIndex].name}]`)[0];
+        }
+
+        // remove previous element
+        let element = $(`.s-field[data-submitee-field-name=${field.name}]`)[0];
+        element.parentNode.removeChild(element);
+
+        // insert
+        insertBefore.parentNode.insertBefore(element, insertBefore);
+    }
+
+    function findFieldIndex(field) {
+        let list = field.owner.fields;
+        for (let i = 0; i < list.length; i++) {
+            if (list[i] === field) {
+                return i;
+            }
+        }
+    }
+
+    init_toast();
     buildFieldTypeSelect();
 
     let currentTemplate;
