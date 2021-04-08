@@ -33,59 +33,51 @@
         }
 
         .s-field-editing {
-            background-color: rgba(255, 212, 127, 0.5);
+        /*rgba(255, 193, 7, 0.5)*/
+            background-color: rgb(253, 222, 130);
+            box-shadow: 0 0 0 4px rgb(253, 222, 130);
+            border: 2px rgb(253, 222, 130);
+            border-radius: 3px;
         }
 
-        .drag-mark-top {
+        .field-sort-drop-area {
             position: relative;
-            display: inline-block;
+            display: block;
+            margin: 0;
+            padding: 0;
             width: 100%;
+            z-index: 999;
         }
 
-        .drag-mark-top div {
+        .field-sort-drop-area div {
             position: absolute;
             width: 100%;
-            top: -0.5rem;
-            /*border: 1px solid green;*/
-            height: 1rem;
+            top: -1rem;
+            height: 1.2rem;
+            border: 1px red;
         }
 
-        .drag-mark-bottom {
-            position: relative;
-            display: inline-block;
-            width: 100%;
-        }
-
-        .drag-mark-bottom div {
-            position: absolute;
-            width: 100%;
-            top: -0.6rem;
-            /*border: 1px solid red;*/
-            height: 1rem;
-        }
-
-        .drag-hover {
+        .field-sort-drop-area-hover {
             background-color: rgba(0, 255, 0, 0.2);
         }
     </style>
 </head>
 <body>
+<template id="template-field-sort-drop-area">
+    <div class="no-gutters field-sort-drop-area" ondragenter="dropAreaDragEnter(event)"
+         ondragleave="dropAreaDragLeave(event)"
+         ondrop="dropAreaDrop(event)" data-drop-area-index>
+        <div></div>
+    </div>
+</template>
 <template id="template-present-field">
     <div class="row s-field" draggable="true" ondragstart=fieldDragStart(event) data-submitee-field-name>
-        <div class="drag-mark-top" ondragenter=fieldDragEnter(event) ondragleave=fieldDragLeave(event)
-             ondrop=fieldDrop(event)>
-            <div></div>
-        </div>
         <div class="col col-2 s-field-type"></div>
         <div class="col col-2 s-field-name"></div>
         <div class="col col-6 s-field-comment"></div>
         <div class="col col-2">
             <a href="#" onclick="editField(this)" class="btn btn-secondary btn-sm">编辑</a>
             <a href="#" onclick="deleteField(this)" class="btn btn-danger btn-sm">删除</a>
-        </div>
-        <div class="drag-mark-bottom" ondragenter=fieldDragEnter(event) ondragleave=fieldDragLeave(event)
-             ondrop=fieldDrop(event)>
-            <div></div>
         </div>
     </div>
 </template>
@@ -109,7 +101,7 @@
     </nav>
     <div class="row col" id="template-fields">
         <h4>字段</h4>
-        <div class="container left-shadow" id="container-field">
+        <div class="container" id="container-field">
             <div class="row">
                 <div class="col col-2">类型</div>
                 <div class="col col-2">标题</div>
@@ -142,7 +134,7 @@
     </div>
     <div class="row col" id="template-metadata">
         <h4>标题</h4>
-        <div class="container left-shadow">
+        <div class="container">
             <div class="row">
                 <div class="col col-2"><label for="template-metadata-name">名称</label></div>
                 <div class="col col-8">
@@ -157,10 +149,9 @@
             </div>
         </div>
     </div>
-    <h4>描述</h4>
-    <span class="d-inline-block"
-          style="color:gray;align-self:flex-end;font-style: italic; font-size: 0.7rem">该段文字会公布到填写页面</span>
-    <div class="container left-shadow">
+    <h4>描述<span class="d-inline-block ml-2"
+                style="color:gray;align-self:flex-end;font-style: italic; font-size: 0.7rem">该段文字会公布到填写页面</span></h4>
+    <div class="container">
         <div id="template-desc"></div>
     </div>
 </div>
@@ -299,15 +290,56 @@
         });
 
         let relative = $("#insert-fields-before")[0];
+
+        let dropAreaIdx = 0;
+        relative.parentNode.insertBefore(createDropArea(0), relative);
+
         nodes.forEach(value => {
             relative.parentNode.insertBefore(value, relative);
+            relative.parentNode.insertBefore(createDropArea(++dropAreaIdx), relative);
         })
+    }
+
+    function createDropArea(index) {
+        let template = $("#template-field-sort-drop-area")[0];
+        template.content.querySelector(".field-sort-drop-area").setAttribute("data-drop-area-index", index);
+        return document.importNode(template.content, true);
+    }
+
+    function reconstructFieldRows() {
+        let rows = {};
+
+        let container = $("#container-field")[0];
+        container.childNodes.forEach(childNode => {
+            if (!childNode.classList) return;
+            if (childNode.classList.contains("s-field")) {
+                let fieldName = childNode.getAttribute("data-submitee-field-name");
+                rows[fieldName] = childNode;
+                container.removeChild(childNode);
+            } else if (childNode.classList.contains("field-sort-drop-area")) {
+                container.removeChild(childNode);
+            }
+        });
+
+        let relative = $("#insert-fields-before")[0];
+
+        let dropAreaIdx = 0;
+        container.insertBefore(createDropArea(0), relative);
+        currentTemplate.fields.forEach(field => {
+            let row = rows[field.name];
+            if (row) {
+                container.insertBefore(row, relative);
+                container.insertBefore(createDropArea(++dropAreaIdx), relative);
+            } else {
+                console.warn("missing row for field " + field.name);
+            }
+        });
     }
 
     /**
      *
      * @param {SField} field
-     * @return {string|string|DocumentFragment|*}
+     * @return {DocumentFragment}
      */
     function createEditingFieldRows(field) {
         let template = $("#template-editing-field")[0];
@@ -396,7 +428,7 @@
                 create_toast("提示", "对模板的更改已保存", 2000);
             }, error => {
                 currentTemplate.latest = false;
-                create_toast("重要提示", "保存模板时出现问题: " + error, 2000);
+                create_toast("重要提示", "保存模板时出现问题: " + error, 10000);
             });
         }
     }
@@ -407,82 +439,99 @@
 
     function fieldDragStart(evt) {
         let field = findFieldByElement(evt.target);
-        if (!field) return false;
+        if (!field) {
+            console.log("cannot find field of dragged element");
+            return;
+        }
 
         evt.dataTransfer.dropEffect = "move";
-        evt.dataTransfer.setData("submitee-drag", field.name);
+        evt.dataTransfer.setData("field-sort", field.name);
     }
 
-    function fieldDragEnter(evt) {
-        evt.target.classList.add("drag-hover");
+    function dropAreaDragEnter(evt) {
+        evt.target.classList.add("field-sort-drop-area-hover");
     }
 
-    function fieldDragLeave(evt) {
-        evt.target.classList.remove("drag-hover");
+    function dropAreaDragLeave(evt) {
+        evt.target.classList.remove("field-sort-drop-area-hover");
     }
 
-    function fieldDrop(evt) {
+    function dropAreaDrop(evt) {
         // reset style
-        evt.target.classList.remove("drag-hover");
-        let top = evt.target.parentNode.classList.contains("drag-mark-top");
+        dropAreaDragLeave(evt);
 
-        // find out target index
-        let relativeField = findFieldByElement(evt.target);
-        let relativeIndex = findFieldIndex(relativeField);
-        let targetIndex = top ? relativeIndex : ++relativeIndex;
+        let field = currentTemplate.getFieldByName(evt.dataTransfer.getData("field-sort"));
 
-        let field = currentTemplate.getFieldByName(evt.dataTransfer.getData("submitee-drag"));
-        if (targetIndex === findFieldIndex(field) + 1) {
-            console.log("move to next");
+        // find target index
+        let targetIndex = parseInt(evt.target.parentNode.getAttribute("data-drop-area-index"));
+        let originalIndex = currentTemplate.findFieldIndex(field);
+        if (originalIndex === targetIndex || originalIndex === targetIndex - 1) {
+            console.log(`nothing changed, originalIndex=${originalIndex}, targetIndex==${targetIndex}`);
             return;
         }
 
-        if (targetIndex >= currentTemplate.fields.length) {
-            targetIndex = currentTemplate.fields.length - 1;
-        }
-
-
-        if (targetIndex === findFieldIndex(field)) {
-            console.log("no changes");
-            return;
-        }
-
-
-        moveFieldRow(field, targetIndex);
         field.owner.moveField(field, targetIndex).then(() => {
             create_toast("提示", "对模板的更改已保存", 2000);
         }, error => {
             create_toast("重要提示", `<span style="color:red">修改模板失败： ${error}</span>`, 10000);
         });
+        reconstructFieldRows();
     }
 
-    function moveFieldRow(field, targetIndex) {
-        let first = field.owner.fields[0] === field;
+    // function fieldDrop(evt) {
+    //     // reset style
+    //     evt.target.classList.remove("drag-hover");
+    //     let top = evt.target.parentNode.classList.contains("drag-mark-top");
+    //
+    //     // find out target index
+    //     let relativeField = findFieldByElement(evt.target);
+    //     let relativeIndex = findFieldIndex(relativeField);
+    //     let targetIndex = top ? relativeIndex : ++relativeIndex;
+    //
+    //     let field = currentTemplate.getFieldByName(evt.dataTransfer.getData("field-sort"));
+    //     if (targetIndex === findFieldIndex(field) + 1) {
+    //         console.log("move to next");
+    //         return;
+    //     }
+    //
+    //     if (targetIndex >= currentTemplate.fields.length) {
+    //         targetIndex = currentTemplate.fields.length - 1;
+    //     }
+    //
+    //
+    //     if (targetIndex === findFieldIndex(field)) {
+    //         console.log("no changes");
+    //         return;
+    //     }
+    //
+    //
+    //     moveFieldRow(field, targetIndex);
+    //     field.owner.moveField(field, targetIndex).then(() => {
+    //         create_toast("提示", "对模板的更改已保存", 2000);
+    //     }, error => {
+    //         create_toast("重要提示", `<span style="color:red">修改模板失败： ${error}</span>`, 10000);
+    //     });
+    // }
+    //
+    // function moveFieldRow(field, targetIndex) {
+    //     let first = field.owner.fields[0] === field;
+    //
+    //     // determine insert place
+    //     let insertBefore;
+    //     if (targetIndex === currentTemplate.fields.length) {
+    //         insertBefore = $("#insert-fields-before")[0];
+    //     } else {
+    //         insertBefore = $(`.s-field[data-submitee-field-name=${currentTemplate.fields[targetIndex].name}]`)[0];
+    //     }
+    //
+    //     // remove previous element
+    //     let element = $(`.s-field[data-submitee-field-name=${field.name}]`)[0];
+    //     element.parentNode.removeChild(element);
+    //
+    //     // insert
+    //     insertBefore.parentNode.insertBefore(element, insertBefore);
+    // }
 
-        // determine insert place
-        let insertBefore;
-        if (targetIndex === currentTemplate.fields.length) {
-            insertBefore = $("#insert-fields-before")[0];
-        } else {
-            insertBefore = $(`.s-field[data-submitee-field-name=${currentTemplate.fields[targetIndex].name}]`)[0];
-        }
-
-        // remove previous element
-        let element = $(`.s-field[data-submitee-field-name=${field.name}]`)[0];
-        element.parentNode.removeChild(element);
-
-        // insert
-        insertBefore.parentNode.insertBefore(element, insertBefore);
-    }
-
-    function findFieldIndex(field) {
-        let list = field.owner.fields;
-        for (let i = 0; i < list.length; i++) {
-            if (list[i] === field) {
-                return i;
-            }
-        }
-    }
 
     init_toast();
     buildFieldTypeSelect();

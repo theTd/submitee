@@ -158,10 +158,22 @@ class STemplate {
     }
 
     moveField(field, index) {
-        let first = this.fields[0] === field;
+        let originalIndex = this.findFieldIndex(field);
+        if (originalIndex === index) return new Promise(resolve => resolve());
+
+        if (index > originalIndex) index--;
+
         this.fields = this.fields.filter(value => value !== field);
-        this.fields.splice(first ? --index : index, 0, field);
+        this.fields.splice(index, 0, field);
         return this.sync();
+    }
+
+    findFieldIndex(field) {
+        for (let i = 0; i < this.fields.length; i++) {
+            if (this.fields[i] === field) {
+                return i;
+            }
+        }
     }
 
     updateAttributeMap() {
@@ -298,7 +310,7 @@ function getFieldTypeDisplayName(type) {
  */
 function makeid(length) {
     var result = [];
-    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var characters = 'abcdefghijklmnopqrstuvwxyz';
     var charactersLength = characters.length;
     for (var i = 0; i < length; i++) {
         result.push(characters.charAt(Math.floor(Math.random() *

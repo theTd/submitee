@@ -41,9 +41,9 @@
     </div>
 
     <hr/>
-    <form onsubmit="createSubmission();return false" id="field-container">
+    <form class="mb-3" id="field-container" onsubmit="createSubmission();return false;">
         <hr id="insert-fields-before"/>
-        <button class="btn btn-primary" onclick="createSubmission()">提交</button>
+        <input type="submit" class="btn btn-primary" value="提交"/>
     </form>
 </div>
 <!-- Optional JavaScript -->
@@ -59,14 +59,19 @@
     function createSubmission() {
         let result = "";
         currentTemplate.fields.forEach(value => {
-            let controller = fieldControllers[value.fieldType];
+            let controller = fieldControllers[value.type];
             if (!controller) {
-                result += "unable to resolve " + value.fieldType; // todo
+                result += `[!]${value.name}: no controller`
             } else {
-                let resolve = controller.resolveSubmission(value);
-                result += resolve;
-                result += "\n";
+                try {
+                    let resolve = controller.resolveSubmission(value);
+                    result += resolve ? `[o]${value.name}: ${resolve}` : `[x]${value.name}`;
+                } catch (e) {
+                    console.log(e);
+                    result += `[!]${value.name}: internal error`
+                }
             }
+            result += "\n";
         })
         alert(result);
     }
@@ -82,11 +87,12 @@
         return node;
     }
 
-    function createFieldContainer(field, html) {
+    function createFieldLine(controller, field, html) {
         let template = $("#template-field-container")[0];
         template.content.querySelector(".container-field-name").textContent = field.name;
         template.content.querySelector(".container-field-input").innerHTML = html;
         template.content.querySelector(".field-container").setAttribute("submitee-field-name", field.name);
+        template.content.querySelector(".field-container").id = controller.getContainerId(field);
         return document.importNode(template.content, true);
     }
 
@@ -103,7 +109,7 @@
             if (!typeController) {
                 relative.parentNode.insertBefore(createErrorLine(value), relative);
             } else {
-                relative.parentNode.insertBefore(createFieldContainer(value,
+                relative.parentNode.insertBefore(createFieldLine(typeController, value,
                     typeController.generateSubmissionHtml(value)), relative);
                 // value.resolveFunction = typeController.generateResolveFunction(value);
             }
