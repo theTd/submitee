@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title></title>
+
+    <style>
+        .main .container {
+            box-shadow: inset 4px 0 0 #797979;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+<!--<template id="template-blob-storage">-->
+<!--    <div class="row">-->
+
+<!--    </div>-->
+<!--</template>-->
+<div class="container main">
+    <div class="row">
+        <h4>文件存储</h4>
+        <div class="container" id="container-blob-storage">
+            <div class="row">
+                <div class="col col-2"><label for="create-blob-storage-type">存储类型</label></div>
+                <div class="col col-2"><label for="create-blob-storage-name">名称</label></div>
+            </div>
+
+            <div class="blob-storage" data-blob-storage-key>
+
+            </div>
+            <hr id="insert-blob-storage-before"/>
+            <form class="row" onsubmit="createBlobStorage();return false;">
+                <div class="col col-2">
+                    <select id="create-blob-storage-type" class="w-100 h-100">
+                    </select>
+                </div>
+                <div class="col col-2">
+                    <input class="w-100 h-100" type="text" id="create-blob-storage-name"/>
+                </div>
+                <div class="col col-2 justify-content-center">
+                    <button type="button" class="btn btn-primary" onclick="createBlobStorage()">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function createBlobStorage() {
+        $.ajax({
+            url: "../configuration/create-blob-storage",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                provider: $("#create-blob-storage-type option:selected").val(),
+                name: $("#create-blob-storage-name").val()
+            }),
+            success: function (response) {
+                window.location.reload();
+            },
+            error: function (error) {
+                toast_ajax_error(error);
+            }
+        });
+        // todo
+    }
+
+    function createBlobStorageRow(config) {
+
+    }
+
+    function loadBlobStorages() {
+        $("#container-blob-storage .blob-storage").remove();
+
+        let relative = $("#insert-blob-storage-before")[0];
+        configuration["blob_storages"].forEach(function (section) {
+            relative.parentNode.insertBefore(createBlobStorageRow(section), relative);
+        });
+
+        let providerTypeList = $("#create-blob-storage-type")[0];
+        $(providerTypeList).empty();
+        let option = document.createElement("option");
+        option.name = "create-blob-storage-type";
+        option.value = "";
+        option.textContent = "-----------";
+        providerTypeList.appendChild(option);
+        Object.keys(configuration["blob_storage_providers"]).forEach(function (key) {
+            let providerType = configuration["blob_storage_providers"][key];
+            let option = document.createElement("option");
+            option.name = "create-blob-storage-type";
+            option.value = key;
+            option.textContent = providerType;
+            providerTypeList.appendChild(option);
+        })
+    }
+
+    function loadConfiguration() {
+        loadBlobStorages()
+    }
+
+    configuration = {};
+
+    function fetchConfiguration() {
+        $.ajax({
+            url: "../configuration",
+            method: "GET",
+            success: function (data) {
+                configuration = data;
+                console.log("configuration fetched: " + JSON.stringify(data))
+                loadConfiguration();
+            },
+            error: function (error) {
+                toast_ajax_error(error);
+            }
+        })
+    }
+
+    init_toast();
+    fetchConfiguration();
+</script>
+</body>
+</html>

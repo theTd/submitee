@@ -5,6 +5,7 @@ import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeFilter;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
+import org.starrel.submitee.model.UserDescriptor;
 
 import java.io.*;
 import java.util.Date;
@@ -74,16 +75,16 @@ public class FileTreeBlobStorage implements BlobStorage {
     }
 
     @Override
-    public Blob create(int blobId, String key, String fileName) throws IOException {
+    public Blob create(int blobId, String key, String fileName, String contentType, UserDescriptor uploader) throws IOException {
         if (directory == null) {
             throw new IOException("blob storage directory not set yet");
         }
-        return new FileTreeBlob(blobId, fileName, key);
+        return new FileTreeBlob(blobId, fileName, key, contentType, uploader);
     }
 
     @Override
-    public Blob access(int blobId, String key, String fileName, Date createTime) throws IOException {
-        FileTreeBlob blob = new FileTreeBlob(blobId, fileName, key, createTime);
+    public Blob access(int blobId, String key, String fileName, Date createTime, String contentType, UserDescriptor uploader) throws IOException {
+        FileTreeBlob blob = new FileTreeBlob(blobId, fileName, key, createTime, contentType, uploader);
         if (!(blob.file.exists() && blob.file.isFile())) {
             throw new IOException("target file missing");
         }
@@ -134,10 +135,14 @@ public class FileTreeBlobStorage implements BlobStorage {
         private final String fileName;
         private final String key;
         private final Date createTime;
+        private final String contentType;
+        private final UserDescriptor uploader;
         private final File file;
+        private long size = 0;
+        private boolean finishedUploading = false;
 
-        private FileTreeBlob(int blobId, String fileName, String key) throws IOException {
-            this(blobId, fileName, key, new Date());
+        private FileTreeBlob(int blobId, String fileName, String key, String contentType, UserDescriptor uploader) throws IOException {
+            this(blobId, fileName, key, new Date(), contentType, uploader);
             if (!file.getParentFile().mkdirs() || !this.file.createNewFile()) {
                 throw new IOException("failed to create file");
             }
@@ -145,11 +150,13 @@ public class FileTreeBlobStorage implements BlobStorage {
             this.file.setExecutable(false);
         }
 
-        private FileTreeBlob(int blobId, String fileName, String key, Date createTime) {
+        private FileTreeBlob(int blobId, String fileName, String key, Date createTime, String contentType, UserDescriptor uploader) {
             this.blobId = blobId;
             this.fileName = fileName;
             this.key = key;
             this.createTime = createTime;
+            this.contentType = contentType;
+            this.uploader = uploader;
             this.file = new File(directory + File.separator + key.substring(0, 2) + File.separator + key);
         }
 
@@ -174,21 +181,40 @@ public class FileTreeBlobStorage implements BlobStorage {
         }
 
         @Override
-        public OutputStream getOutputStream() {
-            try {
-                return new FileOutputStream(file);
-            } catch (FileNotFoundException e) {
-                return null;
-            }
+        public OutputStream getOutputStream() throws FileNotFoundException {
+            return new FileOutputStream(file) {
+                @Override
+                public void close() throws IOException {
+                    super.close();
+                    finishedUploading = true;
+                    size = file.length();
+                }
+            };
         }
 
         @Override
-        public InputStream getInputStream() {
-            try {
-                return new FileInputStream(file);
-            } catch (FileNotFoundException e) {
-                return null;
-            }
+        public InputStream getInputStream() throws IOException {
+            return new FileInputStream(file);
+        }
+
+        @Override
+        public long getSize() {
+            return size;
+        }
+
+        @Override
+        public boolean getFinishedUploading() {
+            return finishedUploading;
+        }
+
+        @Override
+        public String getContentType() {
+            return contentType;
+        }
+
+        @Override
+        public UserDescriptor getUploader() {
+            return uploader;
         }
 
         @Override

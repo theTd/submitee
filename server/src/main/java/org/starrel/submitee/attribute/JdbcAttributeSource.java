@@ -70,4 +70,24 @@ public class JdbcAttributeSource implements AttributeSource {
             throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public <TValue> TValue getListAttribute(String path, int index, Class<TValue> type) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setListAttribute(String path, int index, Object tValue) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void addListAttribute(String path, Object value) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <TValue> List<TValue> getListAttributes(String path, Class<TValue> type) {
+        throw new UnsupportedOperationException();
+    }
 }

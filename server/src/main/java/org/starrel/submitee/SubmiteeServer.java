@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import org.bson.conversions.Bson;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -18,9 +19,11 @@ import org.eclipse.jetty.servlet.ServletHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.starrel.submitee.attribute.*;
+import org.starrel.submitee.auth.AnonymousUserRealm;
 import org.starrel.submitee.auth.InternalAccountRealm;
 import org.starrel.submitee.auth.PasswordAuthScheme;
 import org.starrel.submitee.auth.PasswordAuthSchemeImpl;
+import org.starrel.submitee.blob.Blob;
 import org.starrel.submitee.blob.BlobStorageController;
 import org.starrel.submitee.blob.BlobStorageProvider;
 import org.starrel.submitee.blob.FileTreeBlobStorage;
@@ -57,12 +60,12 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private final BlobStorageController blobStorageController;
     private final TemplateKeeper templateKeeper;
     private final ObjectMapController objectMapController;
-
+    private final AnonymousUserRealm anonymousUserRealm;
+    // endregion
+    private final Logger logger;
     private AttributeMap<SubmiteeServer> attributeMap;
     // region settings
     private AttributeSpec<String> defaultLanguage;
-    // endregion
-    private final Logger logger;
 
     public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress[] listenAddresses) throws IOException {
         instance = this;
@@ -78,6 +81,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         templateKeeper = new TemplateKeeper(this);
         textContainer = new TextContainer();
         objectMapController = new ObjectMapController(this);
+        anonymousUserRealm = new AnonymousUserRealm();
     }
 
     private static Handler initServletHandler() {
@@ -91,6 +95,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         servletHandler.addServlet(PasteServlet.class, "/paste/*");
         servletHandler.addServlet(InfoServlet.class, "/info/*");
         servletHandler.addServlet(BatchGetServlet.class, "/batch-get/*");
+        servletHandler.addServlet(UploadServlet.class, "/upload/*");
+        servletHandler.addServlet(ConfigurationServlet.class, "/configuration/*");
         return servletHandler;
     }
 
@@ -145,7 +151,10 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         addAttributeSerializer(Integer.class, AttributeSerializers.INTEGER);
         addAttributeSerializer(Double.class, AttributeSerializers.DOUBLE);
         addAttributeSerializer(Boolean.class, AttributeSerializers.BOOLEAN);
-        addAttributeSerializer(UserDescriptor.class, AttributeSerializers.USER_DESCRIPTOR);
+        addAttributeSerializer(Date.class, AttributeSerializers.DATE);
+        addAttributeSerializer(UserDescriptor.class, UserDescriptor.SERIALIZER);
+        addAttributeSerializer(HistoryAddressEntry.class, HistoryAddressEntry.SERIALIZER);
+
         addAttributeSerializer(JsonObject.class, new AttributeSerializer<JsonObject>() {
             @Override
             public JsonObject parse(JsonElement json) {
@@ -185,12 +194,6 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
             this.defaultLanguage.set("zh-CN");
         }
         textContainer.init();
-        try {
-            Class.forName("org.starrel.submitee.I18N");
-        } catch (ClassNotFoundException e) {
-            throw new Error(e);
-        }
-        textContainer.updateTemplate(new File("text" + File.separator + "template.properties"), I18N.ConstantI18NKey.KNOWN_KEYS);
         // endregion
 
         // region setup blob storage
@@ -245,16 +248,26 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public void addBlobStorageProvider(BlobStorageProvider provider) {
-        // TODO: 2021-03-30-0030
+        blobStorageController.addProvider(provider);
     }
 
     @Override
-    public <TContext extends AttributeHolder<?>> AttributeMap<TContext> createAttributeMap(TContext context) {
+    public Blob createBlob(String blobStorageName, String fileName, String contentType, UserDescriptor uploader) throws IOException, SQLException {
+        return blobStorageController.createNewBlob(blobStorageName, fileName, contentType, uploader);
+    }
+
+    @Override
+    public Blob getBlobById(int blobId) {
+        return null;
+    }
+
+    @Override
+    public <TContext extends AttributeHolder<?>> AttributeMap<TContext> createTemporaryAttributeMap(TContext context) {
         return new AttributeMapImpl<>(context, null);
     }
 
     @Override
-    public <TContext extends AttributeHolder<?>> AttributeMap<TContext> createAttributeMap(TContext context, String collection) {
+    public <TContext extends AttributeHolder<?>> AttributeMap<TContext> createOrReadAttributeMap(TContext context, String collection) {
         return new AttributeMapImpl<>(context, collection);
     }
 
@@ -321,6 +334,11 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     @Override
     public Submission getSubmission(UUID uniqueId) {
         // TODO: 2021/4/4 implement
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<SubmissionImpl> getSubmissions(Bson query) {
         throw new UnsupportedOperationException();
     }
 
@@ -399,6 +417,10 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         return attributeMap;
     }
 
+    public void removeAttributeMap(String collectionName, String attributePersistKey) {
+        mongoDatabase.getCollection(collectionName).deleteMany(Filters.eq("id", attributePersistKey));
+    }
+
     public String getDefaultLanguage() {
         return defaultLanguage.get();
     }
@@ -417,11 +439,24 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         return null;
     }
 
+    public User resumeSession(SessionImpl session) {
+        // TODO: 2021-04-09-0009
+        return null;
+    }
+
     public TemplateKeeper getTemplateKeeper() {
         return templateKeeper;
     }
 
     public ObjectMapController getObjectMapController() {
         return objectMapController;
+    }
+
+    public AnonymousUserRealm getAnonymousUserRealm() {
+        return anonymousUserRealm;
+    }
+
+    public BlobStorageController getBlobStorageController() {
+        return blobStorageController;
     }
 }

@@ -1,4 +1,6 @@
 function init_toast() {
+    if ($("#template-toast")[0]) return;
+
     let template = document.createElement("template");
     template.id = "template-toast";
     template.innerHTML = `
@@ -27,6 +29,8 @@ function init_toast() {
 }
 
 function create_toast(title, content, delay) {
+    init_toast();
+
     let template = $("#template-toast")[0];
     let id = makeid(6);
 
@@ -46,4 +50,12 @@ function create_toast(title, content, delay) {
     setTimeout(() => {
         container.removeChild(container.querySelector("#" + id));
     }, delay + 200);
+}
+
+function toast_ajax_error(error) {
+    if (error.responseText) {
+        create_toast("重要提示", error.responseText, 10000)
+    } else {
+        create_toast("重要提示", error.statusText, 10000)
+    }
 }

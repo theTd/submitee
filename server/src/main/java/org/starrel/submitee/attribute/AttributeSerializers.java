@@ -5,6 +5,8 @@ import com.google.gson.JsonObject;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.UserDescriptor;
 
+import java.util.Date;
+
 public abstract class AttributeSerializers {
     public static AttributeSerializer<String> STRING = new AttributeSerializer<String>() {
         @Override
@@ -54,22 +56,15 @@ public abstract class AttributeSerializers {
         }
     };
 
-    public static AttributeSerializer<UserDescriptor> USER_DESCRIPTOR = new AttributeSerializer<UserDescriptor>() {
+    public static AttributeSerializer<Date> DATE = new AttributeSerializer<Date>() {
         @Override
-        public UserDescriptor parse(JsonElement json) {
-            JsonObject body = json.getAsJsonObject();
-            return UserDescriptor.builder()
-                    .realmType(body.get("realm-type").getAsString())
-                    .userId(body.get("user-id").getAsString())
-                    .build();
+        public Date parse(JsonElement json) {
+            return new Date(json.getAsLong());
         }
 
         @Override
-        public JsonElement write(UserDescriptor userDescriptor) {
-            JsonObject object = new JsonObject();
-            object.addProperty("realm-type", userDescriptor.getRealmType());
-            object.addProperty("user-id", userDescriptor.getUserId());
-            return object;
+        public JsonElement write(Date date) {
+            return SubmiteeServer.GSON.toJsonTree(date.getTime());
         }
     };
 }

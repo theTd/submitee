@@ -17,4 +17,12 @@ public interface AttributeSource {
     List<String> listKeys(String path);
 
     void delete(String path);
+
+    <TValue> TValue getListAttribute(String path, int index, Class<TValue> type);
+
+    void setListAttribute(String path, int index, Object tValue);
+
+    void addListAttribute(String path, Object value);
+
+    <TValue> List<TValue> getListAttributes(String path, Class<TValue> type);
 }

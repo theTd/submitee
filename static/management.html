@@ -23,10 +23,10 @@
             <div class="list-group" id="management-methods">
                 <a href="?method=template-list" data-submitee-management-method-alt="edit-template"
                    class="list-group-item list-group-item-action">编辑模板</a>
-                <a href="?method=published-templates" class="list-group-item list-group-item-action">已发布的模板</a>
-                <a href="?method=unread-submissions" class="list-group-item list-group-item-action">未读提交</a>
-                <a href="?method=all-submissions" class="list-group-item list-group-item-action">提交列表</a>
-                <a href="?method=settings" class="list-group-item list-group-item-action disabled">配置项</a>
+                <a href="?method=published-templates" class="list-group-item list-group-item-action disabled">已发布的模板</a>
+                <a href="?method=unread-submissions" class="list-group-item list-group-item-action disabled">未读提交</a>
+                <a href="?method=all-submissions" class="list-group-item list-group-item-action disabled">提交列表</a>
+                <a href="?method=settings" class="list-group-item list-group-item-action">配置项</a>
             </div>
         </div>
         <div class="col col-9" id="management-container">
@@ -61,6 +61,19 @@
         })
     }
 
+    function loadManagementPage(url) {
+        $.ajax({
+            url: url,
+            method: "GET",
+            success: function (data) {
+                $("#management-container").html(data);
+            },
+            error: function (error) {
+                alert(error.statusCode);
+            }
+        });
+    }
+
     let method = getQueryVariable("method");
     if (!method) method = "template-list"; // for default option
 
@@ -68,26 +81,11 @@
 
     switch (method) {
         case "template-list": {
-            $.ajax({
-                url: "template-list.html",
-                method: "GET",
-                success: (data) => {
-                    $("#management-container").html(data);
-                }
-            });
+            loadManagementPage("template-list.html");
             break;
         }
         case "edit-template": {
-            $.ajax({
-                url: "edit-template.html",
-                method: "GET",
-                success: function (data) {
-                    $("#management-container").html(data);
-                },
-                error: function (error) {
-                    alert(error.statusCode);
-                }
-            });
+            loadManagementPage("edit-template.html");
             break;
         }
         case "published-templates": {
@@ -96,7 +94,8 @@
         case "unread-submissions": {
             break;
         }
-        case "system-settings": {
+        case "settings": {
+            loadManagementPage("settings.html");
             break;
         }
     }

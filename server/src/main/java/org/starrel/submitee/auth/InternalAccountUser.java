@@ -38,11 +38,6 @@ public class InternalAccountUser implements User {
     }
 
     @Override
-    public boolean isAnonymous() {
-        return uid > 0;
-    }
-
-    @Override
     public String getTypeId() {
         return InternalAccountRealm.TYPE_ID;
     }

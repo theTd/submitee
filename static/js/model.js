@@ -37,6 +37,11 @@ class AttributeMap {
 }
 
 class SField {
+    /**
+     *
+     * @param {STemplate} owner
+     * @param attributes
+     */
     constructor(owner, attributes) {
         this.owner = owner;
         this.attributeMap = attributes ? new AttributeMap(attributes) : new AttributeMap();
@@ -275,6 +280,9 @@ class FieldController {
 
     resolveSubmission(field) {
 
+    }
+
+    async submissionInit() {
     }
 
     generateSubmissionHtml(field) {

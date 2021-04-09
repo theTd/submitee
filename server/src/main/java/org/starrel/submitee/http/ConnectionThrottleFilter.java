@@ -4,6 +4,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.I18N;
+import org.starrel.submitee.Util;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -25,15 +26,7 @@ public class ConnectionThrottleFilter extends HttpFilter {
 
     @Override
     protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
-        String addr = null;
-        String header = req.getHeader("X-Forwarded-For");
-        if (header != null) {
-            int idx = header.indexOf(",");
-            addr = idx == -1 ? header : header.substring(0, idx);
-        }
-        if (addr == null) {
-            addr = req.getRemoteAddr();
-        }
+        String addr = Util.getRemoteAddr(req);
         TimeList timeList;
         try {
             timeList = cache.get(addr, TimeList::new);

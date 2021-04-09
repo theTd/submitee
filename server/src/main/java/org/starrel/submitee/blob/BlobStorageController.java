@@ -4,6 +4,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.model.UserDescriptor;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -11,10 +12,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -33,6 +31,18 @@ public class BlobStorageController {
     public void init() throws SQLException {
         createTables();
         initStorages();
+    }
+
+    public List<? extends BlobStorageProvider> getProviders() {
+        return new ArrayList<>(providerMap.values());
+    }
+
+    public List<? extends BlobStorage> getStorages() {
+        return new ArrayList<>(storageMap.values());
+    }
+
+    public BlobStorage getStorage(String name) {
+        return storageMap.get(name);
     }
 
     private void createTables() throws SQLException {
@@ -78,25 +88,34 @@ public class BlobStorageController {
         providerMap.put(provider.getTypeId(), provider);
     }
 
-    public Blob createNewBlob(String storageKey, String fileName) throws IOException, SQLException {
-        BlobStorage storage = storageMap.get(storageKey);
-        if (storage == null) throw new RuntimeException("blob storage not found: " + storageKey);
+    public BlobStorage createStorage(String providerName, String name) {
+        BlobStorageProvider provider = providerMap.get(providerName);
+        BlobStorage created = provider.createNewStorage(name);
+        storageMap.put(name, created);
+        return created;
+    }
+
+    public Blob createNewBlob(String storageName, String fileName, String contentType, UserDescriptor uploader) throws IOException, SQLException {
+        BlobStorage storage = storageMap.get(storageName);
+        if (storage == null) throw new RuntimeException("blob storage not found: " + storageName);
 
         UUID uniqueId = UUID.randomUUID();
         String key = uniqueId.toString().replace("-", "");
         int blobId;
         try (Connection conn = server.getDataSource().getConnection()) {
-            PreparedStatement stmt = conn.prepareStatement("INSERT INTO blobs(storage_id, blob_key, file_name) VALUES((SELECT id FROM blob_storages WHERE type_id=? AND name=?),?,?)");
+            PreparedStatement stmt = conn.prepareStatement("INSERT INTO blobs(storage_id, blob_key, file_name, content_type, uploader) VALUES((SELECT id FROM blob_storages WHERE type_id=? AND name=?),?,?,?,?)");
             stmt.setString(1, storage.getTypeId());
             stmt.setString(2, storage.getName());
             stmt.setString(3, key);
             stmt.setString(4, fileName);
+            stmt.setString(5, contentType);
+            stmt.setString(6, uploader.toString());
             stmt.executeUpdate();
             ResultSet r = conn.createStatement().executeQuery("SELECT `blob_id`,`create_time` FROM `blobs` WHERE `blob_key`=" + key);
             if (!r.next()) throw new RuntimeException("insertion failed");
             blobId = r.getInt(1);
         }
-        return storage.create(blobId, key, fileName);
+        return storage.create(blobId, key, fileName, contentType, uploader);
     }
 
     public Blob access(int blobId) throws Exception {
@@ -105,19 +124,22 @@ public class BlobStorageController {
                 try (Connection conn = server.getDataSource().getConnection()) {
                     ResultSet r = conn.createStatement().executeQuery(
                             "SELECT (SELECT type_id AS storage_type, name FROM blob_storages AS storage_name " +
-                                    "WHERE blob_storages.id=blobs.storage_id),file_name,create_time FROM blobs WHERE blob_id=" + blobId);
+                                    "WHERE blob_storages.id=blobs.storage_id),file_name,create_time,content_type,uploader FROM blobs WHERE blob_id=" + blobId);
                     if (r.next()) {
                         String type = r.getString(1);
                         String type_name = r.getString(2);
                         String key = r.getString(3);
                         String fileName = r.getString(4);
                         Date createTime = r.getTimestamp(5);
+                        String contentType = r.getString(6);
+                        UserDescriptor uploader = UserDescriptor.parse(r.getString(7));
+
                         String storageKey = type + ":" + type_name;
                         BlobStorage storage = storageMap.get(storageKey);
                         if (storage == null) {
                             throw new NullPointerException("blob storage missing: " + storageKey);
                         }
-                        return storage.access(blobId, key, fileName, createTime);
+                        return storage.access(blobId, key, fileName, createTime, contentType, uploader);
                     } else {
                         return null;
                     }

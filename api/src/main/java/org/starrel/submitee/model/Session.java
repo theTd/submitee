@@ -3,19 +3,25 @@ package org.starrel.submitee.model;
 import org.starrel.submitee.attribute.AttributeHolder;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 public interface Session extends AttributeHolder<Session> {
-    String ATTRIBUTE_COLLECTION_NAME = "sessions";
+    String COLLECTION_NAME = "sessions";
 
     User getUser();
 
     void setUser(User user);
 
-    boolean isAnonymous();
-
     String getLastUA();
 
+    void setLastUA(String ua);
+
     Date getLastActive();
+
+    List<HistoryAddressEntry> getHistoryAddresses();
+
+    String getSessionToken();
 
     void close();
 

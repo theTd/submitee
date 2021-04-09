@@ -20,7 +20,7 @@ public class SubmissionImpl implements Submission {
 
     public SubmissionImpl(UserDescriptor submitUserDescriptor, STemplateImpl template) {
         this.uniqueId = UUID.randomUUID();
-        this.attributeMap = SubmiteeServer.getInstance().createAttributeMap(this, Submission.ATTRIBUTE_COLLECTION_NAME);
+        this.attributeMap = SubmiteeServer.getInstance().createOrReadAttributeMap(this, Submission.ATTRIBUTE_COLLECTION_NAME);
 
         this.templateUUIDSpec = this.attributeMap.of("template-id", UUID.class);
         this.submitUserDescriptorSpec = this.attributeMap.of("submit-user", UserDescriptor.class);

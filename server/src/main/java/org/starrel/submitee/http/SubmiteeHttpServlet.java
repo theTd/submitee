@@ -17,12 +17,19 @@ import java.util.List;
 public class SubmiteeHttpServlet extends HttpServlet {
 
     private final SubmiteeServer submiteeServer;
+    private String baseUri = "";
 
     {
         submiteeServer = SubmiteeServer.getInstance();
     }
 
-    public static String[] parseUri(String uri) {
+    protected void setBaseUri(String baseUri) {
+        this.baseUri = baseUri;
+    }
+
+    public String[] parseUri(String uri) {
+        uri = uri.substring(uri.indexOf(baseUri) + baseUri.length());
+
         List<String> list = new LinkedList<>();
         int idx = 1;
         while (true) {
@@ -52,7 +59,7 @@ public class SubmiteeHttpServlet extends HttpServlet {
     }
 
     public Session getSession(HttpServletRequest request) {
-        SessionImpl session = SessionImpl.getSession(request.getSession());
+        SessionImpl session = (SessionImpl) request.getSession().getAttribute(SessionImpl.HTTP_ATTRIBUTE_SESSION);
         if (session == null) {
             throw new RuntimeException("could not get session instance for servlet request");
         }
@@ -64,13 +71,21 @@ public class SubmiteeHttpServlet extends HttpServlet {
         resp.getWriter().println(I18N.Http.INVALID_INPUT.format(req));
     }
 
+    protected void responseBadRequest(HttpServletRequest req, HttpServletResponse resp, I18N.I18NKey messageKey, Object... messageParts) throws IOException {
+        resp.setStatus(HttpStatus.BAD_REQUEST_400);
+        resp.setCharacterEncoding("UTF-8");
+        resp.getWriter().println(messageKey.format(req, messageParts));
+    }
+
     protected void responseInternalError(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
+        resp.setCharacterEncoding("UTF-8");
         resp.getWriter().println(I18N.Http.INTERNAL_ERROR.format(req));
     }
 
     protected void responseNotFound(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         resp.setStatus(HttpStatus.NOT_FOUND_404);
+        resp.setCharacterEncoding("UTF-8");
         resp.getWriter().println(I18N.Http.NOT_FOUND.format(req));
     }
 }

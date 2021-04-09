@@ -8,13 +8,20 @@ import java.util.List;
 public interface User extends AttributeHolder<User> {
     String ATTRIBUTE_COLLECTION_NAME = "users";
 
-    boolean isAnonymous();
+    default boolean isAnonymous() {
+        return false;
+    }
+
+    @Override
+    default String getAttributePersistKey() {
+        return getDescriptor().toString();
+    }
 
     String getTypeId();
 
     String getId();
 
-    List<Submission> getSubmissions(Bson query);
+    List<? extends Submission> getSubmissions(Bson query);
 
     UserDescriptor getDescriptor();
 }

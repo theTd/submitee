@@ -1,12 +1,14 @@
 package org.starrel.submitee.model;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeFilter;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
+import org.starrel.submitee.http.SFieldImpl;
 
-import java.util.Date;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -21,6 +23,7 @@ public class STemplateImpl implements STemplate {
 
     private final AttributeSpec<UserDescriptor> committedBy;
     private final AttributeSpec<String> comment;
+    private final AttributeSpec<JsonArray> fields;
 
     public STemplateImpl(TemplateKeeper keeper, UUID uniqueId, String grouping, String templateId, int version, int latestVersion, boolean createAttributeMap) {
         this.keeper = keeper;
@@ -35,6 +38,7 @@ public class STemplateImpl implements STemplate {
 
         this.committedBy = attributeMap.of("committed-by", UserDescriptor.class);
         this.comment = attributeMap.of("comment", String.class);
+        this.fields = attributeMap.of("fields", JsonArray.class);
 
         if (createAttributeMap) {
             boolean save = this.attributeMap.getAutoSaveAttribute();
@@ -91,6 +95,19 @@ public class STemplateImpl implements STemplate {
     @Override
     public void setComment(String comment) throws AttributeFilter.FilterException {
         this.comment.set(comment);
+    }
+
+    @Override
+    public Map<String, SFieldImpl> getFields() {
+        Map<String, SFieldImpl> fields = new LinkedHashMap<>();
+        JsonArray jsonArray = this.fields.get();
+        if (jsonArray != null) {
+            for (JsonElement element : jsonArray) {
+                SFieldImpl field = new SFieldImpl(this, element.getAsJsonObject());
+                fields.put(field.getName(), field);
+            }
+        }
+        return fields;
     }
 
     @Override

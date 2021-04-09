@@ -3,5 +3,6 @@ CREATE TABLE blob_storages (
     `type_id` VARCHAR(128) NOT NULL,
     `name` VARCHAR(128) NOT NULL,
     PRIMARY KEY (`id`),
-    INDEX(`type_id`,`name`)
+    INDEX(`type_id`),
+    UNIQUE KEY(`name`)
 );

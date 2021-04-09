@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.ExceptionReporting;
-import org.starrel.submitee.I18N;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;

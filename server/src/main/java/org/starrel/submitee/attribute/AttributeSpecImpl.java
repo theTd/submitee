@@ -3,6 +3,7 @@ package org.starrel.submitee.attribute;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.gson.JsonObject;
+import lombok.SneakyThrows;
 import org.starrel.submitee.ExceptionReporting;
 
 import java.util.*;
@@ -11,6 +12,7 @@ import java.util.concurrent.ExecutionException;
 public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     private final AttributeSpecImpl<?> parent;
     private final String path;
+    private final boolean isList;
     private final Class<TValue> rootType;
     private final Cache<String, AttributeSpec<?>> specCache = CacheBuilder.newBuilder().build();
     private final TreeMap<String, AttributeSpec<?>> specTreeMap =
@@ -23,9 +25,14 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     private AttributeSource foundSource = null;
 
     public AttributeSpecImpl(AttributeSpecImpl<?> parent, String path, Class<TValue> rootType) {
+        this(parent, path, rootType, false);
+    }
+
+    public AttributeSpecImpl(AttributeSpecImpl<?> parent, String path, Class<TValue> rootType, boolean isList) {
         this.parent = parent;
         this.path = path;
         this.rootType = rootType;
+        this.isList = isList;
     }
 
     @Override
@@ -65,9 +72,9 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         this.owningSource = source;
     }
 
-    private String getFullPath(String path) {
+    private String fullPath(String path) {
         if (parent == null) return path;
-        return parent.getFullPath(this.path) + (path.isEmpty() ? "" : "." + path);
+        return parent.fullPath(this.path) + (path.isEmpty() ? "" : "." + path);
     }
 
     @Override
@@ -75,22 +82,29 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         this.filters.add(filter);
     }
 
+    @SneakyThrows
     @SuppressWarnings("unchecked")
     @Override
     public <TSubValue> AttributeSpec<TSubValue> of(String path, Class<TSubValue> type) {
-        try {
-            AttributeSpec<TSubValue> spec = (AttributeSpec<TSubValue>) specCache.get(path,
-                    () -> new AttributeSpecImpl<>(AttributeSpecImpl.this, path, type));
-            specTreeMap.put(path, spec);
-            return spec;
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        }
+        AttributeSpec<TSubValue> spec = (AttributeSpec<TSubValue>) specCache.get(path,
+                () -> new AttributeSpecImpl<>(AttributeSpecImpl.this, path, type));
+        specTreeMap.put(path, spec);
+        return spec;
     }
 
     @Override
     public AttributeSpec<Void> of(String path) {
         return of(path, Void.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @SneakyThrows
+    @Override
+    public <TListValue> AttributeSpec<TListValue> ofList(String path, Class<TListValue> type) {
+        AttributeSpec<TListValue> spec = (AttributeSpec<TListValue>) specCache.get(path,
+                () -> new AttributeSpecImpl<>(AttributeSpecImpl.this, path, type, true));
+        specTreeMap.put(path, spec);
+        return spec;
     }
 
     private AttributeSpec<?> getSpec(String path) {
@@ -110,16 +124,20 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
 
     @Override
     public <TSubValue> TSubValue get(String path, Class<TSubValue> type) {
+        if (isList) throw new UnsupportedOperationException("not object");
+
         AttributeSpec<?> spec = getSpec(path);
         if (spec != this) {
             return spec.get(path.substring(spec.getPath().length()), type);
         } else {
-            return getSource().getAttribute(getFullPath(path), type);
+            return getSource().getAttribute(fullPath(path), type);
         }
     }
 
     @Override
     public void set(String path, Object value) throws AttributeFilter.FilterException {
+        if (isList) throw new UnsupportedOperationException("not object");
+
         AttributeSpec<?> spec = getSpec(path);
         if (spec != this) {
             spec.set(path.substring(spec.getPath().length()), value);
@@ -135,25 +153,51 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
                 }
             }
 
-            getSource().setAttribute(getFullPath(path), value);
-
+            getSource().setAttribute(fullPath(path), value);
             childUpdated(path);
         }
     }
 
     @Override
     public void setAll(String path, JsonObject jsonObject) {
+        if (isList) throw new UnsupportedOperationException("not object");
         getSource().setAll(path, jsonObject);
     }
 
     @Override
     public List<String> getKeys(String path) {
+        if (isList) throw new UnsupportedOperationException("not object");
+
         AttributeSpec<?> spec = getSpec(path);
         if (spec != this) {
             return spec.getKeys(path.substring(spec.getPath().length()));
         } else {
             return getSource().listKeys(path);
         }
+    }
+
+    @Override
+    public TValue get(int index) {
+        if (!isList) throw new UnsupportedOperationException("not list");
+        return getSource().getListAttribute(fullPath(path), index, rootType);
+    }
+
+    @Override
+    public void add(TValue tValue) {
+        if (!isList) throw new UnsupportedOperationException("not list");
+        getSource().addListAttribute(fullPath(path), tValue);
+    }
+
+    @Override
+    public void add(int index, TValue tValue) {
+        if (!isList) throw new UnsupportedOperationException("not list");
+        getSource().setListAttribute(fullPath(path), index, tValue);
+    }
+
+    @Override
+    public List<TValue> getList() {
+        if (isList) throw new UnsupportedOperationException("not list");
+        return getSource().getListAttributes(fullPath(path), rootType);
     }
 
     @Override

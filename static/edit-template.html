@@ -23,7 +23,6 @@
         }
 
         .field-configuration {
-            box-shadow: inset 4px 0 0 #797979;
             margin-left: 0.8rem;
         }
 
@@ -33,10 +32,11 @@
         }
 
         .s-field-editing {
-        /*rgba(255, 193, 7, 0.5)*/
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
             background-color: rgb(253, 222, 130);
-            box-shadow: 0 0 0 4px rgb(253, 222, 130);
-            border: 2px rgb(253, 222, 130);
+            box-shadow: 0 0 0 3px rgba(255, 193, 7, 1);
+            border: solid rgb(253, 222, 130);
             border-radius: 3px;
         }
 
@@ -352,7 +352,7 @@
         let controller = fieldControllers[field.type];
         let confHtml;
         if (controller && (confHtml = controller.generateConfigurationHtml(field))) {
-            template.content.querySelector(".field-configuration").innerHTML = confHtml;
+            template.content.querySelector(".field-configuration").innerHTML = `<div class="container no-gutters">${confHtml}</div>`;
         } else {
             template.content.querySelector(".field-configuration").innerHTML = "";
         }

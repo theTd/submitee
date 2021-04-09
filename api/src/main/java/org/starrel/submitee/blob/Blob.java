@@ -1,5 +1,9 @@
 package org.starrel.submitee.blob;
 
+import org.starrel.submitee.model.UserDescriptor;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Date;
@@ -13,9 +17,17 @@ public interface Blob {
 
     Date getCreateTime();
 
-    OutputStream getOutputStream();
+    OutputStream getOutputStream() throws FileNotFoundException;
 
-    InputStream getInputStream();
+    InputStream getInputStream() throws IOException;
+
+    long getSize();
+
+    boolean getFinishedUploading();
+
+    String getContentType();
+
+    UserDescriptor getUploader();
 
     void delete();
 }

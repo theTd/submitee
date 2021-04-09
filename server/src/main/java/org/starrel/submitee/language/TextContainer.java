@@ -5,6 +5,8 @@ import com.google.common.cache.CacheBuilder;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.I18N;
 import org.starrel.submitee.SubmiteeServer;
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
@@ -12,29 +14,51 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 public class TextContainer {
-    private final Map<String, Properties> loadedLanguages = new HashMap<>();
+    private final Map<String, Map<String, String>> loadedLanguages = new HashMap<>();
     private final Cache<String, I18N.I18NKey> cache = CacheBuilder.newBuilder().build();
     private final Cache<String, String> languageMatchCache = CacheBuilder.newBuilder().build();
-    private Properties defaultLanguage;
+
+    @SuppressWarnings("unchecked")
+    private static void flatMap(Map<String, String> container, Map<String, Object> map, String parentNode) {
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            String node = (parentNode == null ? "" : parentNode + ".") + entry.getKey();
+            if (entry.getValue() instanceof Map) {
+                flatMap(container, (Map<String, Object>) entry.getValue(), node);
+            } else {
+                container.put(node, entry.getValue() + "");
+            }
+        }
+    }
+
+    private static Map<String, String> flatMap(Map<String, Object> map) {
+        Map<String, String> container = new LinkedHashMap<>();
+        flatMap(container, map, null);
+        return container;
+    }
 
     public void init() throws IOException {
         File directory = new File("text");
         if (directory.isDirectory()) {
-            for (File languageFile : Objects.requireNonNull(directory.listFiles((dir, name) -> name.endsWith(".properties")))) {
-                Properties props = new Properties();
-                props.load(new FileInputStream(languageFile));
-                String language = languageFile.getName().substring(0, languageFile.getName().length() - 11);
-
+            for (File languageFile : Objects.requireNonNull(directory.listFiles((dir, name) -> name.endsWith(".yml")))) {
+                String language = languageFile.getName().substring(0, languageFile.getName().length() - 4);
                 SubmiteeServer.getInstance().getLogger().info("loading language " + language);
-                loadedLanguages.put(language, props);
+                Map<String, Object> map = new Yaml().load(new FileReader(languageFile));
+                loadedLanguages.put(language, flatMap(map));
             }
         }
 
-        defaultLanguage = loadedLanguages.get(SubmiteeServer.getInstance().getDefaultLanguage());
-        if (defaultLanguage == null) {
+        if (loadedLanguages.get(SubmiteeServer.getInstance().getDefaultLanguage()) == null) {
             SubmiteeServer.getInstance().getLogger()
                     .warn("unrecognized default language: " + SubmiteeServer.getInstance().getDefaultLanguage());
         }
+
+        try {
+            Class.forName("org.starrel.submitee.I18N");
+        } catch (ClassNotFoundException e) {
+            throw new Error(e);
+        }
+        updateTemplate(new File("text" + File.separator + "keys.yml"),
+                I18N.ConstantI18NKey.KNOWN_KEYS);
     }
 
     public I18N.I18NKey get(String key) {
@@ -59,28 +83,39 @@ public class TextContainer {
         try {
             return languageMatchCache.get(language, () -> {
                 List<String> result = languageMatchResult(language);
-                if (result.isEmpty()) return null;
+                if (result.isEmpty()) throw MissingLanguageSignal.INSTANCE;
                 return result.get(0);
             });
         } catch (ExecutionException e) {
+            if (e.getCause() instanceof MissingLanguageSignal) {
+                return null;
+            }
             throw new RuntimeException(e);
         }
     }
 
     public void updateTemplate(File templateFile, Set<String> knownKeys) throws IOException {
         if (!templateFile.isFile()) {
-            if (!(templateFile.getParentFile().mkdirs() && templateFile.createNewFile()))
+            if (!templateFile.getParentFile().isDirectory()) {
+                if (!templateFile.getParentFile().mkdirs()) {
+                    throw new IOException("failed creating template file " + templateFile);
+                }
+            }
+
+            if (!templateFile.createNewFile())
                 throw new IOException("failed creating template file " + templateFile);
         }
 
-        Properties properties = new Properties();
         List<String> keyList = new ArrayList<>(knownKeys);
         Collections.sort(keyList);
+        Map<String, String> map = new LinkedHashMap<>();
         for (String key : keyList) {
-            properties.put(key, key);
+            map.put(key, key);
         }
-        properties.store(new PrintWriter(new FileOutputStream(templateFile)),
-                "auto-generated template language file");
+        DumperOptions options = new DumperOptions();
+        options.setPrettyFlow(true);
+        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        new Yaml(options).dump(map, new PrintWriter(new FileOutputStream(templateFile)));
     }
 
     private class InternalI18NKey implements I18N.I18NKey {
@@ -93,20 +128,21 @@ public class TextContainer {
 
         private String getValue(String language) {
             String bestMatch = bestMatchLanguage(language);
-            Properties bestMatchTarget = loadedLanguages.get(bestMatch);
+            Map<String, String> bestMatchTarget = loadedLanguages.get(bestMatch);
             String value;
-            if ((value = bestMatchTarget.getProperty(key)) == null) {
+            if ((value = bestMatchTarget.get(key)) == null) {
                 // fall back to secondary match
                 for (String secondaryMatch : languageMatchResult(language)) {
                     if (secondaryMatch.equals(bestMatch)) continue;
-                    Properties secondaryMatchTarget = loadedLanguages.get(secondaryMatch);
-                    if ((value = secondaryMatchTarget.getProperty(key)) == null) continue;
+                    Map<String, String> secondaryMatchTarget = loadedLanguages.get(secondaryMatch);
+                    if ((value = secondaryMatchTarget.get(key)) != null) break;
                 }
             }
 
             if (value == null) {
                 // fall back to default
-                value = defaultLanguage.getProperty(key);
+                Map<String, String> defaultLanguage = loadedLanguages.get(key);
+                value = defaultLanguage == null ? null : defaultLanguage.get(key);
             }
             if (value == null) {
                 ExceptionReporting.report(TextContainer.class, "missing language key", "missing language key: " + key);
@@ -141,6 +177,10 @@ public class TextContainer {
             }
             return format(language, parameters);
         }
-    }
 
+        @Override
+        public String toString() {
+            return format(((String) null));
+        }
+    }
 }

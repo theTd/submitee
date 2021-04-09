@@ -50,8 +50,9 @@ public abstract class I18N {
     }
 
     public static abstract class General {
-        public final static ConstantI18NKey INTERNAL_ERROR = new ConstantI18NKey("generic.internal_error");
-        public final static ConstantI18NKey USER_NOT_EXISTS = new ConstantI18NKey("generic.user_not_exists");
+        public final static ConstantI18NKey INTERNAL_ERROR = new ConstantI18NKey("general.internal_error");
+        public final static ConstantI18NKey USER_NOT_EXISTS = new ConstantI18NKey("general.user_not_exists");
+        public final static ConstantI18NKey MISSING_PARAMETER = new ConstantI18NKey("general.missing_parameter");
     }
 
     public static abstract class Http {

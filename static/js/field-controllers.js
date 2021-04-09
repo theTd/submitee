@@ -4,12 +4,6 @@ class TextFieldController extends FieldController {
         this.displayName = "文本";
     }
 
-    resolveSubmission(field) {
-        let containerId = this.getContainerId(field);
-        let inputId = `${containerId}-${field.name}`;
-        return $("#" + inputId).val();
-    }
-
     /**
      *
      * @param {SField} field
@@ -21,6 +15,23 @@ class TextFieldController extends FieldController {
         let placeholder = field.attributeMap.get("placeholder");
         if (!placeholder) placeholder = "";
         return `<input type="text" placeholder="${placeholder}" id="${inputId}"/>`;
+    }
+
+    resolveSubmission(field) {
+        let containerId = this.getContainerId(field);
+        let inputId = `${containerId}-${field.name}`;
+        return $("#" + inputId).val();
+    }
+
+    generateConfigurationHtml(field) {
+        let inputId = "text-config-" + field.name;
+        let value = field.attributeMap.get("placeholder") || "";
+        return `<label for="${inputId}">提示文字</label><input type="text" id="${inputId}" value="${value}"/>`;
+    }
+
+    applyConfiguration(field) {
+        let inputId = "text-config-" + field.name;
+        field.attributeMap.set("placeholder", $("#" + inputId).val());
     }
 
     /**
@@ -92,10 +103,8 @@ class RadioFieldController extends FieldController {
         }
 
         return `
-<div class="container">
 <label for="${id}">可选项目： (以,分隔)</label>
 <input id="${id}" type="text" id="radio-conf-${field.name}" value="${present}"/>
-</div>
 `;
     }
 
@@ -159,10 +168,8 @@ class CheckboxFieldController extends FieldController {
         }
 
         return `
-<div class="container">
 <label for="${id}">可选项目： (以,分隔)</label>
 <input id="${id}" type="text" id="checkbox-conf-${field.name}" value="${present}"/>
-</div>
 `;
     }
 
@@ -221,3 +228,49 @@ class RichTextFieldController extends FieldController {
 }
 
 fieldControllers["rich-text"] = new RichTextFieldController();
+
+function loadScript(url, callback) {
+    let script = document.createElement("script")
+    // script.type = "text/javascript";
+
+    script.src = url;
+    script.addEventListener("load", () => callback());
+
+    document.getElementsByTagName("head")[0].appendChild(script);
+}
+
+class FileFieldController extends FieldController {
+    constructor() {
+        super("file");
+        this.displayName = "文件";
+    }
+
+    /**
+     *
+     * @param {SField} field
+     * @returns {string}
+     */
+    generateSubmissionHtml(field) {
+        let uploadFieldId = this.getContainerId(field) + "-drop-field";
+        setTimeout(function () {
+            var uppy = Uppy.Core()
+                .use(Uppy.Dashboard, {
+                    inline: true,
+                    target: '#' + uploadFieldId
+                })
+                .use(Uppy.Tus, {endpoint: `../upload/${field.owner.uniqueId}/${field.name}`})
+
+            uppy.on('complete', (result) => {
+                // todo
+            })
+        }, 1);
+        return `<div id="${uploadFieldId}"></div>`;
+    }
+
+    resolveSubmission(field) {
+        let dropFieldId = this.getContainerId(field) + "-drop-field";
+        document.getElementById(dropFieldId).getAttribute("data-blob-id");
+    }
+}
+
+fieldControllers["file"] = new FileFieldController();

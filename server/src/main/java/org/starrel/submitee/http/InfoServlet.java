@@ -9,22 +9,24 @@ import org.starrel.submitee.attribute.AttributeHolder;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.swing.*;
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public class InfoServlet extends SubmiteeHttpServlet {
+    {
+        setBaseUri("/info");
+    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String[] uri = parseUri(req.getRequestURI());
-        if (uri.length != 2) {
+        if (uri.length != 1) {
             resp.setStatus(HttpStatus.BAD_REQUEST_400);
             ExceptionReporting.report(InfoServlet.class, "parsing parameter", "unexpected uri: " + req.getRequestURI());
             return;
         }
-        String uuidString = uri[1];
+        String uuidString = uri[0];
         UUID uuid;
         try {
             uuid = UUID.fromString(uuidString);

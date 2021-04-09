@@ -8,29 +8,33 @@ import java.util.stream.Collectors;
 
 class LanguageMatcher {
     private final List<LanguageMatcherEntry> matchers = new LinkedList<>();
-    private final Comparator<Properties> priorityComparator = new Comparator<Properties>() {
+    private final Comparator<Map<String, String>> priorityComparator = new Comparator<Map<String, String>>() {
         @Override
-        public int compare(Properties o1, Properties o2) {
+        public int compare(Map<String, String> o1, Map<String, String> o2) {
             return getPriority(o2) - getPriority(o1);
         }
 
-        int getPriority(Properties p) {
+        int getPriority(Map<String, String> p) {
+            String val = p.get("priority");
+            if (val == null) return -1;
+            int intVal;
             try {
-                return Integer.parseInt(p.get("priority") + "");
-            } catch (Exception e) {
-                return 0;
+                intVal = Integer.parseInt(val);
+            } catch (NumberFormatException e) {
+                return -1;
             }
+            return intVal;
         }
     };
 
     private int highestHit = 0;
 
-    public LanguageMatcher(Map<String, Properties> loaded) {
-        for (Map.Entry<String, Properties> entry : loaded.entrySet()) {
+    public LanguageMatcher(Map<String, Map<String, String>> loaded) {
+        for (Map.Entry<String, Map<String, String>> entry : loaded.entrySet()) {
             matchers.add(LanguageMatcherEntry.builder()
                     .pathIterator(Arrays.stream(entry.getKey().split("-")).iterator())
                     .path(entry.getKey())
-                    .props(entry.getValue()).build());
+                    .entires(entry.getValue()).build());
         }
     }
 
@@ -47,7 +51,7 @@ class LanguageMatcher {
         matchers.sort((o1, o2) -> {
             int diff = o2.hit - o1.hit;
             if (diff == 0) {
-                return priorityComparator.compare(o1.props, o2.props);
+                return priorityComparator.compare(o1.entires, o2.entires);
             } else {
                 return diff;
             }
@@ -60,7 +64,7 @@ class LanguageMatcher {
     private static class LanguageMatcherEntry {
         Iterator<String> pathIterator;
         String path;
-        Properties props;
+        Map<String, String> entires;
         @Builder.Default
         int hit = 0;
     }

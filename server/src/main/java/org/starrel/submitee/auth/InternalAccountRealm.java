@@ -7,6 +7,7 @@ import de.mkammerer.argon2.Argon2Factory;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.model.Session;
 import org.starrel.submitee.model.User;
 import org.starrel.submitee.model.UserRealm;
 
@@ -29,7 +30,7 @@ public class InternalAccountRealm implements UserRealm {
     public final static String TYPE_ID = "internal";
     private final static Argon2 ARGON2;
 
-    private static InternalAccountUser ANONYMOUS;
+//    private static InternalAccountUser ANONYMOUS;
 
     static {
         ARGON2 = Argon2Factory.create();
@@ -45,7 +46,7 @@ public class InternalAccountRealm implements UserRealm {
 
     public InternalAccountRealm(SubmiteeServer server) throws IOException, SQLException {
         this.server = server;
-        ANONYMOUS = new InternalAccountUser(-1);
+//        ANONYMOUS = new InternalAccountUser(-1);
 
         PasswordAuthScheme passwordAuthScheme = server.createPasswordAuthScheme();
         passwordAuthScheme.setHandler(new AuthHandler());
@@ -76,6 +77,12 @@ public class InternalAccountRealm implements UserRealm {
         }
     }
 
+    @Override
+    public User resumeSession(Session session) {
+        // TODO: 2021-04-09-0009
+        return null;
+    }
+
     private InternalAccountUser getUser(int uid) throws ExecutionException {
         return cache.get(uid, () -> {
             try (Connection conn = server.getDataSource().getConnection()) {
@@ -85,11 +92,6 @@ public class InternalAccountRealm implements UserRealm {
                 return r.next() ? new InternalAccountUser(uid) : null;
             }
         });
-    }
-
-    @Override
-    public User getAnonymousUser() {
-        return ANONYMOUS;
     }
 
     @Override

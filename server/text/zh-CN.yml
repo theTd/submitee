@@ -1,0 +1,11 @@
+priority: 100
+blob_storage.provider.file-tree: '文件系统'
+blob_storage.parameter.provider: '存储类型'
+blob_storage.parameter.name: '存储名称'
+general.internal_error: '内部错误'
+general.user_not_exists: '用户不存在'
+general.missing_parameter: '缺少参数:%s'
+http.internal_error: '内部错误'
+http.invalid_input: '参数不正确'
+http.not_found: '没有找到目标资源'
+http.too_many_request: '请求过于频繁'

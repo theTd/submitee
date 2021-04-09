@@ -9,9 +9,7 @@ public interface UserRealm {
 
     User getUser(String id);
 
-    default User getAnonymousUser() {
-        throw new UnsupportedOperationException("anonymous user is not supported");
-    }
+    User resumeSession(Session session);
 
     List<? extends AuthScheme> getSupportedAuthSchemes();
 
