@@ -12,6 +12,10 @@
     <artifactId>submitee-server</artifactId>
     <version>${submitee.version.server}</version>
 
+    <properties>
+        <jetty_version>9.4.35.v20201120</jetty_version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.starrel</groupId>
@@ -33,17 +37,17 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
-            <version>9.4.3.v20170317</version>
+            <version>${jetty_version}</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
-            <version>9.4.3.v20170317</version>
+            <version>${jetty_version}</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-http</artifactId>
-            <version>9.4.3.v20170317</version>
+            <version>${jetty_version}</version>
         </dependency>
         <dependency>
             <groupId>de.mkammerer</groupId>
