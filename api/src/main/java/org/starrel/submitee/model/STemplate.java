@@ -1,9 +1,6 @@
 package org.starrel.submitee.model;
 
-import org.starrel.submitee.attribute.AttributeFilter;
 import org.starrel.submitee.attribute.AttributeHolder;
-import org.starrel.submitee.attribute.AttributeMap;
-import org.starrel.submitee.attribute.AttributeSpec;
 
 import java.util.Map;
 import java.util.UUID;
@@ -21,11 +18,11 @@ public interface STemplate extends AttributeHolder<STemplate> {
 
     User getCommittedBy();
 
-    void setCommittedBy(User user) throws AttributeFilter.FilterException;
+    void setCommittedBy(User user);
 
     String getComment();
 
-    void setComment(String comment) throws AttributeFilter.FilterException;
+    void setComment(String comment);
 
     Map<String, ? extends SField> getFields();
 

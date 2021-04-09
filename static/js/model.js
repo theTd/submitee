@@ -326,3 +326,16 @@ function makeid(length) {
     }
     return result.join('');
 }
+
+function findParentAttributeByElement(element, attribute) {
+    let node = element;
+    let name;
+    while (node) {
+        if (node.hasAttribute(attribute)) {
+            name = node.getAttribute(attribute);
+            break;
+        }
+        node = node.parentNode;
+    }
+    return name;
+}

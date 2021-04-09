@@ -14,12 +14,12 @@
     <title>SUBMITEE 配置面板</title>
 </head>
 <body>
-<div class="container">
+<div class="container-fluid">
     <div class="row col mb-3 mt-3 align-bottom">
         <h4>logged in as thetd</h4><a href="#" class="pl-2">登出</a>
     </div>
     <div class="row">
-        <div class="col col-3">
+        <div class="order-2 col-12 order-lg-0 col-lg-3">
             <div class="list-group" id="management-methods">
                 <a href="?method=template-list" data-submitee-management-method-alt="edit-template"
                    class="list-group-item list-group-item-action">编辑模板</a>
@@ -29,7 +29,7 @@
                 <a href="?method=settings" class="list-group-item list-group-item-action">配置项</a>
             </div>
         </div>
-        <div class="col col-9" id="management-container">
+        <div class="col-12 col-lg-9" id="management-container">
         </div>
     </div>
 </div>
@@ -44,6 +44,8 @@
 <script src="js/toast.js"></script>
 
 <script>
+    init_toast();
+
     function highlightCurrentMethod(method) {
         let links = $("#management-methods a");
         links.each(function (index) {
@@ -61,7 +63,7 @@
         })
     }
 
-    function loadManagementPage(url) {
+    function loadPage(url) {
         $.ajax({
             url: url,
             method: "GET",
@@ -81,11 +83,11 @@
 
     switch (method) {
         case "template-list": {
-            loadManagementPage("template-list.html");
+            loadPage("template-list.html");
             break;
         }
         case "edit-template": {
-            loadManagementPage("edit-template.html");
+            loadPage("edit-template.html");
             break;
         }
         case "published-templates": {
@@ -95,7 +97,7 @@
             break;
         }
         case "settings": {
-            loadManagementPage("settings.html");
+            loadPage("settings.html");
             break;
         }
     }

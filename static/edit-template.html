@@ -17,7 +17,7 @@
             width: 100%;
         }
 
-        .main .container {
+        .main .container-fluid {
             box-shadow: inset 4px 0 0 #797979;
             margin-bottom: 2rem;
         }
@@ -94,14 +94,14 @@
     </div>
 </template>
 
-<div class="container main">
+<div class="container-fluid main">
     <nav class="row col breadcrumb">
         <div class="breadcrumb-item">所有模板</div>
         <div class="breadcrumb-item" id="breadcrumb-template-name"></div>
     </nav>
     <div class="row col" id="template-fields">
         <h4>字段</h4>
-        <div class="container" id="container-field">
+        <div class="container-fluid" id="container-field">
             <div class="row">
                 <div class="col col-2">类型</div>
                 <div class="col col-2">标题</div>
@@ -134,7 +134,7 @@
     </div>
     <div class="row col" id="template-metadata">
         <h4>标题</h4>
-        <div class="container">
+        <div class="container-fluid">
             <div class="row">
                 <div class="col col-2"><label for="template-metadata-name">名称</label></div>
                 <div class="col col-8">
@@ -151,7 +151,7 @@
     </div>
     <h4>描述<span class="d-inline-block ml-2"
                 style="color:gray;align-self:flex-end;font-style: italic; font-size: 0.7rem">该段文字会公布到填写页面</span></h4>
-    <div class="container">
+    <div class="container-fluid">
         <div id="template-desc"></div>
     </div>
 </div>
@@ -196,15 +196,7 @@
 
 <script>
     function findFieldByElement(element) {
-        let node = element;
-        let name;
-        while (node) {
-            if (node.hasAttribute("data-submitee-field-name")) {
-                name = node.getAttribute("data-submitee-field-name");
-                break;
-            }
-            node = node.parentNode;
-        }
+        let name = findParentAttributeByElement(element, "data-submitee-field-name")
         if (name) {
             return currentTemplate.getFieldByName(name);
         }

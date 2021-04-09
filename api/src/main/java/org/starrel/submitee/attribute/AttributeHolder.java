@@ -17,7 +17,7 @@ public interface AttributeHolder<THolder extends AttributeHolder<?>> {
         return getAttributeMap().get(path, type);
     }
 
-    default void setAttribute(String path, Object value) throws AttributeFilter.FilterException {
+    default void setAttribute(String path, Object value) {
         getAttributeMap().set(path, value);
     }
 

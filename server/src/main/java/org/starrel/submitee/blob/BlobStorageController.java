@@ -2,6 +2,7 @@ package org.starrel.submitee.blob;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import org.starrel.submitee.ClassifiedException;
 import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.UserDescriptor;
@@ -51,7 +52,8 @@ public class BlobStorageController {
             if (!r.next()) {
                 server.getLogger().info("creating table blob_storages");
                 try {
-                    new ScriptRunner(conn, true, true).runScript(new InputStreamReader(getClass().getResourceAsStream("/blob_storages.sql")));
+                    new ScriptRunner(conn, true, true)
+                            .runScript(new InputStreamReader(getClass().getResourceAsStream("/blob_storages.sql")));
                 } catch (Exception e) {
                     throw new RuntimeException("failed creating table blob_storages", e);
                 }
@@ -60,7 +62,8 @@ public class BlobStorageController {
             if (!r.next()) {
                 server.getLogger().info("creating table blobs");
                 try {
-                    new ScriptRunner(conn, true, true).runScript(new InputStreamReader(getClass().getResourceAsStream("/blobs.sql")));
+                    new ScriptRunner(conn, true, true)
+                            .runScript(new InputStreamReader(getClass().getResourceAsStream("/blobs.sql")));
                 } catch (Exception e) {
                     throw new RuntimeException("failed creating table blobs", e);
                 }
@@ -74,12 +77,11 @@ public class BlobStorageController {
             while (r.next()) {
                 String type = r.getString(1);
                 String name = r.getString(2);
-                String storageKey = type + ":" + name;
-                server.getLogger().info("initializing blob storage: " + storageKey);
+                server.getLogger().info("initializing blob storage: " + type + ":" + name);
 
                 BlobStorageProvider provider = providerMap.get(type);
                 if (provider == null) throw new RuntimeException("cannot find blob storage provider: " + type);
-                storageMap.put(storageKey, provider.accessStorage(name));
+                storageMap.put(name, provider.accessStorage(name));
             }
         }
     }
@@ -88,11 +90,29 @@ public class BlobStorageController {
         providerMap.put(provider.getTypeId(), provider);
     }
 
-    public BlobStorage createStorage(String providerName, String name) {
+    public BlobStorage createStorage(String providerName, String name) throws ClassifiedException {
+        if (storageMap.containsKey(name)) {
+            throw new ClassifiedException("storage_name_conflict",
+                    "there's already a blob storage named " + name);
+        }
         BlobStorageProvider provider = providerMap.get(providerName);
         BlobStorage created = provider.createNewStorage(name);
-        storageMap.put(name, created);
+        try {
+            registerStorage(created);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
         return created;
+    }
+
+    private void registerStorage(BlobStorage storage) throws SQLException {
+        try (Connection conn = server.getDataSource().getConnection()) {
+            PreparedStatement stmt = conn.prepareStatement("INSERT INTO blob_storages(type_id, name) VALUES (?,?)");
+            stmt.setString(1, storage.getTypeId());
+            stmt.setString(2, storage.getName());
+            stmt.executeUpdate();
+        }
+        storageMap.put(storage.getName(), storage);
     }
 
     public Blob createNewBlob(String storageName, String fileName, String contentType, UserDescriptor uploader) throws IOException, SQLException {

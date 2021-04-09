@@ -1,8 +1,8 @@
 package org.starrel.submitee.blob;
 
+import org.starrel.submitee.ClassifiedException;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.SubmiteeServer;
-import org.starrel.submitee.attribute.AttributeFilter;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
 import org.starrel.submitee.model.UserDescriptor;
@@ -11,6 +11,7 @@ import java.io.*;
 import java.util.Date;
 
 public class FileTreeBlobStorage implements BlobStorage {
+    public final static String TYPE_ID = "file_tree";
     public final static BlobStorageProvider PROVIDER = new BlobStorageProvider() {
         @Override
         public String getTypeId() {
@@ -19,49 +20,36 @@ public class FileTreeBlobStorage implements BlobStorage {
 
         @Override
         public BlobStorage createNewStorage(String name) {
-            return new FileTreeBlobStorage(name);
+            FileTreeBlobStorage s = new FileTreeBlobStorage(name);
+            s.path.set("");
+            s.setAttribute("provider", TYPE_ID);
+            s.setAttribute("name", name);
+            return s;
         }
 
         @Override
         public BlobStorage accessStorage(String name) {
-            return new FileTreeBlobStorage(name);
+            FileTreeBlobStorage s = new FileTreeBlobStorage(name);
+            try {
+                s.setupDirectory(s.path.get());
+            } catch (Exception e) {
+                ExceptionReporting.report(FileTreeBlobStorage.class, "initializing directory", e);
+            }
+            return s;
         }
     };
-
-    public final static String TYPE_ID = "file-tree";
     public final static String ATTRIBUTE_COLLECTION_NAME = "file-tree-blob-storages";
 
     private final String name;
     private final AttributeMap<FileTreeBlobStorage> attributeMap;
-    private final AttributeSpec<String> uriSpec;
+    private final AttributeSpec<String> path;
     private File directory;
 
     public FileTreeBlobStorage(String name) {
         this.name = name;
 
         this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, ATTRIBUTE_COLLECTION_NAME);
-        this.uriSpec = this.attributeMap.of("uri", String.class);
-        this.uriSpec.addFilter(new AttributeFilter<String>() {
-            @Override
-            public void onSet(String value) throws FilterException {
-                try {
-                    initializeDirectory(value);
-                } catch (IOException e) {
-                    throw new FilterException(e.getMessage());
-                }
-            }
-
-            @Override
-            public void onDelete(String path) throws FilterException {
-                directory = null;
-            }
-        });
-
-        try {
-            initializeDirectory(uriSpec.get());
-        } catch (IOException e) {
-            ExceptionReporting.report(FileTreeBlobStorage.class, "initializing directory", e);
-        }
+        this.path = this.attributeMap.of("config.path", String.class);
     }
 
     @Override
@@ -92,6 +80,20 @@ public class FileTreeBlobStorage implements BlobStorage {
     }
 
     @Override
+    public void validateConfiguration() throws ClassifiedException {
+        if (path.get() == null || path.get().isEmpty()) {
+            throw new ClassifiedException("empty_directory", "directory not configured");
+        }
+        if (this.directory == null || !this.directory.toString().equals(path.get())) {
+            setupDirectory(path.get());
+        }
+    }
+
+    public String getPath() {
+        return path.get();
+    }
+
+    @Override
     public String getAttributePersistKey() {
         return getName();
     }
@@ -101,31 +103,34 @@ public class FileTreeBlobStorage implements BlobStorage {
         return attributeMap;
     }
 
-    public String getUri() {
-        return uriSpec.get();
-    }
-
     @Override
     public void attributeUpdated(String path) {
+        if (AttributeMap.includePath(path, "config.path")) {
+            try {
+                setupDirectory(path);
+            } catch (Exception e) {
+                ExceptionReporting.report(FileTreeBlobStorage.class, "initializing directory", e);
+            }
+        }
     }
 
-    private void initializeDirectory(String uri) throws IOException {
-        File dir = new File(uri);
+    private void setupDirectory(String path) throws ClassifiedException {
+        File dir = new File(path);
         if (dir.exists()) {
             if (dir.isDirectory()) {
                 if (dir.canWrite()) {
                     this.directory = dir;
                 } else {
-                    throw new IOException("cannot write to target directory");
+                    throw new ClassifiedException("cannot_write", "cannot write to target directory");
                 }
             } else {
-                throw new IOException("target uri is not a directory");
+                throw new ClassifiedException("target_not_directory", "target path is not a directory");
             }
         } else {
             if (dir.mkdirs()) {
                 this.directory = dir;
             } else {
-                throw new IOException("failed to create directory");
+                throw new ClassifiedException("create_directory_failed", "failed to create directory");
             }
         }
     }

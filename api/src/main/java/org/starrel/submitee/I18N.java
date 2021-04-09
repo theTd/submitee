@@ -53,6 +53,7 @@ public abstract class I18N {
         public final static ConstantI18NKey INTERNAL_ERROR = new ConstantI18NKey("general.internal_error");
         public final static ConstantI18NKey USER_NOT_EXISTS = new ConstantI18NKey("general.user_not_exists");
         public final static ConstantI18NKey MISSING_PARAMETER = new ConstantI18NKey("general.missing_parameter");
+        public final static ConstantI18NKey NAME_CONFLICT = new ConstantI18NKey("general.name_conflict");
     }
 
     public static abstract class Http {

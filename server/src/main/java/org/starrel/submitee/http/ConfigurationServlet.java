@@ -1,8 +1,8 @@
 package org.starrel.submitee.http;
 
 import com.google.gson.JsonObject;
-import com.google.gson.stream.JsonWriter;
 import org.eclipse.jetty.http.HttpStatus;
+import org.starrel.submitee.ClassifiedException;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.I18N;
 import org.starrel.submitee.SubmiteeServer;
@@ -29,6 +29,7 @@ public class ConfigurationServlet extends AbstractJsonServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         Map<String, Object> configurationMap = new LinkedHashMap<>();
 
+        // region providers
         List<String> blobStorageProviders = SubmiteeServer.getInstance().getBlobStorageController().getProviders().stream()
                 .map(BlobStorageProvider::getTypeId).collect(Collectors.toList());
         Map<String, String> providerNameMap = new LinkedHashMap<>();
@@ -36,12 +37,45 @@ public class ConfigurationServlet extends AbstractJsonServlet {
             providerNameMap.put(provider, I18N.fromKey("blob_storage.provider." + provider).format(req));
         }
         configurationMap.put("blob_storage_providers", providerNameMap);
+        // endregion
 
-        List<JsonObject> blobStorages = new ArrayList<>();
-        SubmiteeServer.getInstance().getBlobStorageController().getStorages().forEach(blobStorage -> {
-            blobStorages.add(blobStorage.getAttributeMap().toJsonTree());
-        });
+        // region storages
+        Map<String, Object> blobStorages = new LinkedHashMap<>();
+        SubmiteeServer.getInstance().getBlobStorageController().getStorages().forEach(blobStorage ->
+                blobStorages.put(blobStorage.getName(), blobStorage.getAttributeMap().toJsonTree()));
         configurationMap.put("blob_storages", blobStorages);
+        // endregion
+
+        // region storage config translation
+        Map<String, Map<String, String>> blobStorageConfigTranslations = new LinkedHashMap<>();
+        SubmiteeServer.getInstance().getBlobStorageController().getStorages().forEach(blobStorage -> {
+            Map<String, String> translationMap = new LinkedHashMap<>();
+            List<String> configKeys = blobStorage.getAttributeMap().getKeys("config");
+            for (String configKey : configKeys) {
+                translationMap.put(configKey, I18N.fromKey(String.format("blob_storage.provider.%s.config.%s",
+                        blobStorage.getTypeId(), configKey)).format(req));
+            }
+            blobStorageConfigTranslations.put(blobStorage.getName(), translationMap);
+        });
+        configurationMap.put("blob_storage_config_translations", blobStorageConfigTranslations);
+        // endregion
+
+        // region storage errors
+        Map<String, String> blobStorageErrors = new LinkedHashMap<>();
+        for (BlobStorage storage : SubmiteeServer.getInstance().getBlobStorageController().getStorages()) {
+            try {
+                storage.validateConfiguration();
+            } catch (ClassifiedException e) {
+                blobStorageErrors.put(storage.getName(),
+                        I18N.fromKey(String.format("blob_storage.provider.%s.error.%s",
+                                storage.getTypeId(), e.getClassify()))
+                                .format(req, e.getMessageParts()));
+            } catch (Exception e) {
+                blobStorageErrors.put(storage.getName(), e.getMessage());
+            }
+        }
+        configurationMap.put("blob_storage_errors", blobStorageErrors);
+        // endregion
 
         resp.setStatus(HttpStatus.OK_200);
         resp.setContentType("application/json");
@@ -76,25 +110,33 @@ public class ConfigurationServlet extends AbstractJsonServlet {
 
                 try {
                     SubmiteeServer.getInstance().getBlobStorageController().createStorage(provider, name);
+                    resp.setStatus(HttpStatus.OK_200);
+                } catch (ClassifiedException e) {
+                    responseBadRequest(req, resp, I18N.General.NAME_CONFLICT,
+                            I18N.fromKey("blob_storage"), name);
+                    return;
                 } catch (Exception e) {
                     ExceptionReporting.report(ConfigurationServlet.class, "creating blob storage", e);
                     responseInternalError(req, resp);
                     return;
                 }
-                resp.setStatus(HttpStatus.OK_200);
                 break;
             }
             case "setup-blob-storage": {
-                String provider = body.get("provider").getAsString();
                 String name = body.get("name").getAsString();
-                List<? extends BlobStorage> match = SubmiteeServer.getInstance().getBlobStorageController().getStorages().stream()
-                        .filter(s -> s.getName().equals(name) && s.getTypeId().equals(provider)).collect(Collectors.toList());
-                if (match.isEmpty()) {
+                BlobStorage setup = SubmiteeServer.getInstance().getBlobStorageController().getStorage(name);
+                if (setup == null) {
                     responseNotFound(req, resp);
                     return;
                 }
-                match.iterator().next().getAttributeMap().set("", body.get("body").getAsJsonObject());
+                setup.getAttributeMap().set("config", body.get("config"));
+
                 resp.setStatus(HttpStatus.OK_200);
+                try {
+                    setup.validateConfiguration();
+                } catch (Exception e) {
+                    ExceptionReporting.report(ConfigurationServlet.class, "validating configuration", e);
+                }
                 break;
             }
             default: {

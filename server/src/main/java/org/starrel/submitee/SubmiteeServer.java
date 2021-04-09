@@ -13,9 +13,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.*;
 import org.eclipse.jetty.server.session.DefaultSessionIdManager;
-import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.starrel.submitee.attribute.*;
@@ -36,7 +34,6 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.sql.SQLException;
@@ -89,6 +86,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
 //        servletHandler.addFilter(UncaughtExceptionFilter.class, "/*", EnumSet.allOf(DispatcherType.class));
         servletHandler.addFilter(ConnectionThrottleFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addFilter(CharsetFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
         servletHandler.addFilter(SessionFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
         servletHandler.addServlet(AuthServlet.class, "/auth/*");
         servletHandler.addServlet(CreateServlet.class, "/create/*");
@@ -104,7 +102,9 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(false);
         resourceHandler.setWelcomeFiles(new String[]{"index.html"});
-        resourceHandler.setResourceBase("static");
+        String staticDirectory = System.getenv("STATIC_DIRECTORY");
+        if (staticDirectory == null || staticDirectory.isEmpty()) staticDirectory = "static";
+        resourceHandler.setResourceBase(staticDirectory);
         ContextHandler contextHandler = new ContextHandler();
         contextHandler.setContextPath("/static");
         contextHandler.setHandler(resourceHandler);
@@ -139,6 +139,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
                                HttpServletRequest request, HttpServletResponse response) throws IOException {
                 Throwable stacktrace = (Throwable) request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
                 if (stacktrace != null) {
+                    response.setCharacterEncoding("utf-8");
+                    response.getWriter().println(I18N.Http.INTERNAL_ERROR.format(request));
                     ExceptionReporting.report("error handler", "uncaught error occurred", stacktrace);
                 }
                 response.getWriter().close();
@@ -425,7 +427,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         return defaultLanguage.get();
     }
 
-    public void setDefaultLanguage(String language) throws AttributeFilter.FilterException {
+    public void setDefaultLanguage(String language) {
         this.defaultLanguage.set(language);
     }
 

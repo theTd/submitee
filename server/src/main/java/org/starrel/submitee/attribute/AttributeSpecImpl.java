@@ -18,8 +18,6 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     private final TreeMap<String, AttributeSpec<?>> specTreeMap =
             new TreeMap<>(Comparator.comparingInt(o -> o.split("\\.").length));
 
-    private final List<AttributeFilter<TValue>> filters = Collections.synchronizedList(new LinkedList<>());
-
     protected AttributeSource owningSource;
     private String sourcePath = null;
     private AttributeSource foundSource = null;
@@ -77,11 +75,6 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         return parent.fullPath(this.path) + (path.isEmpty() ? "" : "." + path);
     }
 
-    @Override
-    public void addFilter(AttributeFilter<TValue> filter) {
-        this.filters.add(filter);
-    }
-
     @SneakyThrows
     @SuppressWarnings("unchecked")
     @Override
@@ -113,7 +106,9 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         try {
             return specCache.get(path, () -> {
                 for (Map.Entry<String, AttributeSpec<?>> pathSpecEntry : specTreeMap.entrySet()) {
-                    if (pathSpecEntry.getKey().startsWith(path)) return pathSpecEntry.getValue();
+                    if (path.startsWith(pathSpecEntry.getKey())) {
+                        return pathSpecEntry.getValue();
+                    }
                 }
                 return AttributeSpecImpl.this;
             });
@@ -135,24 +130,13 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     }
 
     @Override
-    public void set(String path, Object value) throws AttributeFilter.FilterException {
+    public void set(String path, Object value) {
         if (isList) throw new UnsupportedOperationException("not object");
 
         AttributeSpec<?> spec = getSpec(path);
         if (spec != this) {
             spec.set(path.substring(spec.getPath().length()), value);
         } else {
-            if (path.isEmpty()) {
-                for (AttributeFilter<TValue> filter : filters) {
-                    //noinspection unchecked
-                    filter.onSet((TValue) value);
-                }
-            } else {
-                for (AttributeFilter<TValue> filter : filters) {
-                    filter.onSet(path, value);
-                }
-            }
-
             getSource().setAttribute(fullPath(path), value);
             childUpdated(path);
         }
@@ -162,6 +146,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     public void setAll(String path, JsonObject jsonObject) {
         if (isList) throw new UnsupportedOperationException("not object");
         getSource().setAll(path, jsonObject);
+        childUpdated(path);
     }
 
     @Override
@@ -186,12 +171,14 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     public void add(TValue tValue) {
         if (!isList) throw new UnsupportedOperationException("not list");
         getSource().addListAttribute(fullPath(path), tValue);
+        childUpdated(path);
     }
 
     @Override
     public void add(int index, TValue tValue) {
         if (!isList) throw new UnsupportedOperationException("not list");
         getSource().setListAttribute(fullPath(path), index, tValue);
+        childUpdated(path);
     }
 
     @Override
@@ -201,11 +188,9 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     }
 
     @Override
-    public void delete() throws AttributeFilter.FilterException {
-        for (AttributeFilter<TValue> filter : filters) {
-            filter.onDelete("");
-        }
+    public void delete() {
         getSource().delete(path);
+        childUpdated(path);
     }
 
     @Override

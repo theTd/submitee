@@ -73,19 +73,16 @@ public class SubmiteeHttpServlet extends HttpServlet {
 
     protected void responseBadRequest(HttpServletRequest req, HttpServletResponse resp, I18N.I18NKey messageKey, Object... messageParts) throws IOException {
         resp.setStatus(HttpStatus.BAD_REQUEST_400);
-        resp.setCharacterEncoding("UTF-8");
         resp.getWriter().println(messageKey.format(req, messageParts));
     }
 
     protected void responseInternalError(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
-        resp.setCharacterEncoding("UTF-8");
         resp.getWriter().println(I18N.Http.INTERNAL_ERROR.format(req));
     }
 
     protected void responseNotFound(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         resp.setStatus(HttpStatus.NOT_FOUND_404);
-        resp.setCharacterEncoding("UTF-8");
         resp.getWriter().println(I18N.Http.NOT_FOUND.format(req));
     }
 }

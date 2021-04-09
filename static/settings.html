@@ -6,31 +6,111 @@
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <title></title>
 
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
+          rel="stylesheet">
+
     <style>
-        .main .container {
+        .main .container-fluid {
             box-shadow: inset 4px 0 0 #797979;
             margin-bottom: 2rem;
+        }
+
+        .blob-storage-editing {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            background-color: rgb(253, 222, 130);
+            box-shadow: 0 0 0 3px rgba(255, 193, 7, 1);
+            border: solid rgb(253, 222, 130);
+            border-radius: 3px;
         }
     </style>
 </head>
 <body>
-<!--<template id="template-blob-storage">-->
-<!--    <div class="row">-->
+<template id="template-blob-storage-config-row">
+    <div class="row" data-blob-storage-config>
+        <div class="col col-4">
+            <label class="blob-storage-config-name"></label>
+        </div>
+        <div class="col col-8 blob-storage-config-value">
+        </div>
+    </div>
+</template>
+<template id="template-blob-storage-editing-config-row">
+    <div class="row" data-blob-storage-config>
+        <div class="col col-4">
+            <label class="blob-storage-config-name"></label>
+        </div>
+        <div class="col col-8">
+            <!--suppress HtmlFormInputWithoutLabel -->
+            <input class="blob-storage-config-value" type="text"/>
+        </div>
+    </div>
+</template>
+<template id="template-blob-storage">
+    <div class="row blob-storage" data-blob-storage-name>
+        <div class="col col-2 blob-storage-type">
+        </div>
+        <div class="col col-2 blob-storage-name">
+        </div>
+        <div class="col col-5 blob-storage-config">
+            <div class="container">
 
-<!--    </div>-->
-<!--</template>-->
-<div class="container main">
+            </div>
+        </div>
+        <div class="col col-2">
+            <button class="btn btn-sm btn-secondary" type="button"
+                    onclick="editBlobStorage(this)">
+                编辑
+            </button>
+            <button class="btn btn-sm btn-danger disabled" style="cursor: not-allowed" type="button"
+                    onclick="deleteBlobStorage(this)">
+                删除
+            </button>
+            <div class="insert-error-before"></div>
+        </div>
+    </div>
+</template>
+<template id="template-editing-blob-storage">
+    <div class="row blob-storage blob-storage-editing" data-blob-storage-name>
+        <div class="col col-2 blob-storage-type">
+        </div>
+        <div class="col col-2 blob-storage-name">
+        </div>
+        <div class="col col-5 blob-storage-config">
+            <div class="container">
+
+            </div>
+        </div>
+        <div class="col col-2">
+            <button class="btn btn-sm btn-success" type="button"
+                    onclick="applyBlobStorageConfig(this)">
+                应用
+            </button>
+            <!--<div class="insert-error-before"></div>-->
+        </div>
+    </div>
+</template>
+<template id="template-error-tooltip">
+    <span class="position-relative error-tooltip">
+        <span class="position-absolute align-middle">
+            <i data-toggle="tooltip" data-placement="top" title="测试"
+               class="material-icons" style="font-size:2rem;color:red">error</i>
+        </span>
+    </span>
+</template>
+<div class="container-fluid main">
     <div class="row">
         <h4>文件存储</h4>
-        <div class="container" id="container-blob-storage">
+        <div class="container-fluid" id="container-blob-storage">
             <div class="row">
                 <div class="col col-2"><label for="create-blob-storage-type">存储类型</label></div>
                 <div class="col col-2"><label for="create-blob-storage-name">名称</label></div>
             </div>
+            <hr/>
 
-            <div class="blob-storage" data-blob-storage-key>
-
-            </div>
             <hr id="insert-blob-storage-before"/>
             <form class="row" onsubmit="createBlobStorage();return false;">
                 <div class="col col-2">
@@ -40,7 +120,7 @@
                 <div class="col col-2">
                     <input class="w-100 h-100" type="text" id="create-blob-storage-name"/>
                 </div>
-                <div class="col col-2 justify-content-center">
+                <div class="col col-2">
                     <button type="button" class="btn btn-primary" onclick="createBlobStorage()">创建</button>
                 </div>
             </form>
@@ -48,7 +128,17 @@
     </div>
 </div>
 
+<!--<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>-->
+<!--<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>-->
+<!--<script src="https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js"></script>-->
+<!--<script src="js/model.js"></script>-->
+<!--<script src="js/field-controllers.js"></script>-->
+<!--<script src="js/toast.js"></script>-->
+
 <script>
+
     function createBlobStorage() {
         $.ajax({
             url: "../configuration/create-blob-storage",
@@ -68,17 +158,149 @@
         // todo
     }
 
-    function createBlobStorageRow(config) {
+    function editBlobStorage(element) {
+        let blobStorage = findParentAttributeByElement(element, "data-blob-storage-name");
+        if (!blobStorage) return;
+        let container = $(`div[data-blob-storage-name=${blobStorage}]`)[0];
+        container.parentNode.replaceChild(createBlobStorageEditingRow(configuration['blob_storages'][blobStorage]), container);
+    }
 
+    function applyBlobStorageConfig(element) {
+        let blobStorage = findParentAttributeByElement(element, "data-blob-storage-name");
+        if (!blobStorage) return;
+        let container = $(`div[data-blob-storage-name="${blobStorage}"]`)[0];
+        let configContainer = container.querySelector(".blob-storage-config");
+
+        configContainer.childNodes.forEach(node => {
+            if (!node.hasAttribute) return;
+            let configKey;
+            if (node.hasAttribute("data-blob-storage-config")) {
+                configKey = node.getAttribute("data-blob-storage-config");
+            }
+            if (!configKey) return;
+            configContainer[configKey] = node.querySelector(".blob-storage-config-value").value;
+        });
+
+        $.ajax({
+            url: "../configuration/setup-blob-storage",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                name: blobStorage,
+                config: configContainer
+            }),
+            success: function (response) {
+                window.location.reload();
+            },
+            error: function (error) {
+                toast_ajax_error(error);
+            }
+        })
+    }
+
+    function deleteBlobStorage() {
+        //todo
+    }
+
+    function getBlobStorageConfigTranslation(storageName, configName) {
+        let section = configuration["blob_storage_config_translations"]
+        if (section) {
+            let storageSection = section[storageName];
+            if (storageSection) {
+                let translation = storageSection[configName];
+                return translation ? translation : configName;
+            }
+        }
+    }
+
+    function createBlobStorageConfigRow(storageName, name, value) {
+        let template = $("#template-blob-storage-config-row")[0];
+        template.content.querySelector(".blob-storage-config-name").textContent = getBlobStorageConfigTranslation(storageName, name) + ":";
+        if (value) {
+            template.content.querySelector(".blob-storage-config-value").textContent = value ? value : "<尚未配置>";
+        } else {
+            template.content.querySelector(".blob-storage-config-value").innerHTML =
+                "<span style='color: gray'>&lt;尚未配置&gt;</span>";
+        }
+        template.content.querySelector(".row").setAttribute("data-blob-storage-config", name);
+        return document.importNode(template.content, true);
+    }
+
+    function createBlobStorageEditingConfigRow(storageName, name, value) {
+        let template = $("#template-blob-storage-editing-config-row")[0];
+        let inputId = makeid(8);
+
+        let configKeyContainer = template.content.querySelector(".blob-storage-config-name");
+        configKeyContainer.setAttribute("for", inputId);
+        configKeyContainer.textContent = getBlobStorageConfigTranslation(storageName, name) + ":";
+
+        let configValueContainer = template.content.querySelector(".blob-storage-config-value");
+        configValueContainer.id = inputId;
+        configValueContainer.value = value;
+
+        template.content.querySelector(".row").setAttribute("data-blob-storage-config", name);
+
+        return document.importNode(template.content, true);
+    }
+
+    function createBlobStorageRow(config) {
+        let template = $("#template-blob-storage")[0];
+        template.content.querySelector(".blob-storage-type").textContent = configuration['blob_storage_providers'][config["provider"]];
+        template.content.querySelector(".blob-storage-name").textContent = config["name"];
+        template.content.querySelector(".blob-storage").setAttribute("data-blob-storage-name", config["name"]);
+        if (config.hasOwnProperty("config")) {
+            let configContainer = template.content.querySelector(".blob-storage-config");
+            Object.keys(config["config"]).forEach(configKey => {
+                let val = config["config"][configKey];
+                configContainer.appendChild(createBlobStorageConfigRow(config['name'], configKey, val));
+            });
+        }
+
+        $(template.content).find(".error-tooltip").remove();
+        let error = configuration['blob_storage_errors'][config['name']];
+        if (error) {
+            let relative = template.content.querySelector(".insert-error-before");
+            relative.parentNode.insertBefore(createErrorTooltip(error), relative);
+        }
+
+        return document.importNode(template.content, true);
+    }
+
+    function createBlobStorageEditingRow(config) {
+        let template = $("#template-editing-blob-storage")[0];
+        template.content.querySelector(".blob-storage-type").textContent = configuration['blob_storage_providers'][config["provider"]];
+        template.content.querySelector(".blob-storage-name").textContent = config["name"];
+        template.content.querySelector(".blob-storage").setAttribute("data-blob-storage-name", config["name"]);
+        if (config.hasOwnProperty("config")) {
+            let configContainer = template.content.querySelector(".blob-storage-config");
+            Object.keys(config["config"]).forEach(function (configKey) {
+                let val = config["config"][configKey];
+                configContainer.appendChild(createBlobStorageEditingConfigRow([config['name']], configKey, val));
+            })
+        }
+        return document.importNode(template.content, true);
+    }
+
+    function createErrorTooltip(message) {
+        let template = $("#template-error-tooltip")[0];
+        template.content.querySelector("i").setAttribute("title", message);
+        let node = document.importNode(template.content, true);
+        setInterval(() => {
+            $(".error-tooltip").find("i").tooltip({
+                template: '<div class="tooltip" role="tooltip"><div class="arrow"></div><div class="tooltip-inner" style="color: white; background-color: red"></div></div>'
+            });
+        }, 1);
+        return node;
     }
 
     function loadBlobStorages() {
         $("#container-blob-storage .blob-storage").remove();
 
         let relative = $("#insert-blob-storage-before")[0];
-        configuration["blob_storages"].forEach(function (section) {
-            relative.parentNode.insertBefore(createBlobStorageRow(section), relative);
-        });
+        Object.keys(configuration["blob_storages"]).forEach(key => {
+            let config = configuration["blob_storages"][key];
+            relative.parentNode.insertBefore(createBlobStorageRow(config), relative);
+        })
 
         let providerTypeList = $("#create-blob-storage-type")[0];
         $(providerTypeList).empty();
@@ -98,7 +320,16 @@
     }
 
     function loadConfiguration() {
-        loadBlobStorages()
+        // (configuration['blob_storages'])['默认'] = {
+        //     provider: '阿里云OSS',
+        //     name: '默认',
+        //     error: '尚未实现',
+        //     config: {
+        //         apiKey: "",
+        //         endpoint: ""
+        //     }
+        // };
+        loadBlobStorages();
     }
 
     configuration = {};
@@ -118,7 +349,6 @@
         })
     }
 
-    init_toast();
     fetchConfiguration();
 </script>
 </body>

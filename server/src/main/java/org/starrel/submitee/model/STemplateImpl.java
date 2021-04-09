@@ -3,7 +3,6 @@ package org.starrel.submitee.model;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import org.starrel.submitee.SubmiteeServer;
-import org.starrel.submitee.attribute.AttributeFilter;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
 import org.starrel.submitee.http.SFieldImpl;
@@ -83,7 +82,7 @@ public class STemplateImpl implements STemplate {
     }
 
     @Override
-    public void setCommittedBy(User user) throws AttributeFilter.FilterException {
+    public void setCommittedBy(User user) {
         this.committedBy.set(user.getDescriptor());
     }
 
@@ -93,7 +92,7 @@ public class STemplateImpl implements STemplate {
     }
 
     @Override
-    public void setComment(String comment) throws AttributeFilter.FilterException {
+    public void setComment(String comment) {
         this.comment.set(comment);
     }
 

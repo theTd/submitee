@@ -2,9 +2,7 @@ package org.starrel.submitee.attribute;
 
 import com.google.gson.JsonObject;
 
-import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 
 public interface AttributeSpec<TValue> {
 
@@ -13,8 +11,6 @@ public interface AttributeSpec<TValue> {
     String getPath();
 
     void setSource(AttributeSource controller);
-
-    void addFilter(AttributeFilter<TValue> filter);
 
     <TSubValue> AttributeSpec<TSubValue> of(String path, Class<TSubValue> type);
 
@@ -28,11 +24,11 @@ public interface AttributeSpec<TValue> {
 
     <TSubValue> TSubValue get(String path, Class<TSubValue> type);
 
-    default void set(TValue value) throws AttributeFilter.FilterException {
+    default void set(TValue value) {
         set("", value);
     }
 
-    void set(String path, Object value) throws AttributeFilter.FilterException;
+    void set(String path, Object value);
 
     void setAll(String path, JsonObject jsonObject);
 
@@ -46,7 +42,7 @@ public interface AttributeSpec<TValue> {
 
     List<String> getKeys(String path);
 
-    void delete() throws AttributeFilter.FilterException;
+    void delete();
 
     void childUpdated(String path);
 }

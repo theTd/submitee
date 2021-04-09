@@ -253,7 +253,7 @@ class FileFieldController extends FieldController {
     generateSubmissionHtml(field) {
         let uploadFieldId = this.getContainerId(field) + "-drop-field";
         setTimeout(function () {
-            var uppy = Uppy.Core()
+            let uppy = Uppy.Core()
                 .use(Uppy.Dashboard, {
                     inline: true,
                     target: '#' + uploadFieldId
