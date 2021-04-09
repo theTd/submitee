@@ -3,6 +3,7 @@ package org.starrel.submitee.http;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload.RequestContext;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.SubmiteeServer;
@@ -11,10 +12,12 @@ import org.starrel.submitee.blob.SubmiteeFileItem;
 import org.starrel.submitee.model.STemplateImpl;
 import org.starrel.submitee.model.Session;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -92,7 +95,7 @@ public class UploadServlet extends SubmiteeHttpServlet {
             }
         });
         try {
-            List<FileItem> fileItems = servletFileUpload.parseRequest(req);
+            List<FileItem> fileItems = servletFileUpload.parseRequest(new JakartaServletRequestContext(req));
             SubmiteeFileItem uploaded = (SubmiteeFileItem) fileItems.get(0);
 
             resp.setStatus(200);
@@ -102,6 +105,34 @@ public class UploadServlet extends SubmiteeHttpServlet {
         } catch (FileUploadException e) {
             ExceptionReporting.report(UploadServlet.class, "parsing upload request", e);
             responseInternalError(req, resp);
+        }
+    }
+
+    private static class JakartaServletRequestContext implements RequestContext {
+        private final HttpServletRequest request;
+
+        private JakartaServletRequestContext(HttpServletRequest request) {
+            this.request = request;
+        }
+
+        @Override
+        public String getCharacterEncoding() {
+            return request.getCharacterEncoding();
+        }
+
+        @Override
+        public String getContentType() {
+            return request.getContentType();
+        }
+
+        @Override
+        public int getContentLength() {
+            return request.getContentLength();
+        }
+
+        @Override
+        public InputStream getInputStream() throws IOException {
+            return request.getInputStream();
         }
     }
 }

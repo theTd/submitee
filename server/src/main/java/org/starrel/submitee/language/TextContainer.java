@@ -8,7 +8,7 @@ import org.starrel.submitee.SubmiteeServer;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutionException;

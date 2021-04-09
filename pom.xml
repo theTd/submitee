@@ -17,11 +17,12 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.source>1.10</maven.compiler.source>
+    <maven.compiler.target>1.10</maven.compiler.target>
 
     <submitee.version.api>1.0-SNAPSHOT</submitee.version.api>
     <submitee.version.server>1.0-SNAPSHOT</submitee.version.server>
+    <jetty_version>11.0.2</jetty_version>
   </properties>
 
   <dependencies>
@@ -30,11 +31,16 @@
       <artifactId>mongodb-driver-sync</artifactId>
       <version>4.2.2</version>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
+<!--    &lt;!&ndash; https://mvnrepository.com/artifact/jakarta.servlet/jakarta.servlet-api &ndash;&gt;-->
+<!--    <dependency>-->
+<!--      <groupId>jakarta.servlet</groupId>-->
+<!--      <artifactId>jakarta.servlet-api</artifactId>-->
+<!--      <version>4.0.1</version>-->
+<!--    </dependency>-->
     <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
-      <version>4.0.1</version>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+      <version>${jetty_version}</version>
     </dependency>
 
     <dependency>

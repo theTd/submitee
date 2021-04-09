@@ -1,14 +1,15 @@
 package org.starrel.submitee.model;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.Util;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
 import org.starrel.submitee.auth.AnonymousUser;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;

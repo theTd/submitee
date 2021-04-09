@@ -1,6 +1,6 @@
 package org.starrel.submitee;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 public class Util {
     public static String getRemoteAddr(HttpServletRequest req){
