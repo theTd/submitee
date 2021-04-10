@@ -9,8 +9,6 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
-          rel="stylesheet">
 
     <style>
         .main .container-fluid {
@@ -69,7 +67,7 @@
                     onclick="deleteBlobStorage(this)">
                 删除
             </button>
-            <div class="insert-error-before"></div>
+            <div class="blob-storage-error d-inline"></div>
         </div>
     </div>
 </template>
@@ -93,14 +91,6 @@
         </div>
     </div>
 </template>
-<template id="template-error-tooltip">
-    <span class="position-relative error-tooltip">
-        <span class="position-absolute align-middle">
-            <i data-toggle="tooltip" data-placement="top" title="测试"
-               class="material-icons" style="font-size:2rem;color:red">error</i>
-        </span>
-    </span>
-</template>
 <div class="container-fluid main">
     <div class="row">
         <h4>文件存储</h4>
@@ -108,6 +98,7 @@
             <div class="row">
                 <div class="col col-2"><label for="create-blob-storage-type">存储类型</label></div>
                 <div class="col col-2"><label for="create-blob-storage-name">名称</label></div>
+                <div class="col col-5">配置项</div>
             </div>
             <hr/>
 
@@ -256,11 +247,11 @@
             });
         }
 
-        $(template.content).find(".error-tooltip").remove();
+        $(template.content.querySelector(".blob-storage-error")).empty();
+        // $(template.content).find(".error-tooltip").remove();
         let error = configuration['blob_storage_errors'][config['name']];
         if (error) {
-            let relative = template.content.querySelector(".insert-error-before");
-            relative.parentNode.insertBefore(createErrorTooltip(error), relative);
+            template.content.querySelector(".blob-storage-error").appendChild(createErrorTooltip(error));
         }
 
         return document.importNode(template.content, true);
@@ -279,18 +270,6 @@
             })
         }
         return document.importNode(template.content, true);
-    }
-
-    function createErrorTooltip(message) {
-        let template = $("#template-error-tooltip")[0];
-        template.content.querySelector("i").setAttribute("title", message);
-        let node = document.importNode(template.content, true);
-        setInterval(() => {
-            $(".error-tooltip").find("i").tooltip({
-                template: '<div class="tooltip" role="tooltip"><div class="arrow"></div><div class="tooltip-inner" style="color: white; background-color: red"></div></div>'
-            });
-        }, 1);
-        return node;
     }
 
     function loadBlobStorages() {

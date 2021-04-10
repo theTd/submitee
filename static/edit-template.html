@@ -83,6 +83,7 @@
         <div class="col col-2">
             <a href="#" onclick="editField(this)" class="btn btn-secondary btn-sm">编辑</a>
             <a href="#" onclick="deleteField(this)" class="btn btn-danger btn-sm">删除</a>
+            <div class="field-error d-inline"></div>
         </div>
     </div>
 </template>
@@ -274,6 +275,14 @@
         domTemplate.content.querySelector(".s-field-type").textContent = field.getTypeDisplayName();
         domTemplate.content.querySelector(".s-field-name").textContent = field.name;
         domTemplate.content.querySelector(".s-field-comment").textContent = field.comment;
+        $(domTemplate.content.querySelector(".field-error")).empty();
+
+        let error = fieldControllers[field.type].validateConfiguration(field);
+        console.log(field.name + " error=" + error);
+        if (error) {
+            domTemplate.content.querySelector(".field-error").appendChild(createErrorTooltip(error));
+        }
+
         return document.importNode(domTemplate.content, true);
     }
 

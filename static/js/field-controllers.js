@@ -33,22 +33,6 @@ class TextFieldController extends FieldController {
         let inputId = "text-config-" + field.name;
         field.attributeMap.set("placeholder", $("#" + inputId).val());
     }
-
-    /**
-     *
-     * @param {SField} field
-     * @param resolveResult
-     */
-    validateResolveResult(field, resolveResult) {
-        let constraints = field.attributeMap.get("constraints");
-        if (constraints) {
-
-            for (let i = 0; i < constraints.length; i++) {
-                let c = constraints[i];
-                new Function(c)();
-            }
-        }
-    }
 }
 
 fieldControllers['text'] = new TextFieldController();
@@ -286,6 +270,16 @@ ${options}
 
         let value = $(`#${id} option[name=${id}]:selected`).val();
         field.attributeMap.set("blob_storage", value);
+    }
+
+    validateConfiguration(field) {
+        let value = field.attributeMap.get("blob_storage");
+        if (!value) {
+            return "未配置文件存储";
+        }
+        if (!configuration["blob_storages"][value]) {
+            return "配置的文件存储已不再可用";
+        }
     }
 }
 

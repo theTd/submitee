@@ -297,8 +297,11 @@ class FieldController {
 
     }
 
-    validateResolveResult(field, resolveResult) {
-
+    /**
+     * @returns {string} any exception
+     * @param {SField} field
+     */
+    validateConfiguration(field) {
     }
 
     getContainerId(field) {

@@ -59,3 +59,39 @@ function toast_ajax_error(error) {
         create_toast("重要提示", error.statusText, 10000)
     }
 }
+
+function init_tooltip() {
+    if ($("#template-error-tooltip")[0]) return;
+
+    // region load css
+    let link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
+    let head = document.getElementsByTagName('head')[0];
+    head.appendChild(link);
+    console.log("loading material icon stylesheet");
+    // endregion
+
+    let template = document.createElement("template");
+    template.id = "template-error-tooltip";
+    template.innerHTML = `
+<span class="position-relative error-tooltip">
+    <span class="position-absolute align-middle">
+        <i data-toggle="tooltip" data-placement="top" title="测试"
+           class="material-icons" style="font-size:2rem;color:red">error</i>
+    </span>
+</span>`;
+
+    document.body.appendChild(template);
+}
+
+function createErrorTooltip(message) {
+    init_tooltip();
+    let template = $("#template-error-tooltip")[0];
+    template.content.querySelector("i").setAttribute("title", message);
+    let node = document.importNode(template.content, true);
+    setInterval(() => {
+        $(".error-tooltip").find("i").tooltip();
+    }, 1);
+    return node;
+}
