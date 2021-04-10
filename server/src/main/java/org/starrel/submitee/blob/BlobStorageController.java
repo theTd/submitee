@@ -19,8 +19,10 @@ import java.util.concurrent.TimeUnit;
 
 public class BlobStorageController {
     private final SubmiteeServer server;
-    private final Cache<Integer, Blob> cache = CacheBuilder.newBuilder().maximumSize(1000)
+    private final Cache<Integer, Blob> cache = CacheBuilder.newBuilder().maximumSize(100)
             .expireAfterAccess(10, TimeUnit.MINUTES).build();
+    private final Cache<String, Integer> keyCache = CacheBuilder.newBuilder().maximumSize(1000)
+            .expireAfterAccess(1, TimeUnit.HOURS).build();
 
     private final Map<String, BlobStorage> storageMap = new HashMap<>();
     private final Map<String, BlobStorageProvider> providerMap = new HashMap<>();
@@ -131,11 +133,38 @@ public class BlobStorageController {
             stmt.setString(5, contentType);
             stmt.setString(6, uploader.toString());
             stmt.executeUpdate();
-            ResultSet r = conn.createStatement().executeQuery("SELECT `blob_id`,`create_time` FROM `blobs` WHERE `blob_key`=" + key);
+
+            stmt = conn.prepareStatement("SELECT `blob_id`,`create_time` FROM `blobs` WHERE `blob_key`=?");
+            stmt.setString(1, key);
+
+            ResultSet r = stmt.executeQuery();
             if (!r.next()) throw new RuntimeException("insertion failed");
             blobId = r.getInt(1);
         }
         return storage.create(blobId, key, fileName, contentType, uploader);
+    }
+
+    public Blob getBlobByKey(String blobKey) throws Exception {
+        try {
+            int id = keyCache.get(blobKey, () -> {
+                try (Connection conn = server.getDataSource().getConnection()) {
+                    PreparedStatement stmt = conn.prepareStatement("SELECT blob_id FROM blobs WHERE blob_key=?");
+                    stmt.setString(1, blobKey);
+                    ResultSet r = stmt.executeQuery();
+                    if (!r.next()) {
+                        throw new BlobNotFoundSignal();
+                    }
+                    return r.getInt(1);
+                }
+            });
+            return access(id);
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof BlobNotFoundSignal) {
+                return null;
+            } else {
+                throw e;
+            }
+        }
     }
 
     public Blob access(int blobId) throws Exception {
@@ -143,33 +172,36 @@ public class BlobStorageController {
             return cache.get(blobId, () -> {
                 try (Connection conn = server.getDataSource().getConnection()) {
                     ResultSet r = conn.createStatement().executeQuery(
-                            "SELECT (SELECT type_id AS storage_type, name FROM blob_storages AS storage_name " +
-                                    "WHERE blob_storages.id=blobs.storage_id),file_name,create_time,content_type,uploader FROM blobs WHERE blob_id=" + blobId);
-                    if (r.next()) {
-                        String type = r.getString(1);
-                        String type_name = r.getString(2);
-                        String key = r.getString(3);
-                        String fileName = r.getString(4);
-                        Date createTime = r.getTimestamp(5);
-                        String contentType = r.getString(6);
-                        UserDescriptor uploader = UserDescriptor.parse(r.getString(7));
-
-                        String storageKey = type + ":" + type_name;
-                        BlobStorage storage = storageMap.get(storageKey);
-                        if (storage == null) {
-                            throw new NullPointerException("blob storage missing: " + storageKey);
-                        }
-                        return storage.access(blobId, key, fileName, createTime, contentType, uploader);
-                    } else {
-                        return null;
+                            "SELECT S.type_id, S.name, B.file_name, B.blob_key, " +
+                                    "B.create_time, B.content_type, B.uploader " +
+                                    "FROM blobs B " +
+                                    "RIGHT JOIN blob_storages S " +
+                                    "ON S.id = B.storage_id " +
+                                    "WHERE B.blob_id =" +
+                                    " " + blobId);
+                    if (!r.next()) {
+                        throw BlobNotFoundSignal.INSTANCE;
                     }
+                    String storageType = r.getString(1);
+                    String storageName = r.getString(2);
+                    String fileName = r.getString(3);
+                    String blobKey = r.getString(4);
+                    Date createTime = r.getTimestamp(5);
+                    String contentType = r.getString(6);
+                    UserDescriptor uploader = UserDescriptor.parse(r.getString(7));
+
+                    BlobStorage storage = storageMap.get(storageName);
+                    if (storage == null) {
+                        throw new NullPointerException("blob storage missing: " + storageType + ":" + storageName);
+                    }
+                    return storage.access(blobId, blobKey, fileName, createTime, contentType, uploader);
                 }
             });
         } catch (ExecutionException e) {
-            if (e.getCause() instanceof Exception) {
-                throw ((Exception) e.getCause());
+            if (e.getCause() instanceof BlobNotFoundSignal) {
+                return null;
             }
-            throw new Error(e.getCause());
+            throw e;
         }
     }
 }

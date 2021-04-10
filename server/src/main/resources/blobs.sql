@@ -4,7 +4,6 @@ CREATE TABLE blobs (
     `blob_key` VARCHAR(128) NOT NULL,
     `file_name` VARCHAR(128) NULL,
     `create_time` TIMESTAMP NOT NULL DEFAULT now(),
-    `size` BIGINT NOT NULL DEFAULT 0,
     `content_type` VARCHAR(128) NULL,
     `uploader` VARCHAR(128) NOT NULL,
     PRIMARY KEY(`blob_id`),

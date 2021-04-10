@@ -38,7 +38,7 @@ public interface SServer {
 
     Blob createBlob(String blobStorageName, String fileName, String contentType, UserDescriptor uploader) throws IOException, SQLException;
 
-    Blob getBlobById(int blobId);
+    Blob getBlobByKey(String blobKey) throws Exception;
 
     <TContext extends AttributeHolder<?>> AttributeMap<TContext> createTemporaryAttributeMap(TContext context);
 

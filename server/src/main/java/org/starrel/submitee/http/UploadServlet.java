@@ -1,13 +1,14 @@
 package org.starrel.submitee.http;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileItemFactory;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.RequestContext;
+import com.google.common.io.ByteStreams;
+import com.google.gson.stream.JsonWriter;
+import org.apache.commons.fileupload.*;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.fileupload.servlet.ServletRequestContext;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeMap;
+import org.starrel.submitee.blob.Blob;
 import org.starrel.submitee.blob.SubmiteeFileItem;
 import org.starrel.submitee.model.STemplateImpl;
 import org.starrel.submitee.model.Session;
@@ -16,11 +17,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class UploadServlet extends SubmiteeHttpServlet {
     {
@@ -70,19 +73,20 @@ public class UploadServlet extends SubmiteeHttpServlet {
         }
 
         AttributeMap<SFieldImpl> fieldAttributeMap = targetField.getAttributeMap();
-        String blobStorageName = fieldAttributeMap.get("blob-storage", String.class);
+        String blobStorageName = fieldAttributeMap.get("blob_storage", String.class);
         if (blobStorageName == null) {
-            ExceptionReporting.report(UploadServlet.class, "blob-storage not defined",
+            ExceptionReporting.report(UploadServlet.class, "blob_storage not defined",
                     String.format("tried to upload file to field %s:%s not defined blob-storage", template.getTemplateId(), fieldName));
             responseInternalError(req, resp);
             return;
         }
 
-        ServletFileUpload servletFileUpload = new ServletFileUpload(new FileItemFactory() {
+        FileUpload fileUpload = new FileUpload(new FileItemFactory() {
             boolean created = false;
 
             @Override
             public FileItem createItem(String fieldName, String contentType, boolean isFormField, String fileName) {
+                if (isFormField) return new IgnoredFileItem();
                 if (created) throw new RuntimeException("uploading multiple file");
                 try {
                     FileItem item = new SubmiteeFileItem(SubmiteeServer.getInstance().createBlob(
@@ -94,14 +98,20 @@ public class UploadServlet extends SubmiteeHttpServlet {
                 }
             }
         });
+
         try {
-            List<FileItem> fileItems = servletFileUpload.parseRequest(new JakartaServletRequestContext(req));
-            SubmiteeFileItem uploaded = (SubmiteeFileItem) fileItems.get(0);
+            List<FileItem> fileItems = fileUpload.parseRequest(new JakartaServletRequestContext(req));
+            Blob uploaded = fileItems.stream().filter(i -> i instanceof SubmiteeFileItem)
+                    .map(i -> ((SubmiteeFileItem) i).getBlob()).collect(Collectors.toList()).get(0);
 
             resp.setStatus(200);
-            resp.setContentType("text/plain");
-            resp.getWriter().println(uploaded.getBlob().getBlobId());
-            resp.getWriter().close();
+            resp.setContentType("application/json");
+            JsonWriter responseWriter = new JsonWriter(resp.getWriter());
+            responseWriter.beginObject();
+            responseWriter.name("url").value("/get-file/" + uploaded.getKey());
+            responseWriter.name("key").value(uploaded.getKey());
+            responseWriter.endObject();
+            responseWriter.close();
         } catch (FileUploadException e) {
             ExceptionReporting.report(UploadServlet.class, "parsing upload request", e);
             responseInternalError(req, resp);
@@ -133,6 +143,94 @@ public class UploadServlet extends SubmiteeHttpServlet {
         @Override
         public InputStream getInputStream() throws IOException {
             return request.getInputStream();
+        }
+    }
+
+    private static class IgnoredFileItem implements FileItem {
+
+        @Override
+        public InputStream getInputStream() throws IOException {
+            return InputStream.nullInputStream();
+        }
+
+        @Override
+        public String getContentType() {
+            return null;
+        }
+
+        @Override
+        public String getName() {
+            return null;
+        }
+
+        @Override
+        public boolean isInMemory() {
+            return false;
+        }
+
+        @Override
+        public long getSize() {
+            return 0;
+        }
+
+        @Override
+        public byte[] get() {
+            return new byte[0];
+        }
+
+        @Override
+        public String getString(String encoding) throws UnsupportedEncodingException {
+            return null;
+        }
+
+        @Override
+        public String getString() {
+            return null;
+        }
+
+        @Override
+        public void write(File file) throws Exception {
+
+        }
+
+        @Override
+        public void delete() {
+
+        }
+
+        @Override
+        public String getFieldName() {
+            return null;
+        }
+
+        @Override
+        public void setFieldName(String name) {
+
+        }
+
+        @Override
+        public boolean isFormField() {
+            return false;
+        }
+
+        @Override
+        public void setFormField(boolean state) {
+
+        }
+
+        @Override
+        public OutputStream getOutputStream() throws IOException {
+            return OutputStream.nullOutputStream();
+        }
+
+        @Override
+        public FileItemHeaders getHeaders() {
+            return null;
+        }
+
+        @Override
+        public void setHeaders(FileItemHeaders headers) {
+
         }
     }
 }

@@ -36,6 +36,7 @@ import jakarta.servlet.DispatcherType;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -97,6 +98,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         servletHandler.addServlet(InfoServlet.class, "/info/*");
         servletHandler.addServlet(BatchGetServlet.class, "/batch-get/*");
         servletHandler.addServlet(UploadServlet.class, "/upload/*");
+        servletHandler.addServlet(GetFileServlet.class, "/get-file/*");
         servletHandler.addServlet(ConfigurationServlet.class, "/configuration/*");
         return servletHandler;
     }
@@ -262,8 +264,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public Blob getBlobById(int blobId) {
-        return null;
+    public Blob getBlobByKey(String blobKey) throws Exception {
+        return blobStorageController.getBlobByKey(blobKey);
     }
 
     @Override

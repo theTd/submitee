@@ -26,6 +26,11 @@
             margin-left: 0.8rem;
         }
 
+        .field-configuration .container-fluid {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
         .s-field {
             margin-top: 0.5rem;
             margin-bottom: 0.5rem;
@@ -344,7 +349,7 @@
         let controller = fieldControllers[field.type];
         let confHtml;
         if (controller && (confHtml = controller.generateConfigurationHtml(field))) {
-            template.content.querySelector(".field-configuration").innerHTML = `<div class="container no-gutters">${confHtml}</div>`;
+            template.content.querySelector(".field-configuration").innerHTML = `<div class="container-fluid">${confHtml}</div>`;
         } else {
             template.content.querySelector(".field-configuration").innerHTML = "";
         }
@@ -470,62 +475,22 @@
         reconstructFieldRows();
     }
 
-    // function fieldDrop(evt) {
-    //     // reset style
-    //     evt.target.classList.remove("drag-hover");
-    //     let top = evt.target.parentNode.classList.contains("drag-mark-top");
-    //
-    //     // find out target index
-    //     let relativeField = findFieldByElement(evt.target);
-    //     let relativeIndex = findFieldIndex(relativeField);
-    //     let targetIndex = top ? relativeIndex : ++relativeIndex;
-    //
-    //     let field = currentTemplate.getFieldByName(evt.dataTransfer.getData("field-sort"));
-    //     if (targetIndex === findFieldIndex(field) + 1) {
-    //         console.log("move to next");
-    //         return;
-    //     }
-    //
-    //     if (targetIndex >= currentTemplate.fields.length) {
-    //         targetIndex = currentTemplate.fields.length - 1;
-    //     }
-    //
-    //
-    //     if (targetIndex === findFieldIndex(field)) {
-    //         console.log("no changes");
-    //         return;
-    //     }
-    //
-    //
-    //     moveFieldRow(field, targetIndex);
-    //     field.owner.moveField(field, targetIndex).then(() => {
-    //         create_toast("提示", "对模板的更改已保存", 2000);
-    //     }, error => {
-    //         create_toast("重要提示", `<span style="color:red">修改模板失败： ${error}</span>`, 10000);
-    //     });
-    // }
-    //
-    // function moveFieldRow(field, targetIndex) {
-    //     let first = field.owner.fields[0] === field;
-    //
-    //     // determine insert place
-    //     let insertBefore;
-    //     if (targetIndex === currentTemplate.fields.length) {
-    //         insertBefore = $("#insert-fields-before")[0];
-    //     } else {
-    //         insertBefore = $(`.s-field[data-submitee-field-name=${currentTemplate.fields[targetIndex].name}]`)[0];
-    //     }
-    //
-    //     // remove previous element
-    //     let element = $(`.s-field[data-submitee-field-name=${field.name}]`)[0];
-    //     element.parentNode.removeChild(element);
-    //
-    //     // insert
-    //     insertBefore.parentNode.insertBefore(element, insertBefore);
-    // }
+    configuration = {};
 
+    function fetchConfiguration() {
+        $.ajax({
+            url: "../configuration",
+            method: "GET",
+            success: function (data) {
+                configuration = data;
+            },
+            error: function (error) {
+                toast_ajax_error(error);
+            }
+        })
+    }
 
-    init_toast();
+    fetchConfiguration();
     buildFieldTypeSelect();
 
     let currentTemplate;

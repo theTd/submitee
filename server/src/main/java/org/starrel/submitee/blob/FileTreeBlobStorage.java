@@ -143,7 +143,7 @@ public class FileTreeBlobStorage implements BlobStorage {
         private final String contentType;
         private final UserDescriptor uploader;
         private final File file;
-        private long size = 0;
+        private long size = -1;
         private boolean finishedUploading = false;
 
         private FileTreeBlob(int blobId, String fileName, String key, String contentType, UserDescriptor uploader) throws IOException {
@@ -204,6 +204,9 @@ public class FileTreeBlobStorage implements BlobStorage {
 
         @Override
         public long getSize() {
+            if (size == -1) {
+                size = file.length();
+            }
             return size;
         }
 

@@ -9,9 +9,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.I18N;
+import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.Util;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutionException;
@@ -23,6 +26,8 @@ public class ConnectionThrottleFilter extends HttpFilter {
 
     private final Cache<String, TimeList> cache = CacheBuilder.newBuilder()
             .expireAfterAccess(10, TimeUnit.MINUTES).build();
+
+    private final DateFormat format = new SimpleDateFormat("MM-dd_HH:mm:ss");
 
     @Override
     protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
@@ -39,7 +44,15 @@ public class ConnectionThrottleFilter extends HttpFilter {
             res.getWriter().close();
             return;
         }
+        long start = System.currentTimeMillis();
         chain.doFilter(req, res);
+        long end = System.currentTimeMillis();
+
+        if (!addr.equals(req.getRemoteAddr())) {
+            addr = req.getHeader("X-Forwarded-For");
+        }
+        SubmiteeServer.getInstance().getLogger().info(String.format("%s HTTP %s %s FROM %s COSTS %dms",
+                format.format(start), req.getMethod(), req.getRequestURI(), addr, end - start));
     }
 
     private static class TimeList {

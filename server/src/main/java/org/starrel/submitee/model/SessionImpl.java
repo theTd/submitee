@@ -10,6 +10,7 @@ import org.starrel.submitee.auth.AnonymousUser;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -51,6 +52,7 @@ public class SessionImpl implements Session {
     }
 
     private static String getSessionTokenFromCookies(Cookie[] cookies) {
+        if (cookies == null) return null;
         for (Cookie cookie : cookies) {
             if (Objects.equals(cookie.getName(), COOKIE_NAME_SESSION_TOKEN)) {
                 return cookie.getValue();

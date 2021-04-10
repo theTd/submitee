@@ -229,16 +229,6 @@ class RichTextFieldController extends FieldController {
 
 fieldControllers["rich-text"] = new RichTextFieldController();
 
-function loadScript(url, callback) {
-    let script = document.createElement("script")
-    // script.type = "text/javascript";
-
-    script.src = url;
-    script.addEventListener("load", () => callback());
-
-    document.getElementsByTagName("head")[0].appendChild(script);
-}
-
 class FileFieldController extends FieldController {
     constructor() {
         super("file");
@@ -253,14 +243,15 @@ class FileFieldController extends FieldController {
     generateSubmissionHtml(field) {
         let uploadFieldId = this.getContainerId(field) + "-drop-field";
         setTimeout(function () {
-            let uppy = Uppy.Core()
-                .use(Uppy.Dashboard, {
-                    inline: true,
-                    target: '#' + uploadFieldId
-                })
-                .use(Uppy.Tus, {endpoint: `../upload/${field.owner.uniqueId}/${field.name}`})
+            let uppy = Uppy.Core({
+                locale: Uppy.locales.zh_CN
+            }).use(Uppy.Dashboard, {
+                inline: true,
+                target: '#' + uploadFieldId
+            }).use(Uppy.XHRUpload, {endpoint: `../upload/${field.owner.uniqueId}/${field.name}`})
 
             uppy.on('complete', (result) => {
+                console.log(result);
                 // todo
             })
         }, 1);
@@ -270,6 +261,31 @@ class FileFieldController extends FieldController {
     resolveSubmission(field) {
         let dropFieldId = this.getContainerId(field) + "-drop-field";
         document.getElementById(dropFieldId).getAttribute("data-blob-id");
+    }
+
+    generateConfigurationHtml(field) {
+        let id = "file-conf-" + field.name;
+
+        let value = field.attributeMap.get("blob_storage");
+        let options = `<option name="${id}" value="">---------------</option>`;
+        Object.keys(configuration["blob_storages"]).forEach(storageName => {
+            let providerName = configuration["blob_storage_providers"][configuration["blob_storages"][storageName]['provider']];
+            let selected = value === storageName ? "selected" : ""
+            options += `<option name="${id}" value="${storageName}" ${selected}>${providerName}:${storageName}</option>`;
+        })
+        return `
+<label for="${id}">使用文件存储:</label>
+<select id="${id}">
+${options}
+</select>
+`;
+    }
+
+    applyConfiguration(field) {
+        let id = "file-conf-" + field.name;
+
+        let value = $(`#${id} option[name=${id}]:selected`).val();
+        field.attributeMap.set("blob_storage", value);
     }
 }
 
