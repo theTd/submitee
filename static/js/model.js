@@ -344,3 +344,54 @@ function findParentAttributeByElement(element, attribute) {
     }
     return name;
 }
+
+function loadScript(url) {
+    let t = document.createElement("script");
+    t.src = url;
+    document.querySelector("body").appendChild(t);
+}
+
+function beforeUnloadCheck() {
+    if (submitee.beforeUnloadChecker) {
+        return submitee.beforeUnloadChecker();
+    } else {
+        return undefined;
+    }
+}
+
+class ScheduleBroker {
+    constructor(initialState) {
+        this.nextTask = null;
+        this.nextState = null;
+
+        this.pendingState = null;
+        this.state = initialState;
+    }
+
+    submitState(task, state) {
+        if (this.pendingState === state) return;
+        this.nextTask = task;
+        this.nextState = state;
+
+        this._nextTask();
+    }
+
+    setState(state) {
+        if (this.pendingState === state) {
+            this.state = state;
+            this.pendingState = null;
+            this._nextTask();
+        }
+    }
+
+    _nextTask() {
+        if (this.pendingState || !this.nextTask) return
+        if (this.state !== this.nextState) {
+            let task = this.nextTask;
+            this.pendingState = this.nextState;
+            this.nextTask = null;
+            this.nextState = null;
+            setTimeout(task);
+        }
+    }
+}

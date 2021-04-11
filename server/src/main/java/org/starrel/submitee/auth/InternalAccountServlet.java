@@ -2,6 +2,7 @@ package org.starrel.submitee.auth;
 
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
+import jakarta.servlet.AsyncContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,10 +33,9 @@ public class InternalAccountServlet extends AbstractJsonServlet {
         if (registerDisableMessage != null) {
             writer.name("register-disable-message").value(registerDisableMessage);
         }
-        String grecaptchaSitekey = SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class);
-        String grecaptchaSecretKey = SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class);
-        if (grecaptchaSitekey != null && grecaptchaSecretKey != null) {
-            writer.name("grecaptcha-sitekey").value(grecaptchaSitekey);
+        if (Util.grecaptchaConfigured()) {
+            writer.name("grecaptcha-sitekey").value(
+                    SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class));
         }
         writer.endObject();
         writer.close();
@@ -51,6 +51,8 @@ public class InternalAccountServlet extends AbstractJsonServlet {
 
         switch (uriParts[0]) {
             case "send-verify-code": {
+                System.out.println(SubmiteeServer.GSON.toJson(body)); //todo debug
+
                 boolean grecaptcha = Util.grecaptchaConfigured();
                 String email = body.has("mail") ? body.get("mail").getAsString() : null;
                 String token = null;
@@ -67,7 +69,8 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                     return;
                 }
                 String finalToken = token;
-                req.startAsync().start(() -> {
+                AsyncContext asyncContext = req.startAsync();
+                asyncContext.start(() -> {
                     try {
                         if (grecaptcha) {
                             if (!Util.grecaptchaVerify(finalToken, Util.getRemoteAddr(req),
@@ -77,7 +80,8 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                             }
                         }
                         // TODO: 2021-04-12-0012
-                        Util.sendTemplatedEmail();
+//                        Util.sendTemplatedEmail();
+//                        responseErrorPage(resp, HttpStatus.IM_A_TEAPOT_418, "OK");
                     } catch (Exception e) {
                         ExceptionReporting.report(InternalAccountServlet.class, "processing send-verify-code", e);
                         try {
@@ -85,6 +89,8 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         } catch (IOException ex) {
                             throw new RuntimeException(ex);
                         }
+                    } finally {
+                        asyncContext.complete();
                     }
                 });
             }

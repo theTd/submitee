@@ -13,7 +13,7 @@
 
     <title>正在载入</title>
 </head>
-<body>
+<body onbeforeunload="return beforeUnloadCheck();">
 <div class="container-fluid">
     <div class="row col mb-3 mt-3 align-bottom">
         <h4>logged in as thetd</h4><a href="#" class="pl-2">登出</a>
@@ -44,6 +44,8 @@
 <script src="js/toast.js"></script>
 
 <script>
+    submitee.beforeUnloadChecker = null;
+
     function highlightCurrentMethod(method) {
         let links = $("#management-methods a");
         links.each(function (index) {

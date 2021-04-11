@@ -294,7 +294,6 @@
         $(domTemplate.content.querySelector(".field-error")).empty();
 
         let error = fieldControllers[field.type].validateConfiguration(field);
-        console.log(field.name + " error=" + error);
         if (error) {
             domTemplate.content.querySelector(".field-error").appendChild(createErrorTooltip(error));
         }
@@ -454,9 +453,9 @@
             currentTemplate.comment = $("#template-metadata-comment").val();
             currentTemplate.desc = currentTemplate.descEditor.txt.html();
 
-            currentTemplate.latest = true;
             currentTemplate.sync().then(() => {
                 create_toast("提示", "对模板的更改已保存", 2000);
+                currentTemplate.latest = true;
             }, error => {
                 currentTemplate.latest = false;
                 create_toast("重要提示", "保存模板时出现问题: " + error, 10000);
@@ -543,6 +542,12 @@
         alert(reject.message);
         window.history.back();
     });
+
+    submitee.beforeUnloadChecker = function () {
+        if (!currentTemplate.latest) {
+            return "saving template";
+        }
+    }
 </script>
 </body>
 </html>

@@ -64,14 +64,7 @@ public class Util {
 
     @SneakyThrows
     public static boolean grecaptchaVerify(String responseToken, String remoteIp, String siteKey) throws ClassifiedException {
-        StringWriter stringWriter = new StringWriter();
-        JsonWriter writer = new JsonWriter(stringWriter);
-        writer.beginObject();
-        writer.name("secret").value(siteKey);
-        writer.name("response").value(responseToken);
-        writer.name("remoteip").value(remoteIp);
-        writer.endObject();
-        byte[] body = stringWriter.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] body = String.format("secret=%s&response=%s", siteKey, responseToken).getBytes(StandardCharsets.UTF_8);
 
         JsonElement response;
         try {
@@ -80,8 +73,6 @@ public class Util {
             conn.setDoInput(true);
             conn.setDoOutput(true);
             conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
-            conn.setRequestProperty("Content-Length", body.length + "");
             ByteStreams.copy(new ByteArrayInputStream(body), conn.getOutputStream());
             InputStreamReader responseReader = new InputStreamReader(conn.getInputStream());
             response = JsonParser.parseReader(responseReader);

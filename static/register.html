@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
-    <script src="https://www.recaptcha.net/recaptcha/api.js"></script>
+    <script src=""></script>
     <style>
         .main {
             height: 100vh !important;
@@ -184,10 +184,6 @@
         // todo
     }
 
-    function toggleVerifyCode(show) {
-        $(".verify-code").collapse({toggle: show});
-    }
-
     $.ajax({
         url: "../internal-account",
         method: "GET",
@@ -200,8 +196,10 @@
                 $("#register-form").collapse({toggle: true});
             }
             submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
+            if (submitee.grecaptchaSitekey) {
+                loadScript("https://www.recaptcha.net/recaptcha/api.js?render=" + submitee.grecaptchaSitekey);
+            }
             submitee.verifyCodeTimeout = response["verify-code-timeout"];
-            submitee.verifyCodeTimeout = Date.now() + 60000; // todo debug
             setVerifyCodeTimeout();
         },
         error: function (xhr) {
@@ -211,13 +209,18 @@
 
     let mailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
 
-    submitee.verifyCodeCollapse = false;
-    $("#input-email").on('keyup', function (evt) {
+    let emailCollapseScheduleBroker = new ScheduleBroker(false);
+
+    $("#input-email").on('keyup change', function (evt) {
         let test = mailPattern.test(evt.target.value);
-        if (mailPattern.test(evt.target.value) !== submitee.verifyCodeCollapse) {
-            submitee.verifyCodeCollapse = test;
+        emailCollapseScheduleBroker.submitState(() => {
             $(".verify-code").collapse(test ? 'show' : 'hide');
-        }
+        }, test);
+    });
+    $(".verify-code").on("hidden.bs.collapse", function () {
+        emailCollapseScheduleBroker.setState(false);
+    }).on("shown.bs.collapse", function () {
+        emailCollapseScheduleBroker.setState(true);
     });
 </script>
 </body>

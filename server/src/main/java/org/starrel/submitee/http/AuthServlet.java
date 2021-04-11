@@ -2,6 +2,7 @@ package org.starrel.submitee.http;
 
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
+import jakarta.servlet.AsyncContext;
 import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.SubmiteeServer;
@@ -136,7 +137,8 @@ public class AuthServlet extends AbstractJsonServlet {
             return;
         }
 
-        req.startAsync().start(() -> {
+        AsyncContext asyncContext = req.startAsync();
+        asyncContext.start(() -> {
             try {
                 AuthResult result;
                 try {
@@ -169,6 +171,8 @@ public class AuthServlet extends AbstractJsonServlet {
                 writer.close();
             } catch (Exception e) {
                 throw new RuntimeException(e);
+            } finally {
+                asyncContext.complete();
             }
         });
     }
