@@ -17,6 +17,10 @@ public interface AttributeHolder<THolder extends AttributeHolder<?>> {
         return getAttributeMap().get(path, type);
     }
 
+    default <TValue> TValue getAttribute(String path, Class<TValue> type, TValue defaultValue) {
+        return getAttributeMap().get(path, type, defaultValue);
+    }
+
     default void setAttribute(String path, Object value) {
         getAttributeMap().set(path, value);
     }

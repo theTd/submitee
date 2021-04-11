@@ -1,6 +1,11 @@
 package org.starrel.submitee.http;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.io.ByteStreams;
+import lombok.SneakyThrows;
 import org.eclipse.jetty.http.HttpStatus;
+import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.I18N;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.Session;
@@ -10,11 +15,16 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
+
+import java.io.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 
 public class SubmiteeHttpServlet extends HttpServlet {
+    private static String errorPage;
+    private static final Cache<String, String> errorPageCache = CacheBuilder.newBuilder().maximumSize(100).build();
 
     private final SubmiteeServer submiteeServer;
     private String baseUri = "";
@@ -31,14 +41,14 @@ public class SubmiteeHttpServlet extends HttpServlet {
         uri = uri.substring(uri.indexOf(baseUri) + baseUri.length());
 
         List<String> list = new LinkedList<>();
-        int idx = 1;
-        while (true) {
+        int idx = 0;
+        while (idx < uri.length()) {
             int i = uri.indexOf('/', idx);
             if (i == -1) {
-                list.add(uri.substring(idx));
+                String end = uri.substring(idx);
+                if (!end.isEmpty()) list.add(end);
                 break;
             } else if (i == idx) {
-                list.add("");
                 idx++;
             } else {
                 list.add(uri.substring(idx, i));
@@ -66,23 +76,58 @@ public class SubmiteeHttpServlet extends HttpServlet {
         return session;
     }
 
-    protected void responseBadRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        resp.setStatus(HttpStatus.BAD_REQUEST_400);
-        resp.getWriter().println(I18N.Http.INVALID_INPUT.format(req));
+    @SneakyThrows
+    public static String createErrorPage(String title) {
+        if (errorPage == null) {
+            try {
+                InputStream stream = SubmiteeHttpServlet.class.getResourceAsStream("/error-page.html");
+                ByteArrayOutputStream buff = new ByteArrayOutputStream();
+                ByteStreams.copy(stream, buff);
+                errorPage = buff.toString(StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                ExceptionReporting.report(SubmiteeHttpServlet.class, "initializing error page", e);
+                errorPage = "" +
+                        "<!doctype html>\n" +
+                        "<html lang=\"en\">\n" +
+                        "<head>\n" +
+                        "    <meta charset=\"UTF-8\">\n" +
+                        "    <meta name=\"viewport\"\n" +
+                        "          content=\"width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0\">\n" +
+                        "    <title>%ERROR_TITLE%</title>\n" +
+                        "</head>\n" +
+                        "<body>\n" +
+                        "<h1>ERROR_TITLE</h1>\n" +
+                        "</body>\n" +
+                        "</html>";
+            }
+        }
+        return errorPageCache.get(title, () -> errorPage.replaceAll("%ERROR_TITLE%", title));
     }
 
-    protected void responseBadRequest(HttpServletRequest req, HttpServletResponse resp, I18N.I18NKey messageKey, Object... messageParts) throws IOException {
-        resp.setStatus(HttpStatus.BAD_REQUEST_400);
-        resp.getWriter().println(messageKey.format(req, messageParts));
+    public static void responseAccessDenied(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.Http.ACCESS_DENIED.format(req));
     }
 
-    protected void responseInternalError(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
-        resp.getWriter().println(I18N.Http.INTERNAL_ERROR.format(req));
+    public static void responseBadRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        responseErrorPage(resp, HttpStatus.BAD_REQUEST_400, I18N.Http.INVALID_INPUT.format(req));
     }
 
-    protected void responseNotFound(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        resp.setStatus(HttpStatus.NOT_FOUND_404);
-        resp.getWriter().println(I18N.Http.NOT_FOUND.format(req));
+    public static void responseBadRequest(HttpServletRequest req, HttpServletResponse resp, I18N.I18NKey messageKey, Object... messageParts) throws IOException {
+        responseErrorPage(resp, HttpStatus.BAD_REQUEST_400, messageKey.format(req, messageParts));
+    }
+
+    public static void responseInternalError(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        responseErrorPage(resp, HttpStatus.INTERNAL_SERVER_ERROR_500, I18N.Http.INTERNAL_ERROR.format(req));
+    }
+
+    public static void responseNotFound(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        responseErrorPage(resp, HttpStatus.NOT_FOUND_404, I18N.Http.NOT_FOUND.format(req));
+    }
+
+    public static void responseErrorPage(HttpServletResponse resp, int statusCode, String errorTitle) throws IOException {
+        resp.setHeader("SUBMITEE-ERROR-TITLE", URLEncoder.encode(errorTitle, StandardCharsets.UTF_8));
+        resp.setStatus(statusCode);
+        resp.setContentType("text/html");
+        resp.getWriter().println(createErrorPage(errorTitle));
     }
 }

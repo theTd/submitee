@@ -5,10 +5,12 @@ import com.google.common.cache.CacheBuilder;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.I18N;
 import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.Util;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import jakarta.servlet.http.HttpServletRequest;
+
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -168,14 +170,7 @@ public class TextContainer {
 
         @Override
         public String format(HttpServletRequest httpServletRequest, Object... parameters) {
-            String header = httpServletRequest.getHeader("Accept-Language");
-            String language;
-            if (header == null) {
-                language = SubmiteeServer.getInstance().getDefaultLanguage();
-            } else {
-                language = header.split(",")[0];
-            }
-            return format(language, parameters);
+            return format(Util.getPreferredLanguage(httpServletRequest), parameters);
         }
 
         @Override

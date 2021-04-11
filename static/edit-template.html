@@ -23,17 +23,21 @@
         }
 
         .field-configuration {
-            margin-left: 0.8rem;
-        }
-
-        .field-configuration .container-fluid {
-            margin-top: 1rem;
-            margin-bottom: 1rem;
+            padding: 0;
         }
 
         .s-field {
             margin-top: 0.5rem;
             margin-bottom: 0.5rem;
+            transition: .2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
+        .s-field:hover {
+            box-shadow: inset 0 -4px 0 0 #b7b7b7;
+        }
+
+        .s-field-editing:hover {
+            box-shadow: 0 0 0 3px rgb(255, 164, 7) !important;
         }
 
         .s-field-editing {
@@ -89,13 +93,27 @@
 </template>
 <template id="template-editing-field">
     <div class="row s-field s-field-editing" data-submitee-field-name>
-        <div class="col col-2 s-field-type"></div>
-        <div class="col col-2 s-field-name"></div>
+        <div class="col col-4 container">
+            <div class="container" style="padding: 0">
+                <div class="row">
+                    <div class="col s-field-type"></div>
+                    <div class="col s-field-name"></div>
+                </div>
+                <div class="row ml-1">
+                    <hr class="w-100"/>
+                    <h5>配置项</h5>
+                    <div class="container field-configuration">
+                    </div>
+                </div>
+            </div>
+            <div class="col col-6">
+            </div>
+            <div class="col col-2">
+            </div>
+        </div>
         <div class="col col-6 s-field-comment"></div>
         <div class="col col-2">
             <a href="#" onclick="applyField(this)" class="btn btn-success btn-sm">完成</a>
-        </div>
-        <div class="field-configuration no-gutters">
         </div>
     </div>
 </template>
@@ -127,10 +145,7 @@
                     <div class="col col-2 s-field-name">
                         <!--suppress HtmlFormInputWithoutLabel -->
                         <input type="text"/></div>
-                    <div class="col col-6 s-field-comment">
-                        <!--suppress HtmlFormInputWithoutLabel -->
-                        <input type="text"/></div>
-                    <div class="col col-2">
+                    <div class="col col-8">
                         <a href="#" onclick="createNewField()" class="btn btn-sm btn-success">添加字段</a>
                     </div>
                     <input type="submit" style="display: none"/>
@@ -253,7 +268,8 @@
         let container = findFieldContainer(field);
 
         field.name = container.querySelector(".s-field-name").querySelector("input").value;
-        field.comment = container.querySelector(".s-field-comment").querySelector("input").value
+        field.comment = field["commentEditor"].txt.html();
+
         let controller = fieldControllers[field.type];
         if (controller) {
             controller.applyConfiguration(field);
@@ -274,7 +290,7 @@
         domTemplate.content.querySelector(".s-field").setAttribute("data-submitee-field-name", field.name);
         domTemplate.content.querySelector(".s-field-type").textContent = field.getTypeDisplayName();
         domTemplate.content.querySelector(".s-field-name").textContent = field.name;
-        domTemplate.content.querySelector(".s-field-comment").textContent = field.comment;
+        domTemplate.content.querySelector(".s-field-comment").innerHTML = field.comment;
         $(domTemplate.content.querySelector(".field-error")).empty();
 
         let error = fieldControllers[field.type].validateConfiguration(field);
@@ -353,7 +369,15 @@
         template.content.querySelector(".s-field-editing").setAttribute("data-submitee-field-name", field.name);
         template.content.querySelector(".s-field-type").innerHTML = `<span class="disabled" style="cursor: not-allowed">${field.getTypeDisplayName()}</span>`;
         template.content.querySelector(".s-field-name").innerHTML = `<input type="text" value="${field.name}"/>`;
-        template.content.querySelector(".s-field-comment").innerHTML = `<input type="text" value="${field.comment}"/>`
+        // template.content.querySelector(".s-field-comment").innerHTML = `<input type="text" value="${field.comment}"/>`
+        let editorId = makeid(6);
+        template.content.querySelector(".s-field-comment").innerHTML = `<div id="${editorId}">${field.comment}</div>`
+        setTimeout(() => {
+            let commentEditor = new window.wangEditor('#' + editorId);
+            commentEditor.config.excludeMenus = ['todo'];
+            commentEditor.create();
+            field["commentEditor"] = commentEditor;
+        }, 1);
 
         let controller = fieldControllers[field.type];
         let confHtml;
@@ -363,6 +387,9 @@
             template.content.querySelector(".field-configuration").innerHTML = "";
         }
 
+        setTimeout(() => {
+            $(`.s-field-editing[data-submitee-field-name=${field.name}]`)[0].scrollIntoView();
+        }, 1);
         return document.importNode(template.content, true);
     }
 
@@ -370,7 +397,6 @@
         let container = $("#create-template-form");
         let type = container.find(".s-field-type").find("select option:selected").val();
         let name = container.find(".s-field-name").find("input").val();
-        let comment = container.find(".s-field-comment").find("input").val();
 
         if (!type || !name) {
             create_toast("重要提示", "<span style='color: red'>字段类型和名称是必填项目</span>", 2000);
@@ -378,7 +404,6 @@
             let field = new SField(currentTemplate, null);
             field.type = type;
             field.name = name;
-            field.comment = comment;
 
             currentTemplate.addField(field).then(() => {
                 let relative = $("#insert-fields-before")[0];

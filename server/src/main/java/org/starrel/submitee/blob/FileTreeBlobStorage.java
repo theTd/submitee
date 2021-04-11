@@ -28,13 +28,9 @@ public class FileTreeBlobStorage implements BlobStorage {
         }
 
         @Override
-        public BlobStorage accessStorage(String name) {
+        public BlobStorage accessStorage(String name) throws ClassifiedException {
             FileTreeBlobStorage s = new FileTreeBlobStorage(name);
-            try {
-                s.setupDirectory(s.path.get());
-            } catch (Exception e) {
-                ExceptionReporting.report(FileTreeBlobStorage.class, "initializing directory", e);
-            }
+            s.setupDirectory(s.path.get());
             return s;
         }
     };
@@ -115,6 +111,9 @@ public class FileTreeBlobStorage implements BlobStorage {
     }
 
     private void setupDirectory(String path) throws ClassifiedException {
+        if (path == null || path.isEmpty())
+            throw new ClassifiedException("empty_path", "path not configured");
+
         File dir = new File(path);
         if (dir.exists()) {
             if (dir.isDirectory()) {

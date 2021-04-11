@@ -5,6 +5,7 @@ import com.google.common.cache.CacheBuilder;
 import de.mkammerer.argon2.Argon2;
 import de.mkammerer.argon2.Argon2Factory;
 import org.starrel.submitee.ExceptionReporting;
+import org.starrel.submitee.I18N;
 import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.Session;
@@ -30,8 +31,6 @@ public class InternalAccountRealm implements UserRealm {
     public final static String TYPE_ID = "internal";
     private final static Argon2 ARGON2;
 
-//    private static InternalAccountUser ANONYMOUS;
-
     static {
         ARGON2 = Argon2Factory.create();
     }
@@ -52,6 +51,8 @@ public class InternalAccountRealm implements UserRealm {
         passwordAuthScheme.setHandler(new AuthHandler());
         authSchemeList = Collections.singletonList(passwordAuthScheme);
         authSchemeMap.put(passwordAuthScheme.getName(), passwordAuthScheme);
+
+        server.getServletHandler().addServlet(InternalAccountServlet.class, "/internal-account/*");
     }
 
     public static boolean verifyPassword(String verify, String stored) {
@@ -105,13 +106,6 @@ public class InternalAccountRealm implements UserRealm {
     }
 
     private class AuthHandler implements PasswordAuthScheme.AuthHandler {
-        private final AuthResult RESULT_USER_NOT_EXISTS =
-                new AbstractAuthResult("user.not_exists", null, null);
-        private final AuthResult RESULT_INCORRECT_PASSWORD =
-                new AbstractAuthResult("password.incorrect", null, null);
-        private final AuthResult RESULT_INTERNAL_ERROR =
-                new AbstractAuthResult("error.internal_error", null, null);
-
         private AuthHandler() throws SQLException, IOException {
             try (Connection conn = server.getDataSource().getConnection()) {
                 ResultSet resultSet = conn.getMetaData().getTables(null, null, "internal_users", null);
@@ -125,21 +119,24 @@ public class InternalAccountRealm implements UserRealm {
         }
 
         @Override
-        public AuthResult handle(String username, String password) {
+        public AuthResult handle(Session session, String username, String password) {
             try (Connection conn = server.getDataSource().getConnection()) {
                 PreparedStatement stmt = conn.prepareStatement("SELECT password FROM internal_users WHERE username=?");
                 stmt.setString(1, username);
                 ResultSet r = stmt.executeQuery();
-                if (!r.next()) return RESULT_USER_NOT_EXISTS;
+                if (!r.next()) return new AbstractAuthResult("user_not_exists",
+                        I18N.General.USER_NOT_EXISTS.format(session), null);
                 String storedPassword = r.getString(1);
                 if (verifyPassword(password, storedPassword)) {
                     return new AbstractAuthResult(getUser(username), null);
                 } else {
-                    return RESULT_INCORRECT_PASSWORD;
+                    return new AbstractAuthResult("incorrect_password",
+                            I18N.General.INCORRECT_PASSWORD.format(session), null);
                 }
             } catch (Exception e) {
                 ExceptionReporting.report(AuthHandler.class, "handle login request", e);
-                return RESULT_INTERNAL_ERROR;
+                return new AbstractAuthResult("internal_error",
+                        I18N.General.INTERNAL_ERROR.format(session), null);
             }
         }
     }

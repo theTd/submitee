@@ -21,16 +21,36 @@
         }
 
         #field-container .row {
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 992px) {
+            .container-field-name {
+                margin-bottom: 1rem;
+            }
+
+            .container-field-body {
+                box-shadow: inset 4px 0 0 #797979;
+            }
+        }
+
+        .container-field-desc {
+            display: inline-block;
             margin-top: 1rem;
-            margin-bottom: 1rem;
+            padding: 0.7rem;
+            border: 3px orange dotted;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
 <template id="template-field-container">
     <div class="row field-container">
-        <div class="col col-2 container-field-name"></div>
-        <div class="col col-10 container-field-input"></div>
+        <div class="col-12 col-lg-2 container-field-name"></div>
+        <div class="col-12 col-lg-10 container-field-body">
+            <div class="container-field-input"></div>
+            <div class="container-field-desc"></div>
+        </div>
     </div>
 </template>
 <div class="container mt-3" id="main">
@@ -95,6 +115,13 @@
     function createFieldLine(controller, field, html) {
         let template = $("#template-field-container")[0];
         template.content.querySelector(".container-field-name").textContent = field.name;
+        if (field.comment) {
+            template.content.querySelector(".container-field-desc").innerHTML = field.comment;
+            template.content.querySelector(".container-field-desc").style.display = "inline-block";
+        } else {
+            template.content.querySelector(".container-field-desc").innerHTML = "";
+            template.content.querySelector(".container-field-desc").style.display = "none";
+        }
         template.content.querySelector(".container-field-input").innerHTML = html;
         template.content.querySelector(".field-container").setAttribute("submitee-field-name", field.name);
         template.content.querySelector(".field-container").id = controller.getContainerId(field);

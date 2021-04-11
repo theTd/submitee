@@ -84,7 +84,7 @@ public class ConfigurationServlet extends AbstractJsonServlet {
     }
 
     @Override
-    protected void request(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
         String[] uriParts = parseUri(req.getRequestURI());
         if (uriParts.length < 1) {
             ExceptionReporting.report(ConfigurationServlet.class, "parsing configuration method",

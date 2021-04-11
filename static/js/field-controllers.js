@@ -26,7 +26,7 @@ class TextFieldController extends FieldController {
     generateConfigurationHtml(field) {
         let inputId = "text-config-" + field.name;
         let value = field.attributeMap.get("placeholder") || "";
-        return `<label for="${inputId}">提示文字</label><input type="text" id="${inputId}" value="${value}"/>`;
+        return `<label class="w-100" for="${inputId}">提示文字</label><input type="text" id="${inputId}" value="${value}"/>`;
     }
 
     applyConfiguration(field) {
@@ -87,7 +87,7 @@ class RadioFieldController extends FieldController {
         }
 
         return `
-<label for="${id}">可选项目： (以,分隔)</label>
+<label class="w-100" for="${id}">可选项目： (以,分隔)</label>
 <input id="${id}" type="text" id="radio-conf-${field.name}" value="${present}"/>
 `;
     }
@@ -152,7 +152,7 @@ class CheckboxFieldController extends FieldController {
         }
 
         return `
-<label for="${id}">可选项目： (以,分隔)</label>
+<label class="w-100" for="${id}">可选项目： (以,分隔)</label>
 <input id="${id}" type="text" id="checkbox-conf-${field.name}" value="${present}"/>
 `;
     }
@@ -258,7 +258,7 @@ class FileFieldController extends FieldController {
             options += `<option name="${id}" value="${storageName}" ${selected}>${providerName}:${storageName}</option>`;
         })
         return `
-<label for="${id}">使用文件存储:</label>
+<label class="w-100" for="${id}">使用文件存储:</label>
 <select id="${id}">
 ${options}
 </select>

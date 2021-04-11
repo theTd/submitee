@@ -11,6 +11,7 @@ import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.I18N;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.Util;
+import org.starrel.submitee.model.User;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -27,11 +28,11 @@ public class ConnectionThrottleFilter extends HttpFilter {
     private final Cache<String, TimeList> cache = CacheBuilder.newBuilder()
             .expireAfterAccess(10, TimeUnit.MINUTES).build();
 
-    private final DateFormat format = new SimpleDateFormat("MM-dd_HH:mm:ss");
-
     @Override
     protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
         String addr = Util.getRemoteAddr(req);
+        req.setAttribute("REMOTE_ADDR", addr);
+
         TimeList timeList;
         try {
             timeList = cache.get(addr, TimeList::new);
@@ -44,15 +45,7 @@ public class ConnectionThrottleFilter extends HttpFilter {
             res.getWriter().close();
             return;
         }
-        long start = System.currentTimeMillis();
         chain.doFilter(req, res);
-        long end = System.currentTimeMillis();
-
-        if (!addr.equals(req.getRemoteAddr())) {
-            addr = req.getHeader("X-Forwarded-For");
-        }
-        SubmiteeServer.getInstance().getLogger().info(String.format("%s HTTP %s %s FROM %s COSTS %dms",
-                format.format(start), req.getMethod(), req.getRequestURI(), addr, end - start));
     }
 
     private static class TimeList {

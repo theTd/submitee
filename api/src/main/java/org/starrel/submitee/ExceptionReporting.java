@@ -13,7 +13,7 @@ public interface ExceptionReporting {
         for (StackTraceElement stackTraceElement : original) {
             if (!stackTraceElement.getClassName().equals(ExceptionReporting.class.getName())) {
                 shrinkLength++;
-            }else{
+            } else {
                 break;
             }
         }
@@ -42,11 +42,25 @@ public interface ExceptionReporting {
         }
     }
 
+    static void report(String entity, String activity, String detail, Throwable stacktrace) {
+        try {
+            SServer.getInstance().reportException(entity, activity, stacktrace);
+        } catch (Throwable e) {
+            shrinkStackTrace(e);
+            LoggerFactory.getLogger(ExceptionReporting.class).error("failed reporting exception", e);
+            LoggerFactory.getLogger(ExceptionReporting.class).error(String.format("reported: entity=%s, activity=%s, detail=%s stacktrace=", entity, activity, detail), stacktrace);
+        }
+    }
+
     static void report(Class<?> reporter, String activity, String detail) {
         report(reporter.getName(), activity, detail);
     }
 
     static void report(Class<?> reporter, String activity, Throwable stacktrace) {
         report(reporter.getName(), activity, stacktrace);
+    }
+
+    static void report(Class<?> reporter, String activity, String detail, Throwable stacktrace) {
+        report(reporter.getName(), activity, detail, stacktrace);
     }
 }

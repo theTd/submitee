@@ -9,6 +9,7 @@ import org.starrel.submitee.ExceptionReporting;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.io.InputStreamReader;
 
@@ -16,9 +17,12 @@ public abstract class AbstractJsonServlet extends SubmiteeHttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         if (!"application/json".equalsIgnoreCase(req.getContentType())) {
+            ExceptionReporting.report(AbstractJsonServlet.class,
+                    "parsing request body", "expected content type application/json, got " + req.getContentType());
             resp.setStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE_415);
             return;
         }
+
         JsonElement json;
         try {
             json = JsonParser.parseReader(new InputStreamReader(req.getInputStream()));
@@ -28,12 +32,12 @@ public abstract class AbstractJsonServlet extends SubmiteeHttpServlet {
             return;
         }
         if (!json.isJsonObject()) {
-            ExceptionReporting.report(AbstractJsonServlet.class, "parsing request body", "unexpected request body: " + json);
+            ExceptionReporting.report(AbstractJsonServlet.class, "parsing request body", "expected json object, got " + json);
             responseBadRequest(req, resp);
             return;
         }
-        request(req, resp, json.getAsJsonObject());
+        doPost(req, resp, json.getAsJsonObject());
     }
 
-    protected abstract void request(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException;
+    protected abstract void doPost(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException;
 }

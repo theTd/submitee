@@ -10,6 +10,12 @@ public class ClassifiedException extends Exception {
         this.messageParts = messageParts;
     }
 
+    public ClassifiedException(Throwable cause, String classify, Object... messageParts) {
+        super(I18N.fromKey(classify).format(((String) null), messageParts), cause);
+        this.classify = classify;
+        this.messageParts = messageParts;
+    }
+
     public String getClassify() {
         return classify;
     }

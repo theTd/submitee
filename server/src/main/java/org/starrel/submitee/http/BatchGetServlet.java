@@ -20,7 +20,7 @@ import java.util.concurrent.ExecutionException;
 
 public class BatchGetServlet extends AbstractJsonServlet {
     @Override
-    protected void request(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
         JsonElement t;
 
         if (!body.has("scheme") || !(t = body.get("scheme")).isJsonPrimitive()) {

@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
-    <title>SUBMITEE 配置面板</title>
+    <title>正在载入</title>
 </head>
 <body>
 <div class="container-fluid">
@@ -26,7 +26,7 @@
                 <a href="?method=published-templates" class="list-group-item list-group-item-action disabled">已发布的模板</a>
                 <a href="?method=unread-submissions" class="list-group-item list-group-item-action disabled">未读提交</a>
                 <a href="?method=all-submissions" class="list-group-item list-group-item-action disabled">提交列表</a>
-                <a href="?method=settings" class="list-group-item list-group-item-action">配置项</a>
+                <a href="?method=settings" class="list-group-item list-group-item-action">系统选项</a>
             </div>
         </div>
         <div class="col-12 col-xl-9" id="management-container">
@@ -82,10 +82,12 @@
     switch (method) {
         case "template-list": {
             loadPage("template-list.html");
+            setTitle("模板列表");
             break;
         }
         case "edit-template": {
             loadPage("edit-template.html");
+            setTitle("编辑模板");
             break;
         }
         case "published-templates": {
@@ -96,6 +98,7 @@
         }
         case "settings": {
             loadPage("settings.html");
+            setTitle("系统选项");
             break;
         }
     }

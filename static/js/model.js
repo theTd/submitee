@@ -68,7 +68,7 @@ class SField {
     }
 
     get comment() {
-        return this.attributeMap.get("comment");
+        return this.attributeMap.get("comment") || "";
     }
 
     set comment(val) {
@@ -209,7 +209,7 @@ class STemplate {
                     resolve();
                 },
                 error: function (error) {
-                    reject(error.statusCode());
+                    reject(getMessageFromAjaxError(error));
                 }
             })
         })

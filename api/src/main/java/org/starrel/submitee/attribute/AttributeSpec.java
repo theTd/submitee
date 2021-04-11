@@ -24,6 +24,8 @@ public interface AttributeSpec<TValue> {
 
     <TSubValue> TSubValue get(String path, Class<TSubValue> type);
 
+    <TSubValue> TSubValue get(String path, Class<TSubValue> type, TSubValue defaultValue);
+
     default void set(TValue value) {
         set("", value);
     }
@@ -38,7 +40,13 @@ public interface AttributeSpec<TValue> {
 
     void add(int index, TValue value);
 
-    List<TValue> getList();
+    default List<TValue> getList() {
+        return getList("", getType());
+    }
+
+    List<TValue> getList(Class<TValue> type);
+
+    <TSubValue> List<TSubValue> getList(String path, Class<TSubValue> type);
 
     List<String> getKeys(String path);
 

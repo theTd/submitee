@@ -23,5 +23,9 @@ public interface User extends AttributeHolder<User> {
 
     List<? extends Submission> getSubmissions(Bson query);
 
+    String getPreferredLanguage();
+
+    void setPreferredLanguage(String language);
+
     UserDescriptor getDescriptor();
 }

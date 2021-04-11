@@ -119,14 +119,21 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
 
     @Override
     public <TSubValue> TSubValue get(String path, Class<TSubValue> type) {
+        return get(path, type, null);
+    }
+
+    @Override
+    public <TSubValue> TSubValue get(String path, Class<TSubValue> type, TSubValue defaultValue) {
         if (isList) throw new UnsupportedOperationException("not object");
 
         AttributeSpec<?> spec = getSpec(path);
+        TSubValue value;
         if (spec != this) {
-            return spec.get(path.substring(spec.getPath().length()), type);
+            value = spec.get(path.substring(spec.getPath().length()), type);
         } else {
-            return getSource().getAttribute(fullPath(path), type);
+            value = getSource().getAttribute(fullPath(path), type);
         }
+        return value == null ? defaultValue : value;
     }
 
     @Override
@@ -170,7 +177,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     @Override
     public void add(TValue tValue) {
         if (!isList) throw new UnsupportedOperationException("not list");
-        getSource().addListAttribute(fullPath(path), tValue);
+        getSource().addListAttribute(path, tValue);
         childUpdated(path);
     }
 
@@ -182,9 +189,21 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     }
 
     @Override
-    public List<TValue> getList() {
+    public List<TValue> getList(Class<TValue> type) {
         if (isList) throw new UnsupportedOperationException("not list");
-        return getSource().getListAttributes(fullPath(path), rootType);
+        return getSource().getListAttributes(fullPath(path), type);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Override
+    public <TSubValue> List<TSubValue> getList(String path, Class<TSubValue> type) {
+        if (isList) throw new UnsupportedOperationException("not list");
+        AttributeSpec<?> spec = getSpec(path);
+        if (spec != this) {
+            return spec.getList(((Class) type));
+        } else {
+            return getSource().getListAttributes(fullPath(path), type);
+        }
     }
 
     @Override

@@ -1,10 +1,10 @@
-function init_toast() {
+function _init_toast() {
     if ($("#template-toast")[0]) return;
 
     let template = document.createElement("template");
     template.id = "template-toast";
     template.innerHTML = `
-<div class="toast" style="position: absolute; top: 0; right: 0;">
+<div class="toast" style="position: absolute; top: 0; right: 0; z-index: 999">
     <div class="toast-header">
         <strong class="mr-auto"></strong>
         <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
@@ -24,12 +24,11 @@ function init_toast() {
     container.style.minHeight = '0';
     container.style.top = '0';
     container.style.right = '0';
-    container.style.zIndex = '999'
     document.body.appendChild(container);
 }
 
 function create_toast(title, content, delay) {
-    init_toast();
+    _init_toast();
 
     let template = $("#template-toast")[0];
     let id = makeid(6);
@@ -52,16 +51,29 @@ function create_toast(title, content, delay) {
     }, delay + 200);
 }
 
-function toast_ajax_error(error) {
-    if (error.responseText) {
-        create_toast("重要提示", error.responseText, 10000)
+/**
+ *
+ * @param {jqXHR} error
+ */
+function getMessageFromAjaxError(error) {
+    let title = decodeURI(error.getResponseHeader("SUBMITEE-ERROR-TITLE"));
+    if (title) {
+        return title;
     } else {
-        create_toast("重要提示", error.statusText, 10000)
+        return error.status === 0 ? "无法连接到服务器" : error.statusText;
     }
 }
 
-function init_tooltip() {
-    if ($("#template-error-tooltip")[0]) return;
+/**
+ *
+ * @param {jqXHR} error
+ */
+function toast_ajax_error(error) {
+    create_toast("重要提示", getMessageFromAjaxError(error), 10000)
+}
+
+function _init_icon_tooltip() {
+    if ($("#template-icon-tooltip")[0]) return;
 
     // region load css
     let link = document.createElement('link');
@@ -73,25 +85,69 @@ function init_tooltip() {
     // endregion
 
     let template = document.createElement("template");
-    template.id = "template-error-tooltip";
+    template.id = "template-icon-tooltip";
     template.innerHTML = `
-<span class="position-relative error-tooltip">
-    <span class="position-absolute align-middle">
-        <i data-toggle="tooltip" data-placement="top" title="测试"
-           class="material-icons" style="font-size:2rem;color:red">error</i>
-    </span>
-</span>`;
+        <i data-toggle="tooltip" data-placement="top" title=""
+           class="material-icons" style="font-size:2rem;color:red">error</i>`;
 
     document.body.appendChild(template);
 }
 
 function createErrorTooltip(message) {
-    init_tooltip();
-    let template = $("#template-error-tooltip")[0];
-    template.content.querySelector("i").setAttribute("title", message);
+    return createOutFlowIconTooltip("error", "2rem", "red", message, "top");
+}
+
+function createIconTooltip(icon, size, color, message, placement) {
+    _init_icon_tooltip();
+    let template = $("#template-icon-tooltip")[0];
+    let i = template.content.querySelector("i");
+    i.setAttribute("title", message);
+    i.setAttribute("data-placement", placement);
+    i.textContent = icon;
+    i.style.fontSize = size;
+    i.style.color = color;
+    let id = makeid(6);
+    i.id = id;
+
     let node = document.importNode(template.content, true);
     setInterval(() => {
-        $(".error-tooltip").find("i").tooltip();
-    }, 1);
+        $("#" + id).tooltip();
+    });
     return node;
 }
+
+function createOutFlowIconTooltip(icon, size, color, message, placement) {
+    return createOutFlow(createIconTooltip(icon, size, color, message, placement));
+}
+
+function _init_out_flow() {
+    if ($("#template-out-flow")[0]) return;
+
+    let template = document.createElement("template");
+    template.id = "template-out-flow";
+    template.innerHTML = `
+<div class="d-inline position-relative no-gutters out-flow-container">
+<div class="position-absolute d-inline">
+
+</div>
+</div>`;
+    document.body.appendChild(template);
+}
+
+function createOutFlow(node) {
+    _init_out_flow();
+
+    let template = $("#template-out-flow")[0];
+    let id = makeid(6);
+    template.content.querySelector("div").id = id;
+    setTimeout(() => {
+        $("#" + id).find(".position-absolute")[0].appendChild(node);
+    });
+    return document.importNode(template.content, true);
+}
+
+function setTitle(title) {
+    document.title = title + " - SUBMITEE";
+}
+
+setTitle(document.title);

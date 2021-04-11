@@ -16,7 +16,7 @@ import java.util.concurrent.ExecutionException;
 
 public class PasteServlet extends AbstractJsonServlet {
     @Override
-    protected void request(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
         if (!body.has("target") ||
                 !body.get("target").isJsonPrimitive() ||
                 !body.has("content") ||

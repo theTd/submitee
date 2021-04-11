@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title>正在载入</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <script src="https://www.recaptcha.net/recaptcha/api.js"></script>
+    <style>
+        .main {
+            height: 100vh !important;
+            width: 100vw !important;
+            background-image: url("assets/bg.jpg");
+            background-size: cover;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        a {
+            color: #e0e0e0;
+        }
+
+        a:hover {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        a:active {
+            color: #cfcfcf;
+        }
+
+        #realm-tab a {
+            color: white;
+            text-shadow: #bababa 1px 0 1px;
+        }
+
+        #realm-tab a.active {
+            color: #000000;
+            text-shadow: unset;
+        }
+
+        .nav-link {
+            font-size: 0.7rem !important;
+            padding: 0.3rem 0.5rem;
+        }
+
+        .nav-link.active {
+            background-color: #dddddd !important;
+            box-shadow: 0 0 0 2px white;
+            clip-path: inset(-10px -10px 0px -10px);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+<div class="main no-gutters">
+    <div class="container" style="width: auto">
+        <h5 style="color: white; text-shadow: #8d8d8d 2px 0 7px">登入以进行下一步操作</h5>
+        <div>
+            <ul class="nav nav-tabs" id="realm-tab">
+            </ul>
+        </div>
+        <div id="auth-scheme-container"></div>
+    </div>
+    <div class="position-fixed" style="bottom: 1rem">
+        <a style="font-size: 0.8rem" href="https://github.com/theTd/submitee">POWERED BY SUBMITEE</a>
+        <a style="font-size: 0.8rem" href="/static/management.html">维管人员</a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script src="js/model.js"></script>
+<script src="js/toast.js"></script>
+<script>
+    function createRealmTabItem(realm) {
+        let tab = document.createElement("li");
+        tab.classList.add("nav-item");
+        let active = realm["realm"] === currentRealmName ? "active" : "";
+        tab.innerHTML = `<a class='nav-link ${active}' href="?target=${target}&realm=${realm["realm"]}">${realm["title"]}</a>`;
+        return tab;
+    }
+
+    function buildRealmTab() {
+        // todo
+        let container = $("#realm-tab")[0];
+
+        // current
+        let currentRealm = allowedRealms.filter(r => r["realm"] === currentRealmName)[0];
+        if (currentRealm) {
+            container.appendChild(createRealmTabItem(currentRealm));
+        }
+
+        // others
+        allowedRealms.filter(r => r["realm"] !== currentRealmName).forEach(r => {
+            container.appendChild(createRealmTabItem(r))
+        })
+    }
+
+    function loadAuthScheme() {
+        if (!currentRealmName) {
+            currentRealmName = allowedRealms[0]["realm"];
+        }
+        let realm = allowedRealms.filter(r => r.realm === currentRealmName)[0];
+        if (!currentScheme) {
+            currentScheme = realm["scheme"][0].name;
+        }
+        let scheme = realm["scheme"].filter(s => s.name === currentScheme)[0];
+        let url = scheme["url"];
+
+        $.ajax({
+            url: url,
+            method: "GET",
+            success: function (response) {
+                $("#auth-scheme-container").html(response);
+                document.title = "登录: " + realm["title"] + " - SUBMITEE";
+            },
+            error: function (xhr) {
+                toast_ajax_error(xhr);
+            }
+        })
+    }
+
+    function queryAuthSchemes(target) {
+        $.ajax({
+            url: "../auth/" + target,
+            method: "GET",
+            contentType: "application/json",
+            success: function (response) {
+                console.log(response);
+                allowedRealms = [
+                    {
+                        realm: "internal",
+                        title: "站内用户",
+                        scheme: [{name: "密码", url: "/static/auth-scheme-password.html"}]
+                    },
+                    {
+                        realm: "wechat",
+                        title: "微信登录",
+                        scheme: [{name: "微信登录", url: "/static/auth-scheme-wechat.html"}]
+                    }];
+                loadAuthScheme();
+                buildRealmTab();
+            },
+            error: function (xhr) {
+                toast_ajax_error(xhr);
+            }
+        });
+    }
+
+    let target = getQueryVariable("target");
+    let currentRealmName = getQueryVariable("realm");
+    let currentScheme = getQueryVariable("scheme");
+    let allowedRealms;
+
+    if (!target) {
+        alert("未知认证目的");
+        window.history.back();
+    } else {
+        queryAuthSchemes(target);
+    }
+</script>
+</body>
+</html>

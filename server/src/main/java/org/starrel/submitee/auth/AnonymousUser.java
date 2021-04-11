@@ -19,6 +19,7 @@ public class AnonymousUser implements User {
         this.descriptor = new UserDescriptor(AnonymousUserRealm.TYPE_ID, userId);
         this.userId = userId;
         this.attributeMap = SubmiteeServer.getInstance().createOrReadAttributeMap(this, "users");
+        this.attributeMap.setAutoSaveAttribute(false);
     }
 
     @Override
@@ -43,6 +44,16 @@ public class AnonymousUser implements User {
     @Override
     public List<SubmissionImpl> getSubmissions(Bson query) {
         return SubmiteeServer.getInstance().getSubmissions(Filters.eq("user", getDescriptor().toString()));
+    }
+
+    @Override
+    public String getPreferredLanguage() {
+        return this.attributeMap.get("preferred-language", String.class);
+    }
+
+    @Override
+    public void setPreferredLanguage(String language) {
+        this.attributeMap.set("preferred-language", language);
     }
 
     @Override

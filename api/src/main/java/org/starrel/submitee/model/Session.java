@@ -19,6 +19,8 @@ public interface Session extends AttributeHolder<Session> {
 
     Date getLastActive();
 
+    String getLastActiveAddress();
+
     List<HistoryAddressEntry> getHistoryAddresses();
 
     String getSessionToken();

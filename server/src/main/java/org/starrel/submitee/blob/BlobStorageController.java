@@ -3,6 +3,7 @@ package org.starrel.submitee.blob;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.starrel.submitee.ClassifiedException;
+import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.UserDescriptor;
@@ -83,7 +84,12 @@ public class BlobStorageController {
 
                 BlobStorageProvider provider = providerMap.get(type);
                 if (provider == null) throw new RuntimeException("cannot find blob storage provider: " + type);
-                storageMap.put(name, provider.accessStorage(name));
+                try {
+                    storageMap.put(name, provider.accessStorage(name));
+                } catch (ClassifiedException e) {
+                    ExceptionReporting.report(BlobStorageController.class, "setting up blob storage",
+                            "setting up blob storage " + name, e);
+                }
             }
         }
     }

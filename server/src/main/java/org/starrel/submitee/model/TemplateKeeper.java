@@ -8,6 +8,7 @@ import com.mongodb.client.model.Projections;
 import lombok.SneakyThrows;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
 
@@ -104,7 +105,7 @@ public class TemplateKeeper {
     private String allocateTemplateId(String grouping) {
         AtomicInteger id = groupingCache.get(grouping, () -> {
             try (Connection conn = dataSource.getConnection()) {
-                PreparedStatement stmt = conn.prepareStatement("SELECT count(*) FROM `templates` WHERE `grouping`=? GROUP BY `template_id`");
+                PreparedStatement stmt = conn.prepareStatement("SELECT count(*) OVER () FROM `templates` WHERE `grouping`=? GROUP BY `template_id` LIMIT 1");
                 stmt.setString(1, grouping);
                 ResultSet r = stmt.executeQuery();
                 if (r.next()) {
@@ -145,7 +146,13 @@ public class TemplateKeeper {
 
         List<STemplateImpl> list = new LinkedList<>();
         while (cursor.hasNext()) {
-            list.add(getTemplate(UUID.fromString(cursor.next().getString("id"))));
+            UUID uuid = UUID.fromString(cursor.next().getString("id"));
+            STemplateImpl template = getTemplate(uuid);
+            if (template == null) {
+                ExceptionReporting.report(TemplateKeeper.class, "template mismatch", "could not find template with uuid=" + uuid);
+            } else {
+                list.add(template);
+            }
         }
         return list;
     }

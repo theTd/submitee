@@ -8,6 +8,7 @@ import org.starrel.submitee.model.User;
 import org.starrel.submitee.model.UserDescriptor;
 import org.starrel.submitee.model.UserRealm;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -46,7 +47,7 @@ public class AnonymousUserRealm implements UserRealm {
 
     @Override
     public List<? extends AuthScheme> getSupportedAuthSchemes() {
-        return null;
+        return Collections.emptyList();
     }
 
     @Override

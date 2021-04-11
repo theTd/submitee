@@ -64,16 +64,17 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private final AnonymousUserRealm anonymousUserRealm;
     // endregion
     private final Logger logger;
-    private AttributeMap<SubmiteeServer> attributeMap;
+    private final AttributeMap<SubmiteeServer> attributeMap;
     // region settings
-    private AttributeSpec<String> defaultLanguage;
+    private final AttributeSpec<String> defaultLanguage;
+    private ServletContextHandler servletHandler;
 
     public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress[] listenAddresses) throws IOException {
         instance = this;
         APIBridge.instance = this;
 
         this.listenAddresses = listenAddresses;
-        this.logger = LoggerFactory.getLogger(SubmiteeServer.class);
+        this.logger = LoggerFactory.getLogger("SubmiteeServer");
         this.dataSource = dataSource;
         this.mongoDatabase = mongoDatabase;
 
@@ -83,24 +84,13 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         textContainer = new TextContainer();
         objectMapController = new ObjectMapController(this);
         anonymousUserRealm = new AnonymousUserRealm();
-    }
 
-    private static Handler initServletHandler() {
-        ServletContextHandler servletHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        setupAttributeSerializers();
+        this.attributeMap = readAttributeMap(this, "management");
 
-//        servletHandler.addFilter(UncaughtExceptionFilter.class, "/*", EnumSet.allOf(DispatcherType.class));
-        servletHandler.addFilter(ConnectionThrottleFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        servletHandler.addFilter(CharsetFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        servletHandler.addFilter(SessionFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        servletHandler.addServlet(AuthServlet.class, "/auth/*");
-        servletHandler.addServlet(CreateServlet.class, "/create/*");
-        servletHandler.addServlet(PasteServlet.class, "/paste/*");
-        servletHandler.addServlet(InfoServlet.class, "/info/*");
-        servletHandler.addServlet(BatchGetServlet.class, "/batch-get/*");
-        servletHandler.addServlet(UploadServlet.class, "/upload/*");
-        servletHandler.addServlet(GetFileServlet.class, "/get-file/*");
-        servletHandler.addServlet(ConfigurationServlet.class, "/configuration/*");
-        return servletHandler;
+        // region setup attribute specs
+        this.defaultLanguage = this.attributeMap.of("default-language", String.class);
+        // endregion
     }
 
     private static Handler initStaticHandler() {
@@ -118,6 +108,28 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     public static SubmiteeServer getInstance() {
         return instance;
+    }
+
+    private Handler initServletHandler() {
+        servletHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
+
+//        servletHandler.addFilter(UncaughtExceptionFilter.class, "/*", EnumSet.allOf(DispatcherType.class));
+        servletHandler.addFilter(ConnectionThrottleFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addFilter(CharsetFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addFilter(SessionFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addServlet(AuthServlet.class, "/auth/*");
+        servletHandler.addServlet(CreateServlet.class, "/create/*");
+        servletHandler.addServlet(PasteServlet.class, "/paste/*");
+        servletHandler.addServlet(InfoServlet.class, "/info/*");
+        servletHandler.addServlet(BatchGetServlet.class, "/batch-get/*");
+        servletHandler.addServlet(UploadServlet.class, "/upload/*");
+        servletHandler.addServlet(GetFileServlet.class, "/get-file/*");
+        servletHandler.addServlet(ConfigurationServlet.class, "/configuration/*");
+        return servletHandler;
+    }
+
+    public ServletContextHandler getServletHandler() {
+        return servletHandler;
     }
 
     private void setupJettyConnectors(InetSocketAddress[] listenAddresses) {
@@ -144,11 +156,24 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
                                HttpServletRequest request, HttpServletResponse response) throws IOException {
                 Throwable stacktrace = (Throwable) request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
                 if (stacktrace != null) {
-                    response.setCharacterEncoding("utf-8");
-                    response.getWriter().println(I18N.Http.INTERNAL_ERROR.format(request));
                     ExceptionReporting.report("error handler", "uncaught error occurred", stacktrace);
                 }
-                response.getWriter().close();
+
+                String message = null;
+                switch (response.getStatus()) {
+                    case 403:
+                    case 404: {
+                        message = I18N.Http.NOT_FOUND.format(request);
+                        break;
+                    }
+                    case 500: {
+                        message = I18N.Http.INTERNAL_ERROR.format(request);
+                        break;
+                    }
+                }
+
+                SubmiteeHttpServlet.responseErrorPage(response, response.getStatus(),
+                        message == null ? I18N.Http.UNKNOWN_ERROR.format(request) : message);
             }
         });
     }
@@ -189,13 +214,6 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     @Override
     public void start() throws Exception {
 
-        setupAttributeSerializers();
-        this.attributeMap = readAttributeMap(this, "management");
-
-        // region setup attribute specs
-        this.defaultLanguage = this.attributeMap.of("default-language", String.class);
-        // endregion
-
         // region setup language
         if (this.defaultLanguage.get() == null) {
             this.defaultLanguage.set("zh-CN");
@@ -229,13 +247,15 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         }
         // endregion
 
-        addUserRealm(new InternalAccountRealm(this));
-
         // region setup jetty connectors and start jetty server
-        setupJettyConnectors(listenAddresses);
         setupJettyHandlers();
+        setupJettyConnectors(listenAddresses);
         jettyServer.start();
         // endregion
+
+        addUserRealm(new InternalAccountRealm(this));
+
+        // TODO: 2021-04-11-0011 init plugins
     }
 
     @Override

@@ -15,7 +15,7 @@ import java.io.IOException;
 
 public class CreateServlet extends AbstractJsonServlet {
     @Override
-    protected void request(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
         if (!body.has("type")) {
             responseBadRequest(req, resp);
             return;

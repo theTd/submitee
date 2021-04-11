@@ -8,7 +8,6 @@ import org.starrel.submitee.attribute.AttributeSpec;
 import org.starrel.submitee.auth.AnonymousUser;
 
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 import java.util.Date;
@@ -32,18 +31,20 @@ public class SessionImpl implements Session {
 
     private User user;
 
-    private SessionImpl(HttpSession httpSession, Cookie[] cookies) {
-        this.httpSession = httpSession;
+    private SessionImpl(HttpServletRequest req, Cookie[] cookies) {
+        this.httpSession = req.getSession();
         String token = getSessionTokenFromCookies(cookies);
         if (token == null) {
             token = generateNewSessionToken();
         }
         this.sessionToken = token;
         this.attributeMap = SubmiteeServer.getInstance().createOrReadAttributeMap(this, Session.COLLECTION_NAME);
+        this.attributeMap.setAutoSaveAttribute(false);
 
         this.lastUA = attributeMap.of("last-ua", String.class);
         this.lastActive = attributeMap.of("last-active", Date.class);
         this.lastActiveAddress = attributeMap.of("last-active-address", String.class);
+
         this.historyAddress = attributeMap.ofList("history-address", HistoryAddressEntry.class);
     }
 
@@ -63,21 +64,20 @@ public class SessionImpl implements Session {
 
     @SuppressWarnings("UnusedReturnValue")
     public static SessionImpl createFromHttpRequest(HttpServletRequest request) {
-        SessionImpl session = new SessionImpl(request.getSession(), request.getCookies());
-        session.getAttributeMap().setAutoSaveAttribute(false);
+        SessionImpl session = new SessionImpl(request, request.getCookies());
 
-        User user = SubmiteeServer.getInstance().resumeSession(session);
-        if (user == null) {
+        User resumedUser = SubmiteeServer.getInstance().resumeSession(session);
+        if (resumedUser == null) {
             session.setUser(SubmiteeServer.getInstance().getAnonymousUserRealm().createAnonymousUser(session));
             session.setUser(new AnonymousUser(session.getSessionToken()));
+            session.getUser().setPreferredLanguage(Util.getPreferredLanguage(request));
         } else {
-            session.setUser(user);
+            session.setUser(resumedUser);
         }
 
         session.setLastUA(request.getHeader("User-Agent"));
         session.pushLastActive(request);
 
-        session.getAttributeMap().setAutoSaveAttribute(true);
         request.getSession().setAttribute(HTTP_ATTRIBUTE_SESSION, session);
         return session;
     }
@@ -87,7 +87,7 @@ public class SessionImpl implements Session {
         Date now = new Date();
 
         lastActive.set(now);
-        if (Objects.equals(addr, lastActiveAddress.get())) {
+        if (!Objects.equals(addr, lastActiveAddress.get())) {
             lastActiveAddress.set(addr);
             historyAddress.add(new HistoryAddressEntry(now, addr));
         }
@@ -116,6 +116,11 @@ public class SessionImpl implements Session {
     @Override
     public Date getLastActive() {
         return lastActive.get();
+    }
+
+    @Override
+    public String getLastActiveAddress() {
+        return lastActiveAddress.get();
     }
 
     @Override
