@@ -528,7 +528,7 @@
     buildFieldTypeSelect();
 
     let currentTemplate;
-    let currentTemplateId = getQueryVariable("target");
+    let currentTemplateId = getQueryValue("target");
 
     fetchSingleTemplateInfo(currentTemplateId).then(value => {
         currentTemplate = value;

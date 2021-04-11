@@ -53,7 +53,7 @@
                 matches.push(link.getAttribute("data-submitee-management-method-alt"));
             }
 
-            matches.push(getQueryVariable("method", new URL(link.href).search));
+            matches.push(getQueryValue("method", new URL(link.href).search));
 
             if (matches.includes(method)) {
                 $(link).addClass("active");
@@ -74,7 +74,7 @@
         });
     }
 
-    let method = getQueryVariable("method");
+    let method = getQueryValue("method");
     if (!method) method = "template-list"; // for default option
 
     highlightCurrentMethod(method);

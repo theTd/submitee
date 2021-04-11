@@ -6,7 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.http.HttpStatus;
-import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.*;
 import org.starrel.submitee.http.AbstractJsonServlet;
 
 import java.io.IOException;
@@ -32,11 +32,62 @@ public class InternalAccountServlet extends AbstractJsonServlet {
         if (registerDisableMessage != null) {
             writer.name("register-disable-message").value(registerDisableMessage);
         }
+        String grecaptchaSitekey = SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class);
+        String grecaptchaSecretKey = SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class);
+        if (grecaptchaSitekey != null && grecaptchaSecretKey != null) {
+            writer.name("grecaptcha-sitekey").value(grecaptchaSitekey);
+        }
         writer.endObject();
         writer.close();
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
+        String[] uriParts = parseUri(req.getRequestURI());
+        if (uriParts.length < 1) {
+            responseBadRequest(req, resp);
+            return;
+        }
+
+        switch (uriParts[0]) {
+            case "send-verify-code": {
+                boolean grecaptcha = Util.grecaptchaConfigured();
+                String email = body.has("mail") ? body.get("mail").getAsString() : null;
+                String token = null;
+                if (grecaptcha) {
+                    token = body.has("captcha") ? body.get("captcha").getAsString() : null;
+                }
+
+                if (email == null) {
+                    responseBadRequest(req, resp);
+                    return;
+                }
+                if (grecaptcha && token == null) {
+                    responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.REQUIRE_CAPTCHA.format(req));
+                    return;
+                }
+                String finalToken = token;
+                req.startAsync().start(() -> {
+                    try {
+                        if (grecaptcha) {
+                            if (!Util.grecaptchaVerify(finalToken, Util.getRemoteAddr(req),
+                                    SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class))) {
+                                responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.CAPTCHA_FAILURE.format(req));
+                                return;
+                            }
+                        }
+                        // TODO: 2021-04-12-0012
+                        Util.sendTemplatedEmail();
+                    } catch (Exception e) {
+                        ExceptionReporting.report(InternalAccountServlet.class, "processing send-verify-code", e);
+                        try {
+                            responseInternalError(req, resp);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }
+                });
+            }
+        }
     }
 }

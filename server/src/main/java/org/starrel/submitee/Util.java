@@ -19,6 +19,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
+import org.apache.commons.mail.HtmlEmail;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
@@ -26,6 +27,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.concurrent.*;
 
 public class Util {
     public static String getRemoteAddr(HttpServletRequest req) {
@@ -52,8 +55,15 @@ public class Util {
         return language;
     }
 
+    public static boolean grecaptchaConfigured() {
+        String grecaptchaSitekey = SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class);
+        String grecaptchaSecretKey = SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class);
+        return grecaptchaSitekey != null && grecaptchaSecretKey != null &&
+                !grecaptchaSitekey.isEmpty() && !grecaptchaSecretKey.isEmpty();
+    }
+
     @SneakyThrows
-    public static boolean gRecaptchaVerify(String responseToken, String remoteIp, String siteKey) throws ClassifiedException {
+    public static boolean grecaptchaVerify(String responseToken, String remoteIp, String siteKey) throws ClassifiedException {
         StringWriter stringWriter = new StringWriter();
         JsonWriter writer = new JsonWriter(stringWriter);
         writer.beginObject();
@@ -84,5 +94,34 @@ public class Util {
                     + SubmiteeServer.GSON.toJson(response));
         }
         return response.getAsJsonObject().get("success").getAsBoolean();
+    }
+
+    private final static ExecutorService EMAIL_SENDING_EXECUTOR = Executors.newSingleThreadExecutor();
+
+    public static Future<?> sendTemplatedEmail(String path, String recipient, String smtp, String from,
+                                               String fromName, String subject, Map<String, String> replaces) {
+        return EMAIL_SENDING_EXECUTOR.submit((Callable<Void>) () -> {
+            // Create the email message
+            HtmlEmail email = new HtmlEmail();
+            email.setHostName(smtp);
+            email.addTo(recipient);
+            email.setFrom(from, fromName);
+            email.setSubject(subject);
+
+//            // embed the image and get the content id
+//            URL url = new URL("http://www.apache.org/images/asf_logo_wide.gif");
+//            String cid = email.embed(url, "Apache logo");
+//
+//            // set the html message
+//            email.setHtmlMsg("<html>The apache logo - <img src=\"cid:" + cid + "\"></html>");
+//
+//            // set the alternative message
+//            email.setTextMsg("Your email client does not support HTML messages");
+
+            // TODO: 2021-04-12-0012
+            email.setHtmlMsg(null);
+            email.send();
+            return null;
+        });
     }
 }

@@ -12,6 +12,7 @@ import org.starrel.submitee.blob.BlobStorageProvider;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -68,13 +69,19 @@ public class ConfigurationServlet extends AbstractJsonServlet {
             } catch (ClassifiedException e) {
                 blobStorageErrors.put(storage.getName(),
                         I18N.fromKey(String.format("blob_storage.provider.%s.error.%s",
-                                storage.getTypeId(), e.getClassify()))
-                                .format(req, e.getMessageParts()));
+                                storage.getTypeId(), e.getClassify())).format(req));
             } catch (Exception e) {
                 blobStorageErrors.put(storage.getName(), e.getMessage());
             }
         }
         configurationMap.put("blob_storage_errors", blobStorageErrors);
+        // endregion
+
+        // region register toggle
+        configurationMap.put("register-enabled",
+                SubmiteeServer.getInstance().getAttribute("register-enabled", Boolean.class, true));
+        configurationMap.put("register-disable-message",
+                SubmiteeServer.getInstance().getAttribute("register-disable-message", String.class));
         // endregion
 
         resp.setStatus(HttpStatus.OK_200);
@@ -137,6 +144,14 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                 } catch (Exception e) {
                     ExceptionReporting.report(ConfigurationServlet.class, "validating configuration", e);
                 }
+                break;
+            }
+            case "register-toggle": {
+                boolean enabled = body.get("register-enabled").getAsBoolean();
+                String disableMessage = body.get("register-disable-message").getAsString();
+                SubmiteeServer.getInstance().setAttribute("register-enabled", enabled);
+                SubmiteeServer.getInstance().setAttribute("register-disable-message", disableMessage);
+                resp.setStatus(HttpStatus.OK_200);
                 break;
             }
             default: {

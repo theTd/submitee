@@ -81,28 +81,36 @@ function _init_icon_tooltip() {
     link.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
     let head = document.getElementsByTagName('head')[0];
     head.appendChild(link);
-    console.log("loading material icon stylesheet");
+
+    let tooltipStyle = document.createElement("style");
+    tooltipStyle.innerHTML = ".tooltip-inner p {margin:0 !important;}";
+    document.body.appendChild(tooltipStyle);
     // endregion
 
     let template = document.createElement("template");
     template.id = "template-icon-tooltip";
     template.innerHTML = `
-        <i data-toggle="tooltip" data-placement="top" title=""
-           class="material-icons" style="font-size:2rem;color:red">error</i>`;
+<i data-toggle="popover" data-container="body" data-placement="left" type="button" data-html="true" class="material-icons" style="font-size:2rem;color:red">error</i>
+`;
 
     document.body.appendChild(template);
 }
 
-function createErrorTooltip(message) {
-    return createOutFlowIconTooltip("error", "2rem", "red", message, "top");
+function createErrorTooltip(html) {
+    return createOutFlowIconTooltip("error", "2rem", "red", html, "top");
 }
 
-function createIconTooltip(icon, size, color, message, placement) {
+function createIconTooltip(icon, size, color, html, placement) {
     _init_icon_tooltip();
+
+    let elem = document.createElement("div");
+    elem.innerHTML = html;
+
     let template = $("#template-icon-tooltip")[0];
     let i = template.content.querySelector("i");
-    i.setAttribute("title", message);
-    i.setAttribute("data-placement", placement);
+    // console.log(html);
+    // i.setAttribute("data-original-title", html);
+    // i.setAttribute("data-placement", placement);
     i.textContent = icon;
     i.style.fontSize = size;
     i.style.color = color;
@@ -111,7 +119,14 @@ function createIconTooltip(icon, size, color, message, placement) {
 
     let node = document.importNode(template.content, true);
     setInterval(() => {
-        $("#" + id).tooltip();
+        $("#" + id).tooltip({
+            html: true,
+            title: elem,
+            placement: placement,
+            content: function (){
+                return html;
+            }
+        });
     });
     return node;
 }

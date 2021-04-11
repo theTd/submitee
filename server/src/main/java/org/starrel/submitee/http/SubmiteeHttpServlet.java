@@ -23,6 +23,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class SubmiteeHttpServlet extends HttpServlet {
+    private static long errorPageCheck = -1;
+    private static long errorPageLastModifies = -1;
+
     private static String errorPage;
     private static final Cache<String, String> errorPageCache = CacheBuilder.newBuilder().maximumSize(100).build();
 
@@ -78,14 +81,30 @@ public class SubmiteeHttpServlet extends HttpServlet {
 
     @SneakyThrows
     public static String createErrorPage(String title) {
-        if (errorPage == null) {
+        // checks for error page file update per 30 seconds
+        boolean checkUpdate = false;
+        if (errorPageCheck == -1 || System.currentTimeMillis() - errorPageCheck > 1000 * 30) {
+            checkUpdate = true;
+            errorPageCheck = System.currentTimeMillis();
+        }
+
+        if (checkUpdate) {
+            String staticDirectory = System.getenv("STATIC_DIRECTORY");
+            if (staticDirectory == null || staticDirectory.isEmpty()) staticDirectory = "static";
+            File errorPageFile = new File(staticDirectory + File.separator + "protected" + File.separator + "error-page.html");
+
             try {
-                InputStream stream = SubmiteeHttpServlet.class.getResourceAsStream("/error-page.html");
-                ByteArrayOutputStream buff = new ByteArrayOutputStream();
-                ByteStreams.copy(stream, buff);
-                errorPage = buff.toString(StandardCharsets.UTF_8);
+                if (errorPageFile.lastModified() != errorPageLastModifies) {
+                    InputStream stream = new FileInputStream(errorPageFile);
+                    ByteArrayOutputStream buff = new ByteArrayOutputStream();
+                    ByteStreams.copy(stream, buff);
+                    errorPage = buff.toString(StandardCharsets.UTF_8);
+                    errorPageLastModifies = errorPageFile.lastModified();
+                    errorPageCache.invalidateAll();
+                    SubmiteeServer.getInstance().getLogger().info("error page updated");
+                }
             } catch (Exception e) {
-                ExceptionReporting.report(SubmiteeHttpServlet.class, "initializing error page", e);
+                ExceptionReporting.report(SubmiteeHttpServlet.class, "reading error page", e);
                 errorPage = "" +
                         "<!doctype html>\n" +
                         "<html lang=\"en\">\n" +
@@ -96,9 +115,10 @@ public class SubmiteeHttpServlet extends HttpServlet {
                         "    <title>%ERROR_TITLE%</title>\n" +
                         "</head>\n" +
                         "<body>\n" +
-                        "<h1>ERROR_TITLE</h1>\n" +
+                        "<p>%ERROR_TITLE%</p>\n" +
                         "</body>\n" +
                         "</html>";
+                errorPageCache.invalidateAll();
             }
         }
         return errorPageCache.get(title, () -> errorPage.replaceAll("%ERROR_TITLE%", title));

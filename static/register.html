@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>站内用户注册</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <script src="https://www.recaptcha.net/recaptcha/api.js"></script>
+    <style>
+        .main {
+            height: 100vh !important;
+            width: 100vw !important;
+            background-image: url("assets/bg.jpg");
+            background-position: center;
+            background-size: cover;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #register-container {
+            padding: 1rem 1.8rem;
+            background-color: #dddddd;
+            border-radius: 10px;
+            box-shadow: 0 0 0 2px white;
+            width: 20rem;
+        }
+
+        a {
+            color: #e0e0e0;
+        }
+
+        a:hover {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        a:active {
+            color: #cfcfcf;
+        }
+
+        #realm-tab a {
+            color: white;
+            text-shadow: #888888 2px 0 2px;
+        }
+
+        #realm-tab a.active {
+            color: #000000;
+            text-shadow: unset;
+        }
+    </style>
+</head>
+<body>
+<div class="main no-gutters">
+    <div class="container" style="width: auto">
+        <h5 style="color: white; text-shadow: #8d8d8d 2px 0 7px">站内用户注册</h5>
+        <div id="register-container">
+            <form onsubmit="login();return false;" id="register-form" class="collapse">
+                <div class="container">
+                    <div class="row">
+                        <label for="input-email">电子邮箱</label>
+                    </div>
+                    <div class="row">
+                        <input type="text" id="input-email" autocomplete="email" class="form-control"/>
+                    </div>
+                    <div class="row verify-code pt-1 collapse">
+                        <div class="d-flex flex-row flex-nowrap">
+                            <input type="text" class="w-100 d-inline form-control form-control-sm"
+                                   id="input-verify-code"
+                                   autocomplete="false"/>
+                            <button type="button" class="btn btn-sm btn-outline-secondary d-inline ml-1"
+                                    style="width: 10rem" onclick="sendVerifyCode()" id="button-send-verify-code">
+                                发送验证码
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <label for="input-password">密码<span
+                                style="font-size: 0.7rem; color: gray">建议使用同时包含字母、数字或符号的强口令</span></label>
+                    </div>
+                    <div class="row">
+                        <input type="password" name="password" id="input-password" autocomplete="new-password"
+                               class="form-control"/>
+                    </div>
+                    <div class="row mt-3">
+                        <label for="input-repeat-password">确认密码</label>
+                    </div>
+                    <div class="row">
+                        <input type="password" name="password" id="input-repeat-password" autocomplete="new-password"
+                               class="form-control"/>
+                    </div>
+                    <div class="row mt-3">
+                        <button type="button" class="btn btn-success btn-sm w-100" onclick="login()">
+                            注册
+                        </button>
+                        <input type="submit" class="d-none"/>
+                    </div>
+                    <div class="row mt-1 justify-content-end third-party-oauth">
+                    </div>
+                    <div class="row mt-1 justify-content-end d-none" id="internal-account-register-link">
+                        <a href="#" style="font-size: 0.8rem;">站内用户注册</a>
+                    </div>
+                </div>
+            </form>
+            <div class="collapse" id="register-disable-message">
+                <div class="w-100"></div>
+                <button type="button" class="btn btn-danger btn-sm w-100 disabled">
+                    注册
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="position-fixed" style="bottom: 1rem">
+        <a style="font-size: 0.8rem" href="https://github.com/theTd/submitee">POWERED BY SUBMITEE</a>
+        <a style="font-size: 0.8rem" href="/static/management.html">维管人员</a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script src="js/model.js"></script>
+<script src="js/toast.js"></script>
+<script>
+    let redirect = getQueryValue("d");
+
+    function sendVerifyCode() {
+        let mail = $("#input-email").val();
+        if (!mailPattern.test(mail)) {
+            return;
+        }
+
+        let send = (token) => {
+            $.ajax({
+                url: "../internal-account/send-verify-code",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    captcha: token,
+                    mail: mail
+                }),
+                success: function (response) {
+                    submitee.verifyCodeTimeout = response["verify-code-timeout"];
+                    setVerifyCodeTimeout();
+                },
+                error: function (xhr) {
+                    toast_ajax_error(xhr);
+                },
+            })
+        };
+
+        if (submitee.grecaptchaSitekey) {
+            grecaptcha.ready(function () {
+                grecaptcha.execute(submitee.grecaptchaSitekey, {action: 'submit'}).then(function (token) {
+                    send(token);
+                });
+            });
+        } else {
+            send();
+        }
+    }
+
+    function setVerifyCodeTimeout() {
+        clearInterval(submitee.verifyCodeTimeoutSchedule);
+        let button = $("#button-send-verify-code");
+
+        if (submitee.verifyCodeTimeout) {
+            submitee.verifyCodeTimeoutSchedule = setInterval(() => {
+                let timeout = (submitee.verifyCodeTimeout - Date.now()) / 1000;
+                timeout = parseInt(timeout + "");
+                if (timeout < 1) {
+                    button.removeClass("disabled");
+                    button.text("发送验证码");
+                    clearInterval(submitee.verifyCodeTimeoutSchedule);
+                } else {
+                    button.addClass("disabled");
+                    button.text(`(${timeout}s)`);
+                }
+            }, 200);
+        }
+        // todo
+    }
+
+    function toggleVerifyCode(show) {
+        $(".verify-code").collapse({toggle: show});
+    }
+
+    $.ajax({
+        url: "../internal-account",
+        method: "GET",
+        success: function (response) {
+            if (!response["register-enabled"]) {
+                let disableMessage = $("#register-disable-message");
+                disableMessage.find("div").html(response["register-disable-message"] || "");
+                disableMessage.collapse({toggle: true});
+            } else {
+                $("#register-form").collapse({toggle: true});
+            }
+            submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
+            submitee.verifyCodeTimeout = response["verify-code-timeout"];
+            submitee.verifyCodeTimeout = Date.now() + 60000; // todo debug
+            setVerifyCodeTimeout();
+        },
+        error: function (xhr) {
+            toast_ajax_error(xhr);
+        }
+    });
+
+    let mailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+
+    submitee.verifyCodeCollapse = false;
+    $("#input-email").on('keyup', function (evt) {
+        let test = mailPattern.test(evt.target.value);
+        if (mailPattern.test(evt.target.value) !== submitee.verifyCodeCollapse) {
+            submitee.verifyCodeCollapse = test;
+            $(".verify-code").collapse(test ? 'show' : 'hide');
+        }
+    });
+</script>
+</body>
+</html>

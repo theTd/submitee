@@ -78,6 +78,9 @@ public class AuthServlet extends AbstractJsonServlet {
                 realms.add(SubmiteeServer.getInstance().getInternalAccountRealm());
                 break;
             }
+            case "register": {
+                realms.add(SubmiteeServer.getInstance().getInternalAccountRealm());
+            }
             default: {
                 ExceptionReporting.report(AuthServlet.class, "parsing method", "unknown method: " + uriParts[0]);
                 responseBadRequest(req, resp);

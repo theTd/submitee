@@ -78,4 +78,11 @@ public abstract class I18N {
         public final static ConstantI18NKey ACCESS_DENIED = new ConstantI18NKey("http.access_denied");
         public final static ConstantI18NKey UNKNOWN_ERROR = new ConstantI18NKey("http.unknown_error");
     }
+
+    public static abstract class Email {
+        public final static ConstantI18NKey EMAIL_FROM = new ConstantI18NKey("email.from");
+        public final static ConstantI18NKey EMAIL_SUBJECT_VERIFY_CODE = new ConstantI18NKey("email.subject.verify_code");
+        public final static ConstantI18NKey EMAIL_SUBJECT_NOTIFICATION = new ConstantI18NKey("email.subject.notification");
+        public final static ConstantI18NKey EMAIL_SUBJECT_SECURITY_ALERT = new ConstantI18NKey("email.subject.security_alert");
+    }
 }

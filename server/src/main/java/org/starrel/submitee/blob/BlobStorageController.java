@@ -84,12 +84,7 @@ public class BlobStorageController {
 
                 BlobStorageProvider provider = providerMap.get(type);
                 if (provider == null) throw new RuntimeException("cannot find blob storage provider: " + type);
-                try {
-                    storageMap.put(name, provider.accessStorage(name));
-                } catch (ClassifiedException e) {
-                    ExceptionReporting.report(BlobStorageController.class, "setting up blob storage",
-                            "setting up blob storage " + name, e);
-                }
+                storageMap.put(name, provider.accessStorage(name));
             }
         }
     }

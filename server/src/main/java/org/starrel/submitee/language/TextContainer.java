@@ -88,6 +88,8 @@ public class TextContainer {
                 if (result.isEmpty()) throw MissingLanguageSignal.INSTANCE;
                 return result.get(0);
             });
+        } catch (MissingLanguageSignal signal) {
+            return null;
         } catch (ExecutionException e) {
             if (e.getCause() instanceof MissingLanguageSignal) {
                 return null;

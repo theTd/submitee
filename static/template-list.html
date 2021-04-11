@@ -155,7 +155,7 @@
     }
 
     const pageSize = 10;
-    let page = parseInt(getQueryVariable("page")) || 1;
+    let page = parseInt(getQueryValue("page")) || 1;
     fetchTemplateInfo({}, true).then(array => {
         let maxPages = Math.ceil(array.length / pageSize);
         if (page > maxPages) page = maxPages;

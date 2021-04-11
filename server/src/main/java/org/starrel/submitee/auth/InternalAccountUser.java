@@ -20,6 +20,7 @@ public class InternalAccountUser implements User {
     private final AttributeSpec<String> password;
     private final AttributeSpec<String> email;
     private final AttributeSpec<String> sms;
+    private final AttributeSpec<String> preferredLanguage;
 
     public InternalAccountUser(int uid) {
         this.uid = uid;
@@ -29,6 +30,7 @@ public class InternalAccountUser implements User {
 
         this.email = attributeMap.of("email", String.class);
         this.sms = attributeMap.of("sms", String.class);
+        this.preferredLanguage = attributeMap.of("preferred-language", String.class);
 
         JdbcAttributeSource jdbcAttributeSource = new JdbcAttributeSource(SubmiteeServer.getInstance().getDataSource()
                 , "internal_users", "id=" + uid);
@@ -49,6 +51,16 @@ public class InternalAccountUser implements User {
     @Override
     public List<Submission> getSubmissions(Bson query) {
         return null;
+    }
+
+    @Override
+    public String getPreferredLanguage() {
+        return preferredLanguage.get();
+    }
+
+    @Override
+    public void setPreferredLanguage(String language) {
+        this.preferredLanguage.set(language);
     }
 
     @Override

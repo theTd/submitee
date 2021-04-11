@@ -102,6 +102,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         resourceHandler.setResourceBase(staticDirectory);
         ContextHandler contextHandler = new ContextHandler();
         contextHandler.setContextPath("/static");
+        contextHandler.setProtectedTargets(new String[]{"/protected"});
         contextHandler.setHandler(resourceHandler);
         return contextHandler;
     }

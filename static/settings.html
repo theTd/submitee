@@ -9,6 +9,8 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/css/bootstrap4-toggle.min.css"
+          rel="stylesheet">
 
     <style>
         .main .container-fluid {
@@ -23,6 +25,16 @@
             box-shadow: 0 0 0 3px rgba(255, 193, 7, 1);
             border: solid rgb(253, 222, 130);
             border-radius: 3px;
+        }
+
+        .main .row {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .blob-storage-config .row {
+            margin-top: 0;
+            margin-bottom: 0;
         }
     </style>
 </head>
@@ -53,8 +65,8 @@
         </div>
         <div class="col col-2 blob-storage-name">
         </div>
-        <div class="col col-5 blob-storage-config">
-            <div class="container">
+        <div class="col col-5">
+            <div class="container blob-storage-config">
 
             </div>
         </div>
@@ -117,6 +129,28 @@
             </form>
         </div>
     </div>
+    <div class="row">
+        <h4>站内用户注册</h4>
+        <div class="container-fluid" id="container-register-toggle">
+            <div class="row">
+                <div class="col-2"><label for="checkbox-register-enabled">启用注册</label></div>
+                <div class="col"><input id="checkbox-register-enabled" type="checkbox" data-toggle="toggle"
+                                        data-on="开启" data-off="关闭" data-onstyle="success" data-offstyle="danger"
+                                        data-size="normal" checked/></div>
+            </div>
+            <div class="row">
+                <div class="col-2"><label for="input-disable-register-message">停用注册告示</label></div>
+                <div class="col">
+                    <div id="input-disable-register-message"></div>
+                </div>
+            </div>
+            <div class="row d-none" id="apply-register-toggle">
+                <div class="col">
+                    <button class="btn btn-primary" onclick="applyRegisterToggleState()">应用</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!--<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>-->
@@ -127,8 +161,10 @@
 <!--<script src="js/model.js"></script>-->
 <!--<script src="js/field-controllers.js"></script>-->
 <!--<script src="js/toast.js"></script>-->
+<script src="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js"></script>
 
 <script>
+    // $('#checkbox-user-register').bootstrapToggle();
 
     function createBlobStorage() {
         $.ajax({
@@ -208,8 +244,10 @@
         let template = $("#template-blob-storage-config-row")[0];
         template.content.querySelector(".blob-storage-config-name").textContent = getBlobStorageConfigTranslation(storageName, name) + ":";
         if (value) {
+            template.content.querySelector(".blob-storage-config-value").innerHTML = null;
             template.content.querySelector(".blob-storage-config-value").textContent = value ? value : "<尚未配置>";
         } else {
+            template.content.querySelector(".blob-storage-config-value").textContent = null;
             template.content.querySelector(".blob-storage-config-value").innerHTML =
                 "<span style='color: gray'>&lt;尚未配置&gt;</span>";
         }
@@ -241,6 +279,7 @@
         template.content.querySelector(".blob-storage").setAttribute("data-blob-storage-name", config["name"]);
         if (config.hasOwnProperty("config")) {
             let configContainer = template.content.querySelector(".blob-storage-config");
+            $(configContainer).empty();
             Object.keys(config["config"]).forEach(configKey => {
                 let val = config["config"][configKey];
                 configContainer.appendChild(createBlobStorageConfigRow(config['name'], configKey, val));
@@ -298,17 +337,57 @@
         })
     }
 
+    function showSaveRegisterToggleState() {
+        $("#apply-register-toggle").removeClass("d-none");
+    }
+
+    function loadRegisterToggle() {
+        let toggle = $("#checkbox-register-enabled");
+        if (!toggle.bootstrapToggle) {
+            setTimeout(loadRegisterToggle, 100);
+            return;
+        }
+
+        if (configuration["register-enabled"]) {
+            toggle.bootstrapToggle('on');
+        } else {
+            toggle.bootstrapToggle('off');
+        }
+
+        toggle.change(showSaveRegisterToggleState);
+        $("#input-disable-register-message").html(configuration["register-disable-message"] || "");
+
+        submitee.registerToggleEditor = new window.wangEditor('#input-disable-register-message');
+        submitee.registerToggleEditor.config.excludeMenus = ['todo'];
+        submitee.registerToggleEditor.config.onchange = showSaveRegisterToggleState;
+        submitee.registerToggleEditor.create();
+    }
+
+    function applyRegisterToggleState() {
+        let enabled = $("#checkbox-register-enabled:checked")[0] !== undefined;
+        let message = submitee.registerToggleEditor.txt.html();
+
+        $.ajax({
+            url: "../configuration/register-toggle",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                'register-enabled': enabled,
+                'register-disable-message': message
+            }),
+            success: function (response) {
+                $("#apply-register-toggle").addClass("d-none");
+                create_toast("提示", "已应用注册开关配置", 2000)
+            },
+            error: function (xhr) {
+                toast_ajax_error(xhr);
+            }
+        })
+    }
+
     function loadConfiguration() {
-        // (configuration['blob_storages'])['默认'] = {
-        //     provider: '阿里云OSS',
-        //     name: '默认',
-        //     error: '尚未实现',
-        //     config: {
-        //         apiKey: "",
-        //         endpoint: ""
-        //     }
-        // };
         loadBlobStorages();
+        loadRegisterToggle();
     }
 
     configuration = {};
@@ -319,7 +398,8 @@
             method: "GET",
             success: function (data) {
                 configuration = data;
-                console.log("configuration fetched: " + JSON.stringify(data))
+                console.log("configuration fetched");
+                console.log(configuration);
                 loadConfiguration();
             },
             error: function (error) {

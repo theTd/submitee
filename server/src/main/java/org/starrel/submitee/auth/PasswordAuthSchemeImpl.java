@@ -8,7 +8,7 @@ import lombok.SneakyThrows;
 import org.starrel.submitee.*;
 import org.starrel.submitee.model.Session;
 
-import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -20,6 +20,8 @@ public class PasswordAuthSchemeImpl implements PasswordAuthScheme {
 
     private final Cache<String, Integer> failureCache = CacheBuilder.newBuilder()
             .expireAfterWrite(1, TimeUnit.HOURS).maximumSize(1000).build();
+
+    private Map<String, String> params = null;
 
     private AuthHandler authHandler;
 
@@ -37,7 +39,15 @@ public class PasswordAuthSchemeImpl implements PasswordAuthScheme {
     @Override
     public Map<String, String> getParams(Session session) {
         if (requireCaptcha(session)) {
-            return Collections.singletonMap("require-captcha", "1");
+            String grecaptchaSitekey = SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class);
+            String grecaptchaSecretKey = SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class);
+            if (grecaptchaSitekey != null && grecaptchaSecretKey != null) {
+                if (params == null) {
+                    params = new LinkedHashMap<>();
+                    params.put("g", grecaptchaSitekey);
+                }
+                return params;
+            }
         }
         return null;
     }
@@ -98,7 +108,7 @@ public class PasswordAuthSchemeImpl implements PasswordAuthScheme {
                             I18N.General.REQUIRE_CAPTCHA.format(session.getUser().getPreferredLanguage()), null);
                 } else {
                     try {
-                        if (!Util.gRecaptchaVerify(captcha, session.getLastActiveAddress(), sitekey)) {
+                        if (!Util.grecaptchaVerify(captcha, session.getLastActiveAddress(), sitekey)) {
                             return new AbstractAuthResult(RESULT_CAPTCHA_FAILURE,
                                     I18N.General.CAPTCHA_FAILURE.format(session.getUser().getPreferredLanguage()), null);
                         }

@@ -28,9 +28,14 @@ public class FileTreeBlobStorage implements BlobStorage {
         }
 
         @Override
-        public BlobStorage accessStorage(String name) throws ClassifiedException {
+        public BlobStorage accessStorage(String name) {
             FileTreeBlobStorage s = new FileTreeBlobStorage(name);
-            s.setupDirectory(s.path.get());
+            try {
+                s.setupDirectory(s.path.get());
+            } catch (ClassifiedException e) {
+                ExceptionReporting.report(FileTreeBlobStorage.class, "setting up blob storage",
+                        "setting up blob storage " + name, e);
+            }
             return s;
         }
     };

@@ -12,6 +12,15 @@
     <style>
         .main {
             height: 100vh;
+            width: 100vw;
+        }
+
+        .main .container {
+            width: 20rem;
+            padding: 1rem 1.8rem;
+            background-color: #dddddd;
+            border-radius: 10px;
+            box-shadow: 0 0 0 2px white;
         }
 
         a {
@@ -29,14 +38,14 @@
     </style>
 </head>
 <body style='background-image: url("/static/assets/bg.jpg"); background-position: center; background-size: cover'>
-<div class="main d-flex flex-column justify-content-center align-items-center">
-    <div class="container" style="width: 20rem">
-        <div class="container pt-4 pl-4 pb-4 pr-4"
-             style="background-color: lightgray; border-radius: 10px">
-            <h4>%ERROR_TITLE%</h4>
-        </div>
+<div class="main d-flex justify-content-center align-items-center">
+    <div class="container pt-4 pl-4 pb-4 pr-4 d-flex flex-column align-items-center justify-content-center">
+        <h5 class="m-0">%ERROR_TITLE%</h5>
     </div>
-    <a style="position: fixed; bottom: 1rem; font-size: 0.8rem" href="/static/management.html">维管人员</a>
+    <div class="position-fixed" style="bottom: 1rem">
+        <a style="font-size: 0.8rem" href="https://github.com/theTd/submitee">POWERED BY SUBMITEE</a>
+        <a style="font-size: 0.8rem" href="/static/management.html">维管人员</a>
+    </div>
 </div>
 </body>
 </html>

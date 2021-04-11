@@ -16,6 +16,7 @@
             height: 100vh !important;
             width: 100vw !important;
             background-image: url("assets/bg.jpg");
+            background-position: center;
             background-size: cover;
             display: flex;
             flex-direction: column;
@@ -38,7 +39,7 @@
 
         #realm-tab a {
             color: white;
-            text-shadow: #bababa 1px 0 1px;
+            text-shadow: #888888 2px 0 2px;
         }
 
         #realm-tab a.active {
@@ -46,13 +47,24 @@
             text-shadow: unset;
         }
 
-        .nav-link {
+        #realm-tab .nav-link {
             font-size: 0.7rem !important;
             padding: 0.3rem 0.5rem;
+            border-color: #e9ecef #e9ecef #dee2e6;
+            transition: 0.1s cubic-bezier(0.22, 0.61, 0.36, 1);
         }
 
-        .nav-link.active {
-            background-color: #dddddd !important;
+        #realm-tab .nav-link:hover {
+            background-color: #dddddd;
+            box-shadow: 0 0 0 2px white;
+            clip-path: inset(-10px -10px 0px -10px);
+            border-radius: 3px;
+            color: #000000;
+            text-shadow: unset;
+        }
+
+        #realm-tab .nav-link.active {
+            background-color: #dddddd;
             box-shadow: 0 0 0 2px white;
             clip-path: inset(-10px -10px 0px -10px);
             border-radius: 3px;
@@ -84,7 +96,7 @@
     function createRealmTabItem(realm) {
         let tab = document.createElement("li");
         tab.classList.add("nav-item");
-        let active = realm["realm"] === currentRealmName ? "active" : "";
+        let active = realm["realm"] === submitee.currentRealmName ? "active" : "";
         tab.innerHTML = `<a class='nav-link ${active}' href="?target=${target}&realm=${realm["realm"]}">${realm["title"]}</a>`;
         return tab;
     }
@@ -94,26 +106,48 @@
         let container = $("#realm-tab")[0];
 
         // current
-        let currentRealm = allowedRealms.filter(r => r["realm"] === currentRealmName)[0];
+        let currentRealm = submitee.allowedRealms.filter(r => r["realm"] === submitee.currentRealmName)[0];
         if (currentRealm) {
             container.appendChild(createRealmTabItem(currentRealm));
         }
 
         // others
-        allowedRealms.filter(r => r["realm"] !== currentRealmName).forEach(r => {
+        submitee.allowedRealms.filter(r => r["realm"] !== submitee.currentRealmName).forEach(r => {
             container.appendChild(createRealmTabItem(r))
         })
     }
 
     function loadAuthScheme() {
-        if (!currentRealmName) {
-            currentRealmName = allowedRealms[0]["realm"];
+        let realm;
+        if (submitee.currentRealmName) {
+            let find = submitee.allowedRealms.filter(r => r["name"] === submitee.currentRealmName);
+            // noinspection EqualityComparisonWithCoercionJS
+            if (find == true) {
+                realm = find[0];
+            } else {
+                alert("出现了一些意料之外的异常，如需帮助请联系管理人员");
+                window.history.back();
+                return;
+            }
+        } else {
+            realm = submitee.allowedRealms[0];
         }
-        let realm = allowedRealms.filter(r => r.realm === currentRealmName)[0];
-        if (!currentScheme) {
-            currentScheme = realm["scheme"][0].name;
+
+        let scheme;
+        if (submitee.currentSchemeName) {
+            let find = realm["scheme"].filter(s => s["name"] === submitee.currentSchemeName)
+            // noinspection EqualityComparisonWithCoercionJS
+            if (find == true) {
+                scheme = find[0];
+            } else {
+                alert("出现了一些意料之外的异常，如需帮助请联系管理人员");
+                window.history.back();
+                return;
+            }
+        } else {
+            scheme = realm["scheme"][0];
         }
-        let scheme = realm["scheme"].filter(s => s.name === currentScheme)[0];
+
         let url = scheme["url"];
 
         $.ajax({
@@ -121,7 +155,7 @@
             method: "GET",
             success: function (response) {
                 $("#auth-scheme-container").html(response);
-                document.title = "登录: " + realm["title"] + " - SUBMITEE";
+                setTitle("登录: " + realm["title"]);
             },
             error: function (xhr) {
                 toast_ajax_error(xhr);
@@ -135,18 +169,36 @@
             method: "GET",
             contentType: "application/json",
             success: function (response) {
+                // allowedRealms = [
+                //     {
+                //         realm: "统一认证",
+                //         title: "统一认证",
+                //         scheme: [{name: "密码", url: "/static/auth-scheme-password.html"}]
+                //     },
+                //     {
+                //         realm: "wechat",
+                //         title: "微信登录",
+                //         scheme: [{name: "微信登录", url: "/static/auth-scheme-wechat.html"}]
+                //     },
+                //     {
+                //         realm: "internal",
+                //         title: "站内用户",
+                //         scheme: [{name: "密码", url: "/static/auth-scheme-password.html"}]
+                //     },
+                // ];
+
                 console.log(response);
-                allowedRealms = [
-                    {
-                        realm: "internal",
-                        title: "站内用户",
-                        scheme: [{name: "密码", url: "/static/auth-scheme-password.html"}]
-                    },
-                    {
-                        realm: "wechat",
-                        title: "微信登录",
-                        scheme: [{name: "微信登录", url: "/static/auth-scheme-wechat.html"}]
-                    }];
+                // noinspection EqualityComparisonWithCoercionJS
+                submitee.allowedRealms = response.filter(r => r["realm"] !== "anonymous")
+                    .filter(r => r["scheme"] == true);
+                console.log(submitee.allowedRealms);
+
+                if (!submitee.allowedRealms || submitee.allowedRealms.length === 0) {
+                    alert("出现了一些意料之外的异常，如需帮助请联系管理人员");
+                    window.history.back();
+                    return;
+                }
+
                 loadAuthScheme();
                 buildRealmTab();
             },
@@ -156,10 +208,9 @@
         });
     }
 
-    let target = getQueryVariable("target");
-    let currentRealmName = getQueryVariable("realm");
-    let currentScheme = getQueryVariable("scheme");
-    let allowedRealms;
+    let target = getQueryValue("target");
+    submitee.currentRealmName = getQueryValue("realm");
+    submitee.currentSchemeName = getQueryValue("scheme");
 
     if (!target) {
         alert("未知认证目的");

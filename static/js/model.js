@@ -1,3 +1,5 @@
+submitee = {};
+
 class AttributeMap {
     constructor(root) {
         this.root = root || {};
@@ -216,7 +218,7 @@ class STemplate {
     }
 }
 
-function getQueryVariable(name, queryString) {
+function getQueryValue(name, queryString) {
     queryString = queryString || window.location.search;
 
     let query = queryString.substring(1);
