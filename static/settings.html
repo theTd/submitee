@@ -36,6 +36,10 @@
             margin-top: 0;
             margin-bottom: 0;
         }
+
+        .small-text {
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -144,9 +148,76 @@
                     <div id="input-disable-register-message"></div>
                 </div>
             </div>
-            <div class="row d-none" id="apply-register-toggle">
+            <div class="row collapse" id="apply-register-toggle">
                 <div class="col">
                     <button class="btn btn-primary" onclick="applyRegisterToggleState()">应用</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <h4>发送邮件</h4>
+        <div class="container-fluid" id="container-smtp-settings">
+            <div class="row">
+                <div class="col-2"><label>SMTP服务器</label></div>
+                <div class="col">
+                    <div class="container-fluid small-text">
+                        <div class="row mt-0">
+                            <div class="col-2"><label for="input-smtp-server">主机名</label></div>
+                            <div class="col"><input id="input-smtp-server" type="text"/></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-2"><label for="input-smtp-server-port">端口</label></div>
+                            <div class="col"><input type="number" id="input-smtp-server-port"/></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-2"><label for="checkbox-smtp-ssl">使用SSl</label></div>
+                            <div class="col">
+                                <input id="checkbox-smtp-ssl" type="checkbox"
+                                       data-toggle="toggle" data-on="启用" data-off="关闭"
+                                       data-size="xs"/>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-2"><label for="input-smtp-user">用户名/本机邮箱</label></div>
+                            <div class="col">
+                                <input id="input-smtp-user" type="text"/>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-2"><label for="input-smtp-password">密码</label></div>
+                            <div class="col">
+                                <input id="input-smtp-password" type="text"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-2"><label for="input-smtp-sender-address">本机邮箱</label></div>
+                <div class="col">
+                    <input id="input-smtp-sender-address" type="text" placeholder="与SMTP用户名一致"/>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-2"><label for="input-smtp-sender-name">邮件署名</label></div>
+                <div class="col">
+                    <input id="input-smtp-sender-name" type="text" placeholder="SUBMITEE"/>
+                </div>
+            </div>
+            <div class="row collapse" id="apply-smtp-settings">
+                <div class="col">
+                    <button class="btn btn-primary" onclick="applySmtpSettings()">应用</button>
+                </div>
+            </div>
+            <div class="row">
+                <hr class="w-100"/>
+                <div class="col-2"></div>
+                <div class="col-2"><input id="input-test-mail-address" type="text"/></div>
+                <div class="col-2">
+                    <button id="button-send-test-mail" onclick="sendTestMail()" style="width: 6.5rem"
+                            class="ml-3 btn btn-sm btn-secondary">发送测试邮件
+                    </button>
                 </div>
             </div>
         </div>
@@ -337,16 +408,16 @@
         })
     }
 
-    function showSaveRegisterToggleState() {
-        $("#apply-register-toggle").removeClass("d-none");
-    }
-
     function loadRegisterToggle() {
-        let toggle = $("#checkbox-register-enabled");
-        if (!toggle.bootstrapToggle) {
+        // bootstrap-toggle might not have been loaded at this time
+        if (!$(document).bootstrapToggle) {
             setTimeout(loadRegisterToggle, 100);
             return;
         }
+        let changeHook = function () {
+            $("#apply-register-toggle").collapse("show");
+        }
+        let toggle = $("#checkbox-register-enabled");
 
         if (configuration["register-enabled"]) {
             toggle.bootstrapToggle('on');
@@ -354,12 +425,12 @@
             toggle.bootstrapToggle('off');
         }
 
-        toggle.change(showSaveRegisterToggleState);
+        toggle.change(changeHook);
         $("#input-disable-register-message").html(configuration["register-disable-message"] || "");
 
         submitee.registerToggleEditor = new window.wangEditor('#input-disable-register-message');
         submitee.registerToggleEditor.config.excludeMenus = ['todo'];
-        submitee.registerToggleEditor.config.onchange = showSaveRegisterToggleState;
+        submitee.registerToggleEditor.config.onchange = changeHook;
         submitee.registerToggleEditor.create();
     }
 
@@ -376,7 +447,7 @@
                 'register-disable-message': message
             }),
             success: function (response) {
-                $("#apply-register-toggle").addClass("d-none");
+                $("#apply-register-toggle").collapse('hide');
                 create_toast("提示", "已应用注册开关配置", 2000)
             },
             error: function (xhr) {
@@ -385,9 +456,111 @@
         })
     }
 
+    function loadSmtpSettings() {
+        // bootstrap-toggle might not have been loaded at this time
+        if (!$(document).bootstrapToggle) {
+            setTimeout(loadSmtpSettings, 100);
+            return;
+        }
+
+        let changeHook = function () {
+            $("#apply-smtp-settings").collapse("show");
+        }
+        let server = $("#input-smtp-server");
+        let port = $("#input-smtp-server-port");
+        let ssl = $("#checkbox-smtp-ssl");
+        let user = $("#input-smtp-user");
+        let password = $("#input-smtp-password");
+        let senderAddress = $("#input-smtp-sender-address");
+        let senderName = $("#input-smtp-sender-name");
+
+        let section = configuration["smtp"];
+        if (!section) {
+            section = {};
+            configuration["smtp"] = section;
+        }
+
+        server.val(section["server"]);
+        port.val("" + section["port"]);
+        if (section["ssl"]) {
+            ssl.bootstrapToggle("on")
+        } else {
+            ssl.bootstrapToggle("off")
+        }
+        user.val(section["user"]);
+        password.val(section["password"]);
+        senderAddress.val(section["sender-address"]);
+        senderName.val(section["sender-name"]);
+
+        server.keyup(changeHook);
+        port.keyup(changeHook);
+        ssl.change(changeHook);
+        user.keyup(changeHook);
+        password.keyup(changeHook);
+        senderAddress.keyup(changeHook);
+        senderName.keyup(changeHook);
+    }
+
+    function applySmtpSettings() {
+        let section = configuration["smtp"];
+        section["server"] = $("#input-smtp-server").val();
+        section["port"] = parseInt($("#input-smtp-server-port").val());
+        section["ssl"] = $("#checkbox-smtp-ssl:checked")[0] !== undefined;
+        section["user"] = $("#input-smtp-user").val();
+        section["password"] = $("#input-smtp-password").val();
+        section["sender-address"] = $("#input-smtp-sender-address").val();
+        section["sender-name"] = $("#input-smtp-sender-name").val();
+
+        $.ajax({
+            url: "../configuration/smtp-settings",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(section),
+            success: function (response) {
+                $("#apply-smtp-settings").collapse("hide");
+                create_toast("提示", "已应用邮件发送配置", 2000)
+            },
+            error: function (xhr) {
+                toast_ajax_error(xhr);
+            }
+        })
+    }
+
+    function sendTestMail() {
+        let addr = $("#input-test-mail-address").val();
+        if (!addr || !submitee.mailPattern.test(addr)) {
+            create_toast("重要提示", "邮箱地址格式不正确", 10000);
+            return
+        }
+        let button = $("#button-send-test-mail");
+        if (button.hasClass("disabled")) return;
+        button.addClass("disabled");
+        button.html(`<span class="spinner-border spinner-border-sm" role="status"></span>`);
+
+        $.ajax({
+            url: "../configuration/send-test-mail",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                addr: addr
+            }),
+            success: function (response) {
+                create_toast("提示", "已发送", 2000);
+            },
+            error: function (xhr) {
+                toast_ajax_error(xhr);
+            },
+            complete: function () {
+                button.removeClass("disabled");
+                button.text(`发送测试邮件`);
+            }
+        })
+    }
+
     function loadConfiguration() {
         loadBlobStorages();
         loadRegisterToggle();
+        loadSmtpSettings();
     }
 
     configuration = {};
@@ -396,8 +569,8 @@
         $.ajax({
             url: "../configuration",
             method: "GET",
-            success: function (data) {
-                configuration = data;
+            success: function (response) {
+                configuration = response;
                 console.log("configuration fetched");
                 console.log(configuration);
                 loadConfiguration();

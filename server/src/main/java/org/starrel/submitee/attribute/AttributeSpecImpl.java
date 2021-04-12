@@ -2,6 +2,7 @@ package org.starrel.submitee.attribute;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.SneakyThrows;
 import org.starrel.submitee.ExceptionReporting;
@@ -219,5 +220,15 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
             return;
         }
         ExceptionReporting.report(AttributeSpecImpl.class, "unhandled top level child update", "");
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public JsonElement toJsonTree() {
+        if (isList) {
+            return ((JsonTreeAttributeSource<Void>) getSource()).getArrayFromPath(fullPath(""), false);
+        } else {
+            return ((JsonTreeAttributeSource<Void>) getSource()).getObjectFromPath(fullPath(""), false);
+        }
     }
 }

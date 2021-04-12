@@ -6,6 +6,7 @@ import com.google.common.io.ByteStreams;
 import lombok.SneakyThrows;
 import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.ExceptionReporting;
+import org.starrel.submitee.FileLoadingCache;
 import org.starrel.submitee.I18N;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.Session;
@@ -23,10 +24,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class SubmiteeHttpServlet extends HttpServlet {
-    private static long errorPageCheck = -1;
-    private static long errorPageLastModifies = -1;
-
-    private static String errorPage;
     private static final Cache<String, String> errorPageCache = CacheBuilder.newBuilder().maximumSize(100).build();
 
     private final SubmiteeServer submiteeServer;
@@ -79,49 +76,41 @@ public class SubmiteeHttpServlet extends HttpServlet {
         return session;
     }
 
+    private static String errorPageFilePath = null;
+    private final static String DEFAULT_ERROR_PAGE = "" +
+            "<!doctype html>\n" +
+            "<html lang=\"en\">\n" +
+            "<head>\n" +
+            "    <meta charset=\"UTF-8\">\n" +
+            "    <meta name=\"viewport\"\n" +
+            "          content=\"width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0\">\n" +
+            "    <title>%ERROR_TITLE%</title>\n" +
+            "</head>\n" +
+            "<body>\n" +
+            "<p>%ERROR_TITLE%</p>\n" +
+            "</body>\n" +
+            "</html>";
+
     @SneakyThrows
     public static String createErrorPage(String title) {
-        // checks for error page file update per 30 seconds
-        boolean checkUpdate = false;
-        if (errorPageCheck == -1 || System.currentTimeMillis() - errorPageCheck > 1000 * 30) {
-            checkUpdate = true;
-            errorPageCheck = System.currentTimeMillis();
+        if (errorPageFilePath == null) {
+
+            errorPageFilePath = SubmiteeServer.getInstance().getStaticDirectory()
+                    + File.separator + "protected" + File.separator + "error-page.html";
         }
 
-        if (checkUpdate) {
-            String staticDirectory = System.getenv("STATIC_DIRECTORY");
-            if (staticDirectory == null || staticDirectory.isEmpty()) staticDirectory = "static";
-            File errorPageFile = new File(staticDirectory + File.separator + "protected" + File.separator + "error-page.html");
+        FileLoadingCache.Result result = SubmiteeServer.getInstance().getFileLoadingCache()
+                .getFileContent(errorPageFilePath, "UTF-8", DEFAULT_ERROR_PAGE);
 
-            try {
-                if (errorPageFile.lastModified() != errorPageLastModifies) {
-                    InputStream stream = new FileInputStream(errorPageFile);
-                    ByteArrayOutputStream buff = new ByteArrayOutputStream();
-                    ByteStreams.copy(stream, buff);
-                    errorPage = buff.toString(StandardCharsets.UTF_8);
-                    errorPageLastModifies = errorPageFile.lastModified();
-                    errorPageCache.invalidateAll();
-                    SubmiteeServer.getInstance().getLogger().info("error page updated");
-                }
-            } catch (Exception e) {
-                ExceptionReporting.report(SubmiteeHttpServlet.class, "reading error page", e);
-                errorPage = "" +
-                        "<!doctype html>\n" +
-                        "<html lang=\"en\">\n" +
-                        "<head>\n" +
-                        "    <meta charset=\"UTF-8\">\n" +
-                        "    <meta name=\"viewport\"\n" +
-                        "          content=\"width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0\">\n" +
-                        "    <title>%ERROR_TITLE%</title>\n" +
-                        "</head>\n" +
-                        "<body>\n" +
-                        "<p>%ERROR_TITLE%</p>\n" +
-                        "</body>\n" +
-                        "</html>";
-                errorPageCache.invalidateAll();
-            }
+        if (result.getException() != null) {
+            ExceptionReporting.report(SubmiteeHttpServlet.class, "reading error page", result.getException());
         }
-        return errorPageCache.get(title, () -> errorPage.replaceAll("%ERROR_TITLE%", title));
+
+        if (!result.isCached()) {
+            errorPageCache.invalidateAll();
+            SubmiteeServer.getInstance().getLogger().info("error page updated");
+        }
+        return errorPageCache.get(title, () -> result.getContent().replaceAll("%ERROR_TITLE%", title));
     }
 
     public static void responseAccessDenied(HttpServletRequest req, HttpServletResponse resp) throws IOException {

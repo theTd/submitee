@@ -207,12 +207,10 @@
         }
     });
 
-    let mailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
-
     let emailCollapseScheduleBroker = new ScheduleBroker(false);
 
     $("#input-email").on('keyup change', function (evt) {
-        let test = mailPattern.test(evt.target.value);
+        let test = submitee.mailPattern.test(evt.target.value);
         emailCollapseScheduleBroker.submitState(() => {
             $(".verify-code").collapse(test ? 'show' : 'hide');
         }, test);

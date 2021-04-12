@@ -52,6 +52,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     private final InetSocketAddress[] listenAddresses;
 
+    private final FileLoadingCache fileLoadingCache = new FileLoadingCache(30 * 1000);
+
     private final MongoDatabase mongoDatabase;
     private final DataSource dataSource;
     private final Server jettyServer;
@@ -486,5 +488,14 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     public BlobStorageController getBlobStorageController() {
         return blobStorageController;
+    }
+
+    public FileLoadingCache getFileLoadingCache() {
+        return fileLoadingCache;
+    }
+
+    public String getStaticDirectory() {
+        String staticDirectory = System.getenv("STATIC_DIRECTORY");
+        return staticDirectory == null || staticDirectory.isEmpty() ? "static" : staticDirectory;
     }
 }

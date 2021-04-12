@@ -1,5 +1,6 @@
 package org.starrel.submitee.attribute;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.util.List;
@@ -50,7 +51,13 @@ public interface AttributeSpec<TValue> {
 
     List<String> getKeys(String path);
 
+    default List<String> getKeys() {
+        return getKeys("");
+    }
+
     void delete();
 
     void childUpdated(String path);
+
+    JsonElement toJsonTree();
 }

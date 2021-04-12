@@ -4,7 +4,7 @@ function _init_toast() {
     let template = document.createElement("template");
     template.id = "template-toast";
     template.innerHTML = `
-<div class="toast" style="position: absolute; top: 0; right: 0; z-index: 999">
+<div class="toast" style="position: absolute; top: 0; right: 0; z-index: 11000">
     <div class="toast-header">
         <strong class="mr-auto"></strong>
         <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
@@ -123,7 +123,7 @@ function createIconTooltip(icon, size, color, html, placement) {
             html: true,
             title: elem,
             placement: placement,
-            content: function (){
+            content: function () {
                 return html;
             }
         });

@@ -149,7 +149,7 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
         array.add(serializer.write(value));
     }
 
-    private JsonObject getObjectFromPath(String path, boolean createParentNode) {
+    JsonObject getObjectFromPath(String path, boolean createParentNode) {
         if(path.isEmpty()) return jsonRoot.getAsJsonObject();
         Iterator<String> pathIte = Arrays.stream(path.split("\\.")).iterator();
         JsonObject currentNode = jsonRoot.getAsJsonObject();
@@ -180,7 +180,7 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
         throw new RuntimeException("empty path?");
     }
 
-    private JsonArray getArrayFromPath(String path, boolean createParentNode) {
+    JsonArray getArrayFromPath(String path, boolean createParentNode) {
         Iterator<String> pathIte = Arrays.stream(path.split("\\.")).iterator();
         JsonObject currentNode = jsonRoot.getAsJsonObject();
         StringBuilder pathTrace = new StringBuilder();

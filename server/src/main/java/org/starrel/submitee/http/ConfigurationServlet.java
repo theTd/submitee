@@ -1,11 +1,9 @@
 package org.starrel.submitee.http;
 
 import com.google.gson.JsonObject;
+import jakarta.servlet.AsyncContext;
 import org.eclipse.jetty.http.HttpStatus;
-import org.starrel.submitee.ClassifiedException;
-import org.starrel.submitee.ExceptionReporting;
-import org.starrel.submitee.I18N;
-import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.*;
 import org.starrel.submitee.blob.BlobStorage;
 import org.starrel.submitee.blob.BlobStorageProvider;
 
@@ -18,6 +16,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public class ConfigurationServlet extends AbstractJsonServlet {
@@ -82,6 +81,10 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                 SubmiteeServer.getInstance().getAttribute("register-enabled", Boolean.class, true));
         configurationMap.put("register-disable-message",
                 SubmiteeServer.getInstance().getAttribute("register-disable-message", String.class));
+        // endregion
+
+        // region smtp settings
+        configurationMap.put("smtp", SubmiteeServer.getInstance().getAttributeMap().of("smtp").toJsonTree());
         // endregion
 
         resp.setStatus(HttpStatus.OK_200);
@@ -152,6 +155,32 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                 SubmiteeServer.getInstance().setAttribute("register-enabled", enabled);
                 SubmiteeServer.getInstance().setAttribute("register-disable-message", disableMessage);
                 resp.setStatus(HttpStatus.OK_200);
+                break;
+            }
+            case "smtp-settings": {
+                SubmiteeServer.getInstance().getAttributeMap().setAll("smtp", body);
+                resp.setStatus(HttpStatus.OK_200);
+                break;
+            }
+            case "send-test-mail": {
+                AsyncContext asyncContext = req.startAsync();
+                asyncContext.start(() -> {
+                    try {
+                        Util.sendNotificationEmail(body.get("addr").getAsString(),
+                                "SUBMITEE测试邮件", "这是一封测试邮件，如果能够收到此邮件，则邮件发送配置有效", null).get();
+                        resp.setStatus(HttpStatus.OK_200);
+                    } catch (InterruptedException ignored) {
+                    } catch (ExecutionException e) {
+                        try {
+                            ExceptionReporting.report(ConfigurationServlet.class, "sending mail", e);
+                            responseErrorPage(resp, HttpStatus.INTERNAL_SERVER_ERROR_500, e.getMessage());
+                        } catch (IOException ioException) {
+                            throw new RuntimeException(ioException);
+                        }
+                    } finally {
+                        asyncContext.complete();
+                    }
+                });
                 break;
             }
             default: {
