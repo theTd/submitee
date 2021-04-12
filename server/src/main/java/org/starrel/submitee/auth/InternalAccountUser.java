@@ -28,7 +28,6 @@ public class InternalAccountUser implements User {
 
         this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, User.ATTRIBUTE_COLLECTION_NAME);
 
-        this.email = attributeMap.of("email", String.class);
         this.sms = attributeMap.of("sms", String.class);
         this.preferredLanguage = attributeMap.of("preferred-language", String.class);
 
@@ -36,6 +35,7 @@ public class InternalAccountUser implements User {
                 , "internal_users", "id=" + uid);
         (this.username = attributeMap.of("username", String.class)).setSource(jdbcAttributeSource);
         (this.password = attributeMap.of("password", String.class)).setSource(jdbcAttributeSource);
+        (this.email = attributeMap.of("email", String.class)).setSource(jdbcAttributeSource);
     }
 
     @Override

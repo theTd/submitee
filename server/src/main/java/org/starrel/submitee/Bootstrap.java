@@ -75,7 +75,7 @@ public class Bootstrap {
         SubmiteeServer server;
         try {
             server = new SubmiteeServer(database, dataSource, listenAddresses.toArray(new InetSocketAddress[0]));
-        } catch (IOException e) {
+        } catch (Exception e) {
             LoggerFactory.getLogger(Bootstrap.class).error("failed initializing server", e);
             System.exit(-1);
             return;

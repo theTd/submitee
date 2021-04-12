@@ -345,10 +345,23 @@ function findParentAttributeByElement(element, attribute) {
     return name;
 }
 
-function loadScript(url) {
-    let t = document.createElement("script");
-    t.src = url;
-    document.querySelector("body").appendChild(t);
+submitee.loadScript = function (url, distinct, callback) {
+    let element = document.createElement("script");
+    element.src = url;
+    element.addEventListener("load", callback);
+
+    if (!submitee.loadedScripts) submitee.loadedScripts = {};
+    if (distinct) {
+        let loadedId = submitee.loadedScripts[distinct];
+        if (loadedId) {
+            let s = document.getElementById(loadedId);
+            s.parentNode.removeChild(s);
+        }
+        element.id = makeid(6);
+        submitee.loadedScripts[distinct] = element.id;
+    }
+
+    document.querySelector("body").appendChild(element);
 }
 
 function beforeUnloadCheck() {

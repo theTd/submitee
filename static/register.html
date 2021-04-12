@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
+    <link rel="stylesheet" href="css/global.css">
+
     <script src=""></script>
     <style>
         .main {
@@ -58,7 +60,7 @@
     <div class="container" style="width: auto">
         <h5 style="color: white; text-shadow: #8d8d8d 2px 0 7px">站内用户注册</h5>
         <div id="register-container">
-            <form onsubmit="login();return false;" id="register-form" class="collapse">
+            <form onsubmit="register();return false;" id="register-form" class="collapse">
                 <div class="container">
                     <div class="row">
                         <label for="input-email">电子邮箱</label>
@@ -85,15 +87,16 @@
                         <input type="password" name="password" id="input-password" autocomplete="new-password"
                                class="form-control"/>
                     </div>
+                    <!--                    <div class="row mt-3">-->
+                    <!--                        <label for="input-repeat-password">确认密码</label>-->
+                    <!--                    </div>-->
+                    <!--                    <div class="row">-->
+                    <!--                        <input type="password" name="password" id="input-repeat-password" autocomplete="new-password"-->
+                    <!--                               class="form-control"/>-->
+                    <!--                    </div>-->
                     <div class="row mt-3">
-                        <label for="input-repeat-password">确认密码</label>
-                    </div>
-                    <div class="row">
-                        <input type="password" name="password" id="input-repeat-password" autocomplete="new-password"
-                               class="form-control"/>
-                    </div>
-                    <div class="row mt-3">
-                        <button type="button" class="btn btn-success btn-sm w-100" onclick="login()">
+                        <button type="button" class="btn btn-success btn-sm w-100" onclick="register()"
+                                id="button-register">
                             注册
                         </button>
                         <input type="submit" class="d-none"/>
@@ -126,12 +129,78 @@
 <script src="js/toast.js"></script>
 <script>
     let redirect = getQueryValue("d");
+    if (redirect) redirect = btoa(redirect);
 
-    function sendVerifyCode() {
-        let mail = $("#input-email").val();
-        if (!mailPattern.test(mail)) {
+    function register() {
+        let email = $("#input-email").val();
+        if (!submitee.mailPattern.test(email)) {
+            create_toast("重要提示", "邮箱格式有误");
             return;
         }
+        let verifyCode = $("#input-verify-code").val();
+        if (!verifyCode) {
+            create_toast("重要提示", "验证码是必填项目");
+            return
+        }
+        let password = $("#input-password").val();
+        if (!password) {
+            create_toast("重要提示", "密码是必填项目");
+            return;
+        }
+
+        // if (password !== $("#input-repeat-password").val()) {
+        //     create_toast("重要提示", "两次输入的密码不一致");
+        //     return
+        // }
+        let registerButton = $("#button-register");
+        if (registerButton.hasClass("disabled")) return;
+
+        grecaptcha.ready(function () {
+            grecaptcha.execute(submitee.grecaptchaSitekey, {action: 'submit'}).then(function (token) {
+                registerButton.html(`<span class="spinner-border spinner-border-sm" role="status"></span>`);
+                registerButton.addClass("disabled");
+
+                $.ajax({
+                    url: "../internal-account/register",
+                    method: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        email: email,
+                        password: password,
+                        captcha: token,
+                        'verify-code': verifyCode
+                    }),
+                    success: function (response) {
+                        create_toast("提示", "<p>注册已完成</p><p>正在重定向...</p>", 2000)
+                        setInterval(function () {
+                            if (redirect) {
+                                window.location.href = redirect
+                            } else {
+                                window.location.href = "auth.html";
+                            }
+                        }, 2000);
+                    },
+                    error: function (xhr) {
+                        toast_ajax_error(xhr);
+                        registerButton.text("注册");
+                        registerButton.removeClass("disabled");
+                    }
+                })
+            });
+        });
+    }
+
+    function sendVerifyCode() {
+        let button = $("#button-send-verify-code");
+        if (button.hasClass("disabled")) return;
+
+        let mail = $("#input-email").val();
+        if (!submitee.mailPattern.test(mail)) {
+            return;
+        }
+
+        button.addClass("disabled");
+        button.html("<span class='spinner-border spinner-border-sm' role='status'></span>");
 
         let send = (token) => {
             $.ajax({
@@ -143,11 +212,18 @@
                     mail: mail
                 }),
                 success: function (response) {
-                    submitee.verifyCodeTimeout = response["verify-code-timeout"];
+                    create_toast("提示", "已发送");
+                    submitee.verifyCodeTimeout = response;
                     setVerifyCodeTimeout();
+                    if (!submitee.verifyCodeTimeout) {
+                        button.removeClass("disabled");
+                        button.text("发送验证码");
+                    }
                 },
                 error: function (xhr) {
                     toast_ajax_error(xhr);
+                    button.removeClass("disabled");
+                    button.text("发送验证码");
                 },
             })
         };
@@ -197,7 +273,7 @@
             }
             submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
             if (submitee.grecaptchaSitekey) {
-                loadScript("https://www.recaptcha.net/recaptcha/api.js?render=" + submitee.grecaptchaSitekey);
+                submitee.loadScript("https://www.recaptcha.net/recaptcha/api.js?render=" + submitee.grecaptchaSitekey, "grecaptcha");
             }
             submitee.verifyCodeTimeout = response["verify-code-timeout"];
             setVerifyCodeTimeout();

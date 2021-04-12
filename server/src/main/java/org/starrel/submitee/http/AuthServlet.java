@@ -170,7 +170,12 @@ public class AuthServlet extends AbstractJsonServlet {
                 writer.endObject();
                 writer.close();
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                ExceptionReporting.report(AuthServlet.class, "processing authentication", e);
+                try {
+                    responseInternalError(req, resp);
+                } catch (IOException ioException) {
+                    throw new RuntimeException(ioException);
+                }
             } finally {
                 asyncContext.complete();
             }

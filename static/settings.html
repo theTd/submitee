@@ -36,10 +36,6 @@
             margin-top: 0;
             margin-bottom: 0;
         }
-
-        .small-text {
-            font-size: 0.85rem;
-        }
     </style>
 </head>
 <body>
@@ -213,12 +209,43 @@
             <div class="row">
                 <hr class="w-100"/>
                 <div class="col-2"></div>
-                <div class="col-2"><input id="input-test-mail-address" type="text"/></div>
+                <div class="col-2"><!--suppress HtmlFormInputWithoutLabel -->
+                    <input id="input-test-mail-address" type="text"/></div>
                 <div class="col-2">
                     <button id="button-send-test-mail" onclick="sendTestMail()" style="width: 6.5rem"
                             class="ml-3 btn btn-sm btn-secondary">发送测试邮件
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <h4>人机验证</h4>
+        <div class="container-fluid" id="container-grecaptcha">
+            <div class="row">
+                <div class="col-2"><label for="input-grecaptcha-sitekey">GRECAPTCHA SITEKEY</label></div>
+                <div class="col">
+                    <input type="text" id="input-grecaptcha-sitekey" style="width: 30rem"/>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-2"><label for="input-grecaptcha-secretkey">GRECAPTCHA SECRETKEY</label></div>
+                <div class="col">
+                    <input type="text" id="input-grecaptcha-secretkey" style="width: 30rem"/>
+                </div>
+            </div>
+            <div class="row collapse" id="apply-grecaptcha">
+                <div class="col">
+                    <button class="btn btn-primary" onclick="applyGrecaptcha()">应用</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-2"></div>
+                <div class="col">
+                    <button class="btn btn-secondary btn-sm" onclick="testGrecaptcha()">验证配置</button>
+                    <span id="grecaptcha-test-status" class="ml-2" style="vertical-align: center"></span>
+                </div>
+
             </div>
         </div>
     </div>
@@ -557,10 +584,68 @@
         })
     }
 
+    function loadGrecaptcha() {
+        let changeHook = function () {
+            $("#apply-grecaptcha").collapse("show");
+        }
+        $("#input-grecaptcha-sitekey").val(configuration['grecaptcha-sitekey'])
+            .on("keyup", changeHook);
+        $("#input-grecaptcha-secretkey").val(configuration['grecaptcha-secretkey'])
+            .on("keyup", changeHook);
+    }
+
+    function applyGrecaptcha() {
+        let sitekey = configuration['grecaptcha-sitekey'] = $("#input-grecaptcha-sitekey").val();
+        let secretkey = configuration['grecaptcha-secretkey'] = $("#input-grecaptcha-secretkey").val();
+        $.ajax({
+            url: "../configuration/grecaptcha",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                sitekey: sitekey,
+                secretkey: secretkey
+            }),
+            success: function (response) {
+                create_toast("提示", "已应用人机验证配置")
+                $("#apply-grecaptcha").collapse('hide');
+            },
+            error: function (xhr) {
+                toast_ajax_error(xhr);
+            }
+        });
+    }
+
+    function testGrecaptcha() {
+        let status = $("#grecaptcha-test-status");
+        status.html("<span class='spinner-border spinner-border-sm'></span>");
+        submitee.loadScript("https://www.recaptcha.net/recaptcha/api.js?render=" +
+            configuration['grecaptcha-sitekey'], "grecaptcha", () => {
+            grecaptcha.ready(function () {
+                grecaptcha.execute(configuration['grecaptcha-sitekey'], {action: 'submit'}).then(function (token) {
+                    $.ajax({
+                        url: "../configuration/test-grecaptcha",
+                        method: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            token: token
+                        }),
+                        success: function (response) {
+                            status.html("<i class='material-icons' style='color: green'>done</i>");
+                        },
+                        error: function (xhr) {
+                            status.html(`<span style='color: red'><i class="material-icons">error</i>${getMessageFromAjaxError(xhr)}</span>`);
+                        }
+                    })
+                });
+            });
+        });
+    }
+
     function loadConfiguration() {
         loadBlobStorages();
         loadRegisterToggle();
         loadSmtpSettings();
+        loadGrecaptcha();
     }
 
     configuration = {};

@@ -29,6 +29,7 @@ function _init_toast() {
 
 function create_toast(title, content, delay) {
     _init_toast();
+    if (!delay) delay = 2000;
 
     let template = $("#template-toast")[0];
     let id = makeid(6);
@@ -66,10 +67,10 @@ function getMessageFromAjaxError(error) {
 
 /**
  *
- * @param {jqXHR} error
+ * @param {jqXHR} xhr
  */
-function toast_ajax_error(error) {
-    create_toast("重要提示", getMessageFromAjaxError(error), 10000)
+function toast_ajax_error(xhr) {
+    create_toast("重要提示", getMessageFromAjaxError(xhr), 10000)
 }
 
 function _init_icon_tooltip() {
@@ -90,7 +91,11 @@ function _init_icon_tooltip() {
     let template = document.createElement("template");
     template.id = "template-icon-tooltip";
     template.innerHTML = `
-<i data-toggle="popover" data-container="body" data-placement="left" type="button" data-html="true" class="material-icons" style="font-size:2rem;color:red">error</i>
+<a>
+<i data-toggle="popover" data-container="body" data-placement="left" 
+type="button" data-html="true" class="material-icons" 
+style="font-size:2rem;color:red">error</i>
+</a>
 `;
 
     document.body.appendChild(template);
@@ -100,7 +105,7 @@ function createErrorTooltip(html) {
     return createOutFlowIconTooltip("error", "2rem", "red", html, "top");
 }
 
-function createIconTooltip(icon, size, color, html, placement) {
+function createIconTooltip(icon, size, color, html, placement, link) {
     _init_icon_tooltip();
 
     let elem = document.createElement("div");
@@ -108,14 +113,18 @@ function createIconTooltip(icon, size, color, html, placement) {
 
     let template = $("#template-icon-tooltip")[0];
     let i = template.content.querySelector("i");
-    // console.log(html);
-    // i.setAttribute("data-original-title", html);
-    // i.setAttribute("data-placement", placement);
+
     i.textContent = icon;
     i.style.fontSize = size;
     i.style.color = color;
     let id = makeid(6);
     i.id = id;
+
+    if (link) {
+        template.content.querySelector("a").href = link;
+    } else {
+        template.content.querySelector("a").href = undefined;
+    }
 
     let node = document.importNode(template.content, true);
     setInterval(() => {

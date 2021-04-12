@@ -1,5 +1,6 @@
 package org.starrel.submitee;
 
+import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -42,6 +43,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 
 public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> {
@@ -57,13 +59,18 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private final MongoDatabase mongoDatabase;
     private final DataSource dataSource;
     private final Server jettyServer;
-    private final Map<Class<?>, AttributeSerializer<?>> attributeSerializerMap = new HashMap<>();
+    private final Map<Class<?>, AttributeSerializer<?>> attributeSerializerMap = Maps.newConcurrentMap();
 
     private final TextContainer textContainer;
     private final BlobStorageController blobStorageController;
     private final TemplateKeeper templateKeeper;
     private final ObjectMapController objectMapController;
     private final AnonymousUserRealm anonymousUserRealm;
+    private final Map<String, UserRealm> userRealmMap = Maps.newConcurrentMap();
+    private InternalAccountRealm internalAccountRealm;
+
+    private final Map<String, NotificationScheme> notificationSchemeMap = Maps.newConcurrentMap();
+
     // endregion
     private final Logger logger;
     private final AttributeMap<SubmiteeServer> attributeMap;
@@ -71,7 +78,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private final AttributeSpec<String> defaultLanguage;
     private ServletContextHandler servletHandler;
 
-    public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress[] listenAddresses) throws IOException {
+    public SubmiteeServer(MongoDatabase mongoDatabase, DataSource dataSource, InetSocketAddress[] listenAddresses) throws Exception {
         instance = this;
         APIBridge.instance = this;
 
@@ -184,6 +191,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private void setupAttributeSerializers() {
         addAttributeSerializer(String.class, AttributeSerializers.STRING);
         addAttributeSerializer(Integer.class, AttributeSerializers.INTEGER);
+        addAttributeSerializer(Long.class, AttributeSerializers.LONG);
         addAttributeSerializer(Double.class, AttributeSerializers.DOUBLE);
         addAttributeSerializer(Boolean.class, AttributeSerializers.BOOLEAN);
         addAttributeSerializer(Date.class, AttributeSerializers.DATE);
@@ -256,24 +264,31 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         jettyServer.start();
         // endregion
 
-        addUserRealm(new InternalAccountRealm(this));
+        addUserRealm(internalAccountRealm = new InternalAccountRealm());
 
-        // TODO: 2021-04-11-0011 init plugins
+        addNotificationScheme(new EmailNotificationScheme());
+        // TODO: 2021-04-13-0013 other initializations
     }
 
     @Override
     public void addUserRealm(UserRealm userRealm) {
+        if (userRealmMap.containsKey(userRealm.getTypeId()))
+            throw new RuntimeException("user realm type id conflict: " + userRealm.getTypeId());
 
+        userRealmMap.put(userRealm.getTypeId(), userRealm);
     }
 
     @Override
     public UserRealm getUserRealm(String name) {
-        return null;
+        return userRealmMap.get(name);
     }
 
     @Override
     public void addNotificationScheme(NotificationScheme notificationScheme) {
-
+        if (notificationSchemeMap.containsKey(notificationScheme.getTypeId())) {
+            throw new RuntimeException("notification scheme type id conflicts: " + notificationScheme.getTypeId());
+        }
+        notificationSchemeMap.put(notificationScheme.getTypeId(), notificationScheme);
     }
 
     @Override
@@ -465,8 +480,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     public InternalAccountRealm getInternalAccountRealm() {
-        // TODO: 2021-03-25-0025
-        return null;
+        return internalAccountRealm;
     }
 
     public User resumeSession(SessionImpl session) {

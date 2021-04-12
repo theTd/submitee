@@ -8,9 +8,7 @@ import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.I18N;
 import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
-import org.starrel.submitee.model.Session;
-import org.starrel.submitee.model.User;
-import org.starrel.submitee.model.UserRealm;
+import org.starrel.submitee.model.*;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -20,10 +18,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -43,9 +39,22 @@ public class InternalAccountRealm implements UserRealm {
             .expireAfterAccess(30, TimeUnit.MINUTES)
             .build();
 
-    public InternalAccountRealm(SubmiteeServer server) throws IOException, SQLException {
-        this.server = server;
-//        ANONYMOUS = new InternalAccountUser(-1);
+    private final Cache<String, Integer> emailUidCache = CacheBuilder.newBuilder()
+            .expireAfterAccess(30, TimeUnit.MINUTES)
+            .build();
+
+    public InternalAccountRealm() throws SQLException, IOException {
+        this.server = SubmiteeServer.getInstance();
+
+        try (Connection conn = server.getDataSource().getConnection()) {
+            ResultSet resultSet = conn.getMetaData().getTables(null, null, "internal_users", null);
+            if (!resultSet.next()) {
+                server.getLogger().info("creating table internal_users");
+
+                URL resource = getClass().getResource("/internal_users.sql");
+                new ScriptRunner(conn, true, true).runScript(new InputStreamReader(resource.openStream()));
+            }
+        }
 
         PasswordAuthScheme passwordAuthScheme = server.createPasswordAuthScheme();
         passwordAuthScheme.setHandler(new AuthHandler());
@@ -80,19 +89,37 @@ public class InternalAccountRealm implements UserRealm {
 
     @Override
     public User resumeSession(Session session) {
-        // TODO: 2021-04-09-0009
+        UserDescriptor loggedInUser = session.getAttribute("logged-in-user", UserDescriptor.class);
+        if (loggedInUser != null && Objects.equals(loggedInUser.getRealmType(), TYPE_ID)) {
+            try {
+                return getUser(Integer.parseInt(loggedInUser.getUserId()));
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
         return null;
     }
 
     private InternalAccountUser getUser(int uid) throws ExecutionException {
-        return cache.get(uid, () -> {
-            try (Connection conn = server.getDataSource().getConnection()) {
-                PreparedStatement stmt = conn.prepareStatement("SELECT 1 FROM `internal_users` WHERE uid=?");
-                stmt.setInt(1, uid);
-                ResultSet r = stmt.executeQuery();
-                return r.next() ? new InternalAccountUser(uid) : null;
+        try {
+            return cache.get(uid, () -> {
+                try (Connection conn = server.getDataSource().getConnection()) {
+                    PreparedStatement stmt = conn.prepareStatement("SELECT 1 FROM `internal_users` WHERE uid=?");
+                    stmt.setInt(1, uid);
+                    ResultSet r = stmt.executeQuery();
+                    if (!r.next()) {
+                        throw NotExistsSignal.INSTANCE;
+                    } else {
+                        return new InternalAccountUser(uid);
+                    }
+                }
+            });
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof NotExistsSignal) {
+                return null;
             }
-        });
+            throw e;
+        }
     }
 
     @Override
@@ -105,18 +132,46 @@ public class InternalAccountRealm implements UserRealm {
         return authSchemeMap.get(scheme);
     }
 
-    private class AuthHandler implements PasswordAuthScheme.AuthHandler {
-        private AuthHandler() throws SQLException, IOException {
-            try (Connection conn = server.getDataSource().getConnection()) {
-                ResultSet resultSet = conn.getMetaData().getTables(null, null, "internal_users", null);
-                if (!resultSet.next()) {
-                    server.getLogger().info("creating table internal_users");
+    public User createUser(String email, String password) throws SQLException, ExecutionException {
+        email = email.toLowerCase(Locale.ROOT);
+        password = hashPassword(password);
+        try (Connection conn = server.getDataSource().getConnection()) {
+            PreparedStatement stmt = conn.prepareStatement("INSERT INTO internal_users(email,password) VALUES (?,?)");
+            stmt.setString(1, email);
+            stmt.setString(2, password);
+            stmt.executeUpdate();
+            ResultSet r = stmt.executeQuery("SELECT LAST_INSERT_ID()");
+            r.next();
+            int uid = r.getInt(1);
+            return getUser(uid);
+        }
+    }
 
-                    URL resource = getClass().getResource("/internal_users.sql");
-                    new ScriptRunner(conn, true, true).runScript(new InputStreamReader(resource.openStream()));
+    public Integer getUidFromEmail(String email) throws ExecutionException {
+        email = email.toLowerCase(Locale.ROOT);
+        try {
+            String finalEmail = email;
+            return emailUidCache.get(finalEmail, () -> {
+                try (Connection conn = server.getDataSource().getConnection()) {
+                    PreparedStatement stmt = conn.prepareStatement("SELECT uid FROM internal_users WHERE email=?");
+                    stmt.setString(1, finalEmail);
+                    ResultSet r = stmt.executeQuery();
+                    if (r.next()) {
+                        return r.getInt(1);
+                    }
+                    throw NotExistsSignal.INSTANCE;
                 }
+            });
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof NotExistsSignal) {
+                return null;
+            } else {
+                throw e;
             }
         }
+    }
+
+    private class AuthHandler implements PasswordAuthScheme.AuthHandler {
 
         @Override
         public AuthResult handle(Session session, String username, String password) {

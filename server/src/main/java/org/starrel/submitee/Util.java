@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -25,6 +26,9 @@ import java.util.regex.Pattern;
 
 public class Util {
     public static String getRemoteAddr(HttpServletRequest req) {
+        String set = (String) req.getAttribute("REMOTE-ADDR");
+        if (set != null) return set;
+
         String addr = null;
         String header = req.getHeader("X-Forwarded-For");
         if (header != null) {
@@ -34,6 +38,7 @@ public class Util {
         if (addr == null) {
             addr = req.getRemoteAddr();
         }
+        req.setAttribute("REMOTE-ADDR", addr);
         return addr;
     }
 
@@ -57,6 +62,7 @@ public class Util {
 
     @SneakyThrows
     public static boolean grecaptchaVerify(String responseToken, String remoteIp, String siteKey) throws ClassifiedException {
+        // TODO: 2021-04-12-0012 add remote ip into request
         byte[] body = String.format("secret=%s&response=%s", siteKey, responseToken).getBytes(StandardCharsets.UTF_8);
 
         JsonElement response;
@@ -77,6 +83,10 @@ public class Util {
             throw new ClassifiedException("unexpected response", "expected json object, got: "
                     + SubmiteeServer.GSON.toJson(response));
         }
+        if (response.getAsJsonObject().has("error-codes")) {
+            throw new ClassifiedException("grecaptcha_error_codes",
+                    SubmiteeServer.GSON.toJson(response.getAsJsonObject().get("error-codes")));
+        }
         return response.getAsJsonObject().get("success").getAsBoolean();
     }
 
@@ -95,6 +105,15 @@ public class Util {
         map.put("%CONTENT%", message);
         map.put("%ABBREV%", abbrev == null ? message : abbrev);
         return sendTemplatedEmail(path, recipient, subject, map, message);
+    }
+
+    public static Future<?> sendVerifyCodeEmail(String recipient, String verifyCode, String preferredLanguage) {
+        String path = SubmiteeServer.getInstance().getStaticDirectory() + File.separator
+                + "protected" + File.separator + "email-verify-code.html";
+
+        String subject = I18N.Email.EMAIL_SUBJECT_VERIFY_CODE.format(preferredLanguage, verifyCode);
+        return sendTemplatedEmail(path, recipient, subject,
+                Collections.singletonMap("%CODE%", verifyCode), subject);
     }
 
     public static Future<?> sendTemplatedEmail(String path, String recipient, String subject,

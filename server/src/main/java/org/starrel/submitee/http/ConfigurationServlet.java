@@ -87,6 +87,9 @@ public class ConfigurationServlet extends AbstractJsonServlet {
         configurationMap.put("smtp", SubmiteeServer.getInstance().getAttributeMap().of("smtp").toJsonTree());
         // endregion
 
+        configurationMap.put("grecaptcha-sitekey", SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class));
+        configurationMap.put("grecaptcha-secretkey", SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class));
+
         resp.setStatus(HttpStatus.OK_200);
         resp.setContentType("application/json");
         resp.getWriter().println(SubmiteeServer.GSON.toJson(configurationMap));
@@ -173,6 +176,33 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                     } catch (ExecutionException e) {
                         try {
                             ExceptionReporting.report(ConfigurationServlet.class, "sending mail", e);
+                            responseErrorPage(resp, HttpStatus.INTERNAL_SERVER_ERROR_500, e.getMessage());
+                        } catch (IOException ioException) {
+                            throw new RuntimeException(ioException);
+                        }
+                    } finally {
+                        asyncContext.complete();
+                    }
+                });
+                break;
+            }
+            case "grecaptcha": {
+                SubmiteeServer.getInstance().setAttribute("grecaptcha-sitekey", body.get("sitekey").getAsString());
+                SubmiteeServer.getInstance().setAttribute("grecaptcha-secretkey", body.get("secretkey").getAsString());
+                resp.setStatus(HttpStatus.OK_200);
+                break;
+            }
+            case "test-grecaptcha": {
+                String token = body.get("token").getAsString();
+                AsyncContext asyncContext = req.startAsync();
+                asyncContext.start(() -> {
+                    try {
+                        Util.grecaptchaVerify(token, Util.getRemoteAddr(req),
+                                SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class));
+                        resp.setStatus(HttpStatus.OK_200);
+                    } catch (ClassifiedException e) {
+                        ExceptionReporting.report(ConfigurationServlet.class, "testing grecaptcha", e);
+                        try {
                             responseErrorPage(resp, HttpStatus.INTERNAL_SERVER_ERROR_500, e.getMessage());
                         } catch (IOException ioException) {
                             throw new RuntimeException(ioException);

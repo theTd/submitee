@@ -12,6 +12,7 @@ public abstract class I18N {
         try {
             Class.forName("org.starrel.submitee.I18N$General");
             Class.forName("org.starrel.submitee.I18N$Http");
+            Class.forName("org.starrel.submitee.I18N$Email");
         } catch (Throwable e) {
             throw new Error(e);
         }
@@ -68,6 +69,8 @@ public abstract class I18N {
         public final static ConstantI18NKey NAME_CONFLICT = new ConstantI18NKey("general.name_conflict");
         public final static ConstantI18NKey REQUIRE_CAPTCHA = new ConstantI18NKey("general.require_captcha");
         public static final ConstantI18NKey CAPTCHA_FAILURE = new ConstantI18NKey("general.captcha_failure");
+        public static final ConstantI18NKey VERIFY_CODE_MISMATCH = new ConstantI18NKey("general.verify_code_mismatch");
+        public static final ConstantI18NKey USER_EXISTS_EMAIL = new ConstantI18NKey("general.user_exists_email");
     }
 
     public static abstract class Http {
@@ -80,7 +83,6 @@ public abstract class I18N {
     }
 
     public static abstract class Email {
-        public final static ConstantI18NKey EMAIL_FROM = new ConstantI18NKey("email.from");
         public final static ConstantI18NKey EMAIL_SUBJECT_VERIFY_CODE = new ConstantI18NKey("email.subject.verify_code");
         public final static ConstantI18NKey EMAIL_SUBJECT_NOTIFICATION = new ConstantI18NKey("email.subject.notification");
         public final static ConstantI18NKey EMAIL_SUBJECT_SECURITY_ALERT = new ConstantI18NKey("email.subject.security_alert");

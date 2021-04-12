@@ -2,6 +2,7 @@ package org.starrel.submitee.attribute;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.UserDescriptor;
 
@@ -29,6 +30,18 @@ public abstract class AttributeSerializers {
         @Override
         public JsonElement write(Integer integer) {
             return SubmiteeServer.GSON.toJsonTree(integer);
+        }
+    };
+
+    public static AttributeSerializer<Long> LONG = new AttributeSerializer<Long>() {
+        @Override
+        public Long parse(JsonElement json) {
+            return json.getAsLong();
+        }
+
+        @Override
+        public JsonElement write(Long aLong) {
+            return new JsonPrimitive(aLong);
         }
     };
 

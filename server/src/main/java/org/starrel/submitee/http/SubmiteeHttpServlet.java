@@ -134,7 +134,14 @@ public class SubmiteeHttpServlet extends HttpServlet {
     }
 
     public static void responseErrorPage(HttpServletResponse resp, int statusCode, String errorTitle) throws IOException {
+        responseErrorPage(resp, statusCode, errorTitle, null);
+    }
+
+    public static void responseErrorPage(HttpServletResponse resp, int statusCode, String errorTitle, String errorClassify) throws IOException {
         resp.setHeader("SUBMITEE-ERROR-TITLE", URLEncoder.encode(errorTitle, StandardCharsets.UTF_8));
+        if (errorClassify != null) {
+            resp.setHeader("SUBMITEE-ERROR-CLASSIFY", URLEncoder.encode(errorClassify, StandardCharsets.UTF_8));
+        }
         resp.setStatus(statusCode);
         resp.setContentType("text/html");
         resp.getWriter().println(createErrorPage(errorTitle));

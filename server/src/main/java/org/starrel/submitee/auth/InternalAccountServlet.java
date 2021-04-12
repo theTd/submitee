@@ -1,20 +1,64 @@
 package org.starrel.submitee.auth;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.SneakyThrows;
 import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.*;
 import org.starrel.submitee.http.AbstractJsonServlet;
+import org.starrel.submitee.model.User;
 
 import java.io.IOException;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 public class InternalAccountServlet extends AbstractJsonServlet {
+    private final static int VERIFY_CODE_TIMEOUT = 1000 * 30;
+
     {
         setBaseUri("/internal-account");
+    }
+
+    private final LoadingCache<String, String> verifyCodeCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(30, TimeUnit.MINUTES)
+            .build(new CacheLoader<>() {
+                private final Random random = new Random();
+
+                @Override
+                public String load(String s) throws Exception {
+                    return (100000 + random.nextInt(899999)) + "";
+                }
+            });
+
+    private final Cache<String, TimeThrottleList> addrVerifyCodeCache = CacheBuilder.newBuilder()
+            .expireAfterAccess(1, TimeUnit.HOURS).build();
+    private final Cache<String, TimeThrottleList> sessionVerifyCodeCache = CacheBuilder.newBuilder()
+            .expireAfterAccess(5, TimeUnit.MINUTES).build();
+
+    @SneakyThrows
+    private boolean checkVerifyCodeSending(HttpServletRequest req) {
+        TimeThrottleList list = addrVerifyCodeCache.get(Util.getRemoteAddr(req),
+                () -> new TimeThrottleList(1000 * 60, 50));
+        if (!list.checkViolation()) return false;
+        list = sessionVerifyCodeCache.get(getSession(req).getSessionToken(),
+                () -> new TimeThrottleList(VERIFY_CODE_TIMEOUT - 1000, 1));
+        return list.checkViolation();
+    }
+
+    private long getVerifyCodeTimeout(HttpServletRequest req) {
+        TimeThrottleList list = sessionVerifyCodeCache.getIfPresent(getSession(req).getSessionToken());
+        if (list == null) return 0;
+        return list.getNewest() + VERIFY_CODE_TIMEOUT;
     }
 
     @Override
@@ -37,6 +81,10 @@ public class InternalAccountServlet extends AbstractJsonServlet {
             writer.name("grecaptcha-sitekey").value(
                     SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class));
         }
+        long verifyCodeTimeout = getVerifyCodeTimeout(req);
+        if (verifyCodeTimeout > 0) {
+            writer.name("verify-code-timeout").value(verifyCodeTimeout);
+        }
         writer.endObject();
         writer.close();
     }
@@ -51,8 +99,6 @@ public class InternalAccountServlet extends AbstractJsonServlet {
 
         switch (uriParts[0]) {
             case "send-verify-code": {
-                System.out.println(SubmiteeServer.GSON.toJson(body)); //todo debug
-
                 boolean grecaptcha = Util.grecaptchaConfigured();
                 String email = body.has("mail") ? body.get("mail").getAsString() : null;
                 String token = null;
@@ -79,9 +125,24 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                                 return;
                             }
                         }
-                        // TODO: 2021-04-12-0012
-//                        Util.sendTemplatedEmail();
-//                        responseErrorPage(resp, HttpStatus.IM_A_TEAPOT_418, "OK");
+
+                        Integer uid = SubmiteeServer.getInstance().getInternalAccountRealm().getUidFromEmail(email);
+                        if (uid != null) {
+                            responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.USER_EXISTS_EMAIL.format(req, email));
+                            return;
+                        }
+
+                        if (!checkVerifyCodeSending(req)) {
+                            responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.Http.TOO_MANY_REQUEST.format(req));
+                            return;
+                        }
+
+                        verifyCodeCache.invalidate(email.toLowerCase(Locale.ROOT));
+                        String gen = verifyCodeCache.get(email.toLowerCase(Locale.ROOT));
+                        Util.sendVerifyCodeEmail(email, gen, Util.getPreferredLanguage(req)).get();
+                        resp.setStatus(HttpStatus.OK_200);
+                        resp.setContentType("application/json");
+                        resp.getWriter().println(SubmiteeServer.GSON.toJson(getVerifyCodeTimeout(req)));
                     } catch (Exception e) {
                         ExceptionReporting.report(InternalAccountServlet.class, "processing send-verify-code", e);
                         try {
@@ -93,6 +154,67 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         asyncContext.complete();
                     }
                 });
+                break;
+            }
+            case "register": {
+                String email = body.has("email") ? body.get("email").getAsString() : null;
+                String password = body.has("password") ? body.get("password").getAsString() : null;
+                String captcha = body.has("captcha") ? body.get("captcha").getAsString() : null;
+                String verifyCode = body.has("verify-code") ? body.get("verify-code").getAsString() : null;
+
+                if (email == null || email.isEmpty() || password == null || password.isEmpty() || verifyCode == null) {
+                    responseBadRequest(req, resp);
+                    return;
+                }
+                if (Util.grecaptchaConfigured() && captcha == null) {
+                    responseErrorPage(resp, HttpStatus.BAD_REQUEST_400, I18N.General.REQUIRE_CAPTCHA.format(req));
+                    return;
+                }
+                if (!Objects.equals(verifyCodeCache.getIfPresent(email.toLowerCase(Locale.ROOT)), verifyCode)) {
+                    responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.VERIFY_CODE_MISMATCH.format(req));
+                    return;
+                }
+                verifyCodeCache.invalidate(email.toLowerCase(Locale.ROOT));
+                AsyncContext asyncContext = req.startAsync();
+                asyncContext.start(() -> {
+                    try {
+                        if (Util.grecaptchaConfigured()) {
+                            if (!Util.grecaptchaVerify(captcha, Util.getRemoteAddr(req),
+                                    SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class))) {
+                                responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.CAPTCHA_FAILURE.format(req));
+                                return;
+                            }
+
+                            Integer uid = SubmiteeServer.getInstance().getInternalAccountRealm().getUidFromEmail(email);
+                            if (uid != null) {
+                                responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.USER_EXISTS_EMAIL.format(req, email));
+                                return;
+                            }
+
+                            User created = SubmiteeServer.getInstance().getInternalAccountRealm().createUser(email, password);
+                            created.setAttribute("create-time", System.currentTimeMillis());
+                            created.setAttribute("last-seen", System.currentTimeMillis());
+                            created.setAttribute("preferred-language", Util.getPreferredLanguage(req));
+
+                            getSession(req).setUser(created);
+                            resp.setStatus(HttpStatus.OK_200);
+                        }
+                    } catch (Exception e) {
+                        ExceptionReporting.report(InternalAccountServlet.class, "creating user", e);
+                        try {
+                            responseInternalError(req, resp);
+                        } catch (IOException ioException) {
+                            throw new RuntimeException(ioException);
+                        }
+                    } finally {
+                        asyncContext.complete();
+                    }
+                });
+                break;
+            }
+            default: {
+                ExceptionReporting.report(InternalAccountServlet.class, "parsing method", "unknown method: " + uriParts[0]);
+                responseBadRequest(req, resp);
             }
         }
     }
