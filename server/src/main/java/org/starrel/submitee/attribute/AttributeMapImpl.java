@@ -7,6 +7,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import org.bson.Document;
+import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.SubmiteeServer;
 
 import java.util.ArrayList;
@@ -98,6 +99,11 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
         // TODO: 2021-04-13-0013 partial update
         if (autoSaveAttribute) {
             saveAttribute(SubmiteeServer.getInstance().getMongoDatabase());
+        }
+        try {
+            holder.attributeUpdated(path);
+        } catch (Exception e) {
+            ExceptionReporting.report(AttributeMapImpl.class, "invoking attributeUpdated()", e);
         }
     }
 }

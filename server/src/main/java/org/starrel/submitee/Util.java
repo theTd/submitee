@@ -2,11 +2,13 @@ package org.starrel.submitee;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.ByteStreams;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import org.apache.commons.mail.HtmlEmail;
+import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.attribute.AttributeSpec;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -76,18 +78,23 @@ public class Util {
             InputStreamReader responseReader = new InputStreamReader(conn.getInputStream());
             response = JsonParser.parseReader(responseReader);
         } catch (Exception e) {
-            throw new ClassifiedException(e, "http_failure", "http failure verifying grecaptcha");
+            throw new ClassifiedException(ClassifiedErrors.INTERNAL_SERVER_ERROR);
         }
 
-        if (!response.isJsonObject()) {
-            throw new ClassifiedException("unexpected response", "expected json object, got: "
-                    + SubmiteeServer.GSON.toJson(response));
+        JsonArray errorCodes = JsonUtil.parseArray(response, "error-codes");
+        if (errorCodes != null) {
+            throw new ClassifiedException("GRECAPTCHA_ERROR_CODES", HttpStatus.INTERNAL_SERVER_ERROR_500,
+                    SubmiteeServer.GSON.toJson(errorCodes));
         }
-        if (response.getAsJsonObject().has("error-codes")) {
-            throw new ClassifiedException("grecaptcha_error_codes",
-                    SubmiteeServer.GSON.toJson(response.getAsJsonObject().get("error-codes")));
+
+        Boolean success = JsonUtil.parseBoolean(response, "success");
+        if (success == null) {
+            ExceptionReporting.report(Util.class, "parsing grecaptcha response", "unexpected response: " +
+                    SubmiteeServer.GSON.toJson(response));
+            throw new ClassifiedException(ClassifiedErrors.INTERNAL_SERVER_ERROR);
         }
-        return response.getAsJsonObject().get("success").getAsBoolean();
+
+        return success;
     }
 
     private final static ExecutorService EMAIL_SENDING_EXECUTOR = Executors.newSingleThreadExecutor();

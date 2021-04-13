@@ -83,7 +83,7 @@ public class FileTreeBlobStorage implements BlobStorage {
     @Override
     public void validateConfiguration() throws ClassifiedException {
         if (path.get() == null || path.get().isEmpty()) {
-            throw new ClassifiedException("empty_directory", "directory not configured");
+            throw new ClassifiedException("EMPTY_DIRECTORY");
         }
         if (this.directory == null || !this.directory.toString().equals(path.get())) {
             setupDirectory(path.get());
@@ -116,8 +116,7 @@ public class FileTreeBlobStorage implements BlobStorage {
     }
 
     private void setupDirectory(String path) throws ClassifiedException {
-        if (path == null || path.isEmpty())
-            throw new ClassifiedException("empty_path", "path not configured");
+        if (path == null || path.isEmpty()) throw new ClassifiedException("EMPTY_PATH");
 
         File dir = new File(path);
         if (dir.exists()) {
@@ -125,16 +124,16 @@ public class FileTreeBlobStorage implements BlobStorage {
                 if (dir.canWrite()) {
                     this.directory = dir;
                 } else {
-                    throw new ClassifiedException("cannot_write", "cannot write to target directory");
+                    throw new ClassifiedException("DIRECTORY_NOT_WRITEABLE");
                 }
             } else {
-                throw new ClassifiedException("target_not_directory", "target path is not a directory");
+                throw new ClassifiedException("NOT_DIRECTORY");
             }
         } else {
             if (dir.mkdirs()) {
                 this.directory = dir;
             } else {
-                throw new ClassifiedException("create_directory_failed", "failed to create directory");
+                throw new ClassifiedException("CANNOT_CREATE_DIRECTORY");
             }
         }
     }

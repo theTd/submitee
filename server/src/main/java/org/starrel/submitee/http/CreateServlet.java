@@ -1,58 +1,107 @@
 package org.starrel.submitee.http;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import org.eclipse.jetty.http.HttpStatus;
-import org.starrel.submitee.ExceptionReporting;
-import org.starrel.submitee.I18N;
-import org.starrel.submitee.SubmiteeServer;
-import org.starrel.submitee.model.STemplate;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.eclipse.jetty.http.HttpStatus;
+import org.starrel.submitee.ClassifiedErrors;
+import org.starrel.submitee.ClassifiedException;
+import org.starrel.submitee.ExceptionReporting;
+import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.model.STemplate;
+import org.starrel.submitee.model.STemplateImpl;
+
 import java.io.IOException;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 public class CreateServlet extends AbstractJsonServlet {
+    {
+        setBaseUri("/create");
+    }
+
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
-        if (!body.has("type")) {
+        String[] uriParts = parseUri(req.getRequestURI());
+        if (uriParts.length < 1) {
             responseBadRequest(req, resp);
             return;
         }
-
-        String type = body.get("type").getAsString();
-
-        switch (type) {
-            case "STemplate": {
+        switch (uriParts[0]) {
+            case "template": {
                 try {
-                    STemplate template = SubmiteeServer.getInstance().createTemplate();
-                    resp.setStatus(HttpStatus.OK_200);
-                    resp.getWriter().println(template.getUniqueId());
-                    return;
+                    if (uriParts.length == 1) {
+                        // create new
+                        STemplate template = SubmiteeServer.getInstance().createTemplate();
+                        resp.setStatus(HttpStatus.OK_200);
+                        resp.getWriter().println(template.getUniqueId());
+                    } else if (uriParts.length == 2) {
+                        // create revision
+                        String templateId = uriParts[1];
+                        STemplateImpl revision = SubmiteeServer.getInstance().getTemplate(templateId);
+                        if (revision == null) {
+                            responseNotFound(req, resp);
+                            return;
+                        }
+                        STemplateImpl revisionTemplate = SubmiteeServer.getInstance().getTemplateKeeper()
+                                .createRevisionTemplate(revision.getTemplateId());
+
+                        resp.setStatus(HttpStatus.OK_200);
+                        resp.setContentType("application/json");
+                        resp.getWriter().println(SubmiteeServer.GSON.toJson(revisionTemplate.getUniqueId().toString()));
+                    } else {
+                        // bad uri
+                        ExceptionReporting.report(CreateServlet.class, "parsing uri", "unrecognized uri: " + req.getRequestURI());
+                        responseBadRequest(req, resp);
+                    }
+                } catch (ClassifiedException e) {
+                    responseClassifiedError(req, resp, e.getClassifiedError());
                 } catch (Exception e) {
                     ExceptionReporting.report(CreateServlet.class, "creating template", e);
                     responseInternalError(req, resp);
-                    return;
                 }
+                break;
             }
-            case "Submission": {
-                JsonElement ele;
-                if (!body.has("content") || !(ele = body.get("content")).isJsonObject()) {
-                    ExceptionReporting.report(CreateServlet.class, "parsing submit request",
-                            "request body does not contains content, body=" + SubmiteeServer.GSON.toJson(body));
+            case "submission": {
+                if (uriParts.length != 2) {
+                    ExceptionReporting.report(CreateServlet.class, "parsing uri",
+                            "unrecognized uri: " + req.getRequestURI());
                     responseBadRequest(req, resp);
                     return;
                 }
-                JsonObject content = ele.getAsJsonObject();
-                // TODO: 2021-03-25-0025
+
+                String uuidString = uriParts[1];
+                UUID templateUniqueId;
+                try {
+                    templateUniqueId = UUID.fromString(uuidString);
+                } catch (Exception e) {
+                    ExceptionReporting.report(CreateServlet.class, "parsing submission target",
+                            "invalid uuid: " + uuidString);
+                    responseBadRequest(req, resp);
+                    return;
+                }
+                STemplate template;
+                try {
+                    template = SubmiteeServer.getInstance().getTemplate(templateUniqueId);
+                    if (template == null) {
+                        ExceptionReporting.report(CreateServlet.class, "target template not found",
+                                "template uuid=" + templateUniqueId);
+                        responseNotFound(req, resp);
+                    } else if (template.getLatestVersion() != template.getVersion()) {
+                        responseClassifiedError(req, resp, ClassifiedErrors.SUBMIT_TO_OLD_TEMPLATE);
+                    } else {
+                        // TODO: 2021-04-14-0014
+                    }
+                } catch (ExecutionException e) {
+                    ExceptionReporting.report(CreateServlet.class, "fetching target template info", e);
+                    responseInternalError(req, resp);
+                }
                 break;
             }
             default: {
-                ExceptionReporting.report(CreateServlet.class, "parsing type", "unknown type: " + type);
-                resp.setStatus(HttpStatus.BAD_REQUEST_400);
-                resp.getWriter().println(I18N.Http.INVALID_INPUT.format(req));
-                return;
+                ExceptionReporting.report(CreateServlet.class, "parsing method", "unknown method: " + uriParts[0]);
+                responseBadRequest(req, resp);
             }
         }
     }

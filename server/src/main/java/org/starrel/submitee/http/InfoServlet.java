@@ -53,7 +53,7 @@ public class InfoServlet extends SubmiteeHttpServlet {
         try {
             switch (type) {
                 case "template": {
-                    object = SubmiteeServer.getInstance().getTemplateFromUUID(uuid);
+                    object = SubmiteeServer.getInstance().getTemplate(uuid);
                     break;
                 }
                 case "submission": {

@@ -37,7 +37,7 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
         }
 
         JsonObject parentNode = getObjectFromPath(parseParentPath(path), false);
-        if(parentNode == null) return null;
+        if (parentNode == null) return null;
         JsonElement element = parentNode.get(parsePathNodeName(path));
         if (element == null) return null;
         return serializer.parse(element);
@@ -108,6 +108,10 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
 
     @Override
     public void delete(String path) {
+        if (path.isEmpty()) {
+            jsonRoot = new JsonObject();
+            return;
+        }
         String parentPath = path.substring(0, path.lastIndexOf("."));
         String nodeName = path.substring(path.lastIndexOf(".") + 1);
         JsonObject object = getObjectFromPath(parentPath, false);
@@ -150,7 +154,7 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
     }
 
     JsonObject getObjectFromPath(String path, boolean createParentNode) {
-        if(path.isEmpty()) return jsonRoot.getAsJsonObject();
+        if (path.isEmpty()) return jsonRoot.getAsJsonObject();
         Iterator<String> pathIte = Arrays.stream(path.split("\\.")).iterator();
         JsonObject currentNode = jsonRoot.getAsJsonObject();
         StringBuilder pathTrace = new StringBuilder();

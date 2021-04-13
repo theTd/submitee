@@ -61,7 +61,7 @@ public class SubmissionImpl implements Submission {
         if ((id = templateUUIDSpec.get()) == null) {
             return null;
         }
-        return SubmiteeServer.getInstance().getTemplateFromUUID(id);
+        return SubmiteeServer.getInstance().getTemplate(id);
     }
 
     @Override

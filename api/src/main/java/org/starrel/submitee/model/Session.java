@@ -27,6 +27,8 @@ public interface Session extends AttributeHolder<Session> {
 
     void close();
 
+    boolean isClosed();
+
     @Override
     default String getAttributePersistKey() {
         return getUser() == null ? null : getUser().getDescriptor().toString();

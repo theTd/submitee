@@ -34,6 +34,10 @@ public abstract class I18N {
         default String format(User user, Object... parameters) {
             return format(user == null ? null : user.getPreferredLanguage(), parameters);
         }
+
+        default String format() {
+            return format(((String) null));
+        }
     }
 
     public static class ConstantI18NKey implements I18NKey {
@@ -63,7 +67,7 @@ public abstract class I18N {
 
     public static abstract class General {
         public final static ConstantI18NKey INTERNAL_ERROR = new ConstantI18NKey("general.internal_error");
-        public final static ConstantI18NKey USER_NOT_EXISTS = new ConstantI18NKey("general.user_not_exists");
+        public final static ConstantI18NKey USER_NOT_EXIST = new ConstantI18NKey("general.user_not_exist");
         public final static ConstantI18NKey INCORRECT_PASSWORD = new ConstantI18NKey("general.incorrect_password");
         public final static ConstantI18NKey MISSING_PARAMETER = new ConstantI18NKey("general.missing_parameter");
         public final static ConstantI18NKey NAME_CONFLICT = new ConstantI18NKey("general.name_conflict");
@@ -71,6 +75,7 @@ public abstract class I18N {
         public static final ConstantI18NKey CAPTCHA_FAILURE = new ConstantI18NKey("general.captcha_failure");
         public static final ConstantI18NKey VERIFY_CODE_MISMATCH = new ConstantI18NKey("general.verify_code_mismatch");
         public static final ConstantI18NKey USER_EXISTS_EMAIL = new ConstantI18NKey("general.user_exists_email");
+        public static final ConstantI18NKey SUBMIT_TO_OLD_TEMPLATE = new ConstantI18NKey("general.submit_to_old_template");
     }
 
     public static abstract class Http {

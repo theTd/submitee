@@ -60,7 +60,7 @@ public interface SServer {
 
     STemplate getTemplate(String templateId);
 
-    STemplate getTemplateFromUUID(UUID templateUUID) throws ExecutionException;
+    STemplate getTemplate(UUID templateUUID) throws ExecutionException;
 
     List<? extends STemplate> getTemplateAllVersion(String templateId) throws ExecutionException;
 

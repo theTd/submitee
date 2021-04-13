@@ -66,9 +66,8 @@ public class ConfigurationServlet extends AbstractJsonServlet {
             try {
                 storage.validateConfiguration();
             } catch (ClassifiedException e) {
-                blobStorageErrors.put(storage.getName(),
-                        I18N.fromKey(String.format("blob_storage.provider.%s.error.%s",
-                                storage.getTypeId(), e.getClassify())).format(req));
+                blobStorageErrors.put(storage.getName(), I18N.fromKey(String.format("blob_storage.provider.%s.error.%s",
+                        storage.getTypeId(), e.getDistinguishName())).format(req));
             } catch (Exception e) {
                 blobStorageErrors.put(storage.getName(), e.getMessage());
             }
@@ -111,13 +110,13 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                 String provider = body.has("provider") ? body.get("provider").getAsString() : null;
                 String name = body.has("name") ? body.get("name").getAsString() : null;
                 if (name == null || name.isEmpty()) {
-                    responseBadRequest(req, resp, I18N.General.MISSING_PARAMETER,
-                            I18N.fromKey("blob_storage.parameter.name"));
+                    responseClassifiedError(req, resp, ClassifiedErrors.MISSING_PARAMETER,
+                            I18N.fromKey("blob_storage.parameter.name").format(req));
                     return;
                 }
                 if (provider == null || provider.isEmpty()) {
-                    responseBadRequest(req, resp, I18N.General.MISSING_PARAMETER,
-                            I18N.fromKey("blob_storage.parameter.provider"));
+                    responseClassifiedError(req, resp, ClassifiedErrors.MISSING_PARAMETER,
+                            I18N.fromKey("blob_storage.parameter.provider").format(req));
                     return;
                 }
 
@@ -125,8 +124,7 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                     SubmiteeServer.getInstance().getBlobStorageController().createStorage(provider, name);
                     resp.setStatus(HttpStatus.OK_200);
                 } catch (ClassifiedException e) {
-                    responseBadRequest(req, resp, I18N.General.NAME_CONFLICT,
-                            I18N.fromKey("blob_storage"), name);
+                    responseClassifiedError(req, resp, e.getClassifiedError());
                     return;
                 } catch (Exception e) {
                     ExceptionReporting.report(ConfigurationServlet.class, "creating blob storage", e);
@@ -174,12 +172,8 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                         resp.setStatus(HttpStatus.OK_200);
                     } catch (InterruptedException ignored) {
                     } catch (ExecutionException e) {
-                        try {
-                            ExceptionReporting.report(ConfigurationServlet.class, "sending mail", e);
-                            responseErrorPage(resp, HttpStatus.INTERNAL_SERVER_ERROR_500, e.getMessage());
-                        } catch (IOException ioException) {
-                            throw new RuntimeException(ioException);
-                        }
+                        ExceptionReporting.report(ConfigurationServlet.class, "sending mail", e);
+                        responseInternalError(req, resp);
                     } finally {
                         asyncContext.complete();
                     }
@@ -202,11 +196,7 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                         resp.setStatus(HttpStatus.OK_200);
                     } catch (ClassifiedException e) {
                         ExceptionReporting.report(ConfigurationServlet.class, "testing grecaptcha", e);
-                        try {
-                            responseErrorPage(resp, HttpStatus.INTERNAL_SERVER_ERROR_500, e.getMessage());
-                        } catch (IOException ioException) {
-                            throw new RuntimeException(ioException);
-                        }
+                        responseInternalError(req, resp);
                     } finally {
                         asyncContext.complete();
                     }

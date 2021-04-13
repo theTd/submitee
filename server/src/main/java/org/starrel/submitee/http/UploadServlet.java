@@ -1,10 +1,10 @@
 package org.starrel.submitee.http;
 
-import com.google.common.io.ByteStreams;
 import com.google.gson.stream.JsonWriter;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.fileupload.*;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.fileupload.servlet.ServletRequestContext;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeMap;
@@ -13,14 +13,8 @@ import org.starrel.submitee.blob.SubmiteeFileItem;
 import org.starrel.submitee.model.STemplateImpl;
 import org.starrel.submitee.model.Session;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import java.io.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -56,7 +50,7 @@ public class UploadServlet extends SubmiteeHttpServlet {
 
         STemplateImpl template;
         try {
-            template = SubmiteeServer.getInstance().getTemplateFromUUID(templateUniqueId);
+            template = SubmiteeServer.getInstance().getTemplate(templateUniqueId);
         } catch (ExecutionException e) {
             ExceptionReporting.report(UploadServlet.class, "template not found",
                     "unknown template with uuid: " + templateUniqueId);
@@ -108,7 +102,8 @@ public class UploadServlet extends SubmiteeHttpServlet {
             resp.setContentType("application/json");
             JsonWriter responseWriter = new JsonWriter(resp.getWriter());
             responseWriter.beginObject();
-            responseWriter.name("url").value("/get-file/" + uploaded.getKey());
+            responseWriter.name("url").value(String.format("%s://%s:%d", req.getScheme(), req.getServerName(),
+                    req.getServerPort()) + "/get-file/" + uploaded.getKey());
             responseWriter.name("key").value(uploaded.getKey());
             responseWriter.endObject();
             responseWriter.close();

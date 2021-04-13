@@ -65,31 +65,26 @@ public class PasswordAuthSchemeImpl implements PasswordAuthScheme {
                     I18N.Http.INVALID_INPUT.format(session.getUser().getPreferredLanguage()), null);
         }
 
-        String sitekey = SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class);
-        if (sitekey == null || sitekey.isEmpty()) {
-            ExceptionReporting.report(PasswordAuthSchemeImpl.class,
-                    "missing grecaptcha sitekey", "will not verifying captcha until grecaptcha sitekey is configured");
-        } else {
-            // region check for captcha
-            if (Util.grecaptchaConfigured()) {
-                String captcha = body.has("captcha") ? body.get("captcha").getAsString() : null;
-                if (captcha == null) {
-                    return new AbstractAuthResult(RESULT_REQUIRE_CAPTCHA,
-                            I18N.General.REQUIRE_CAPTCHA.format(session.getUser().getPreferredLanguage()), null);
-                } else {
-                    try {
-                        if (!Util.grecaptchaVerify(captcha, session.getLastActiveAddress(), sitekey)) {
-                            return new AbstractAuthResult(RESULT_CAPTCHA_FAILURE,
-                                    I18N.General.CAPTCHA_FAILURE.format(session.getUser().getPreferredLanguage()), null);
-                        }
-                    } catch (ClassifiedException e) {
-                        ExceptionReporting.report(PasswordAuthSchemeImpl.class, "failed verifying grecaptcha",
-                                "failed verifying grecaptcha, skipping", e);
+        // region check for captcha
+        if (Util.grecaptchaConfigured()) {
+            String captcha = body.has("captcha") ? body.get("captcha").getAsString() : null;
+            if (captcha == null) {
+                return new AbstractAuthResult(RESULT_REQUIRE_CAPTCHA,
+                        I18N.General.REQUIRE_CAPTCHA.format(session.getUser().getPreferredLanguage()), null);
+            } else {
+                try {
+                    if (!Util.grecaptchaVerify(captcha, session.getLastActiveAddress(),
+                            SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class))) {
+                        return new AbstractAuthResult(RESULT_CAPTCHA_FAILURE,
+                                I18N.General.CAPTCHA_FAILURE.format(session.getUser().getPreferredLanguage()), null);
                     }
+                } catch (ClassifiedException e) {
+                    ExceptionReporting.report(PasswordAuthSchemeImpl.class, "failed verifying grecaptcha",
+                            "failed verifying grecaptcha, skipping", e);
                 }
             }
-            // endregion
         }
+        // endregion
 
         String username = body.get("username").getAsString();
         String password = body.get("password").getAsString();

@@ -2,8 +2,8 @@ package org.starrel.submitee.blob;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import org.starrel.submitee.ClassifiedErrors;
 import org.starrel.submitee.ClassifiedException;
-import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.ScriptRunner;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.UserDescriptor;
@@ -94,10 +94,8 @@ public class BlobStorageController {
     }
 
     public BlobStorage createStorage(String providerName, String name) throws ClassifiedException {
-        if (storageMap.containsKey(name)) {
-            throw new ClassifiedException("storage_name_conflict",
-                    "there's already a blob storage named " + name);
-        }
+        if (storageMap.containsKey(name))
+            throw new ClassifiedException(ClassifiedErrors.NAME_CONFLICT);
         BlobStorageProvider provider = providerMap.get(providerName);
         BlobStorage created = provider.createNewStorage(name);
         try {

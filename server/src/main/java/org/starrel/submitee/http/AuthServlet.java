@@ -10,7 +10,6 @@ import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.auth.AuthResult;
 import org.starrel.submitee.auth.AuthScheme;
 import org.starrel.submitee.model.STemplateImpl;
-import org.starrel.submitee.model.Session;
 import org.starrel.submitee.model.UserRealm;
 
 import jakarta.servlet.ServletException;
@@ -18,7 +17,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.rmi.server.ExportException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +55,7 @@ public class AuthServlet extends AbstractJsonServlet {
                 }
                 STemplateImpl template = null;
                 try {
-                    template = SubmiteeServer.getInstance().getTemplateFromUUID(uuid);
+                    template = SubmiteeServer.getInstance().getTemplate(uuid);
                 } catch (ExecutionException e) {
                     ExceptionReporting.report(AuthServlet.class, "fetching template", e);
                 }
@@ -170,11 +168,7 @@ public class AuthServlet extends AbstractJsonServlet {
                 writer.close();
             } catch (Exception e) {
                 ExceptionReporting.report(AuthServlet.class, "processing authentication", e);
-                try {
-                    responseInternalError(req, resp);
-                } catch (IOException ioException) {
-                    throw new RuntimeException(ioException);
-                }
+                responseInternalError(req, resp);
             } finally {
                 asyncContext.complete();
             }

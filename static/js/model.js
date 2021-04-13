@@ -77,6 +77,14 @@ class SField {
         this.attributeMap.set("comment", val);
     }
 
+    get required() {
+        return this.attributeMap.get("required") || false;
+    }
+
+    set required(val) {
+        this.attributeMap.set("required", !!val);
+    }
+
     async sync() {
         return this.owner.sync();
     }

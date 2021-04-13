@@ -1,0 +1,5 @@
+submitee.session = {}
+
+function fetchSessionInfo() {
+
+}

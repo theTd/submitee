@@ -80,14 +80,14 @@ class RadioFieldController extends FieldController {
         let values = field.attributeMap.get("values");
         let present = "";
         if (values) {
-            values.forEach(function (val) {
+            values.forEach(function (val, index) {
                 present += val;
-                present += ",";
+                if (index !== values.length - 1) present += " ";
             })
         }
 
         return `
-<label class="w-100" for="${id}">可选项目： (以,分隔)</label>
+<label class="w-100" for="${id}">可选项目： (使用空格分隔)</label>
 <input id="${id}" type="text" id="radio-conf-${field.name}" value="${present}"/>
 `;
     }
@@ -96,7 +96,7 @@ class RadioFieldController extends FieldController {
         let id = "radio-conf-" + field.name;
         let valuesString = $("#" + id).val();
         let values = Array();
-        valuesString.split(",").forEach(value => {
+        valuesString.split(" ").forEach(value => {
             if (value) values.push(value);
         });
         field.attributeMap.set("values", values);
@@ -145,14 +145,14 @@ class CheckboxFieldController extends FieldController {
         let values = field.attributeMap.get("values");
         let present = "";
         if (values) {
-            values.forEach(function (val) {
+            values.forEach(function (val, index) {
                 present += val;
-                present += ",";
+                if (index !== values.length - 1) present += " ";
             })
         }
 
         return `
-<label class="w-100" for="${id}">可选项目： (以,分隔)</label>
+<label class="w-100" for="${id}">可选项目： (使用空格分隔)</label>
 <input id="${id}" type="text" id="checkbox-conf-${field.name}" value="${present}"/>
 `;
     }
@@ -161,7 +161,7 @@ class CheckboxFieldController extends FieldController {
         let id = "checkbox-conf-" + field.name;
         let valuesString = $("#" + id).val();
         let values = Array();
-        valuesString.split(",").forEach(value => {
+        valuesString.split(" ").forEach(value => {
             if (value) values.push(value);
         });
         field.attributeMap.set("values", values);
@@ -219,6 +219,10 @@ class FileFieldController extends FieldController {
         this.displayName = "文件";
     }
 
+    async submissionInit() {
+        submitee.fileTemp = {};
+    }
+
     /**
      *
      * @param {SField} field
@@ -226,15 +230,34 @@ class FileFieldController extends FieldController {
      */
     generateSubmissionHtml(field) {
         let uploadFieldId = this.getContainerId(field) + "-drop-field";
+
+        let maxFiles = field.attributeMap.get("max-files");
+        let allowedTypes = field.attributeMap.get("allowed-types");
         setTimeout(function () {
             let uppy = Uppy.Core({
-                locale: Uppy.locales.zh_CN
+                locale: Uppy.locales.zh_CN,
+                restrictions: {
+                    maxNumberOfFiles: maxFiles,
+                    allowedFileTypes: allowedTypes
+                }
             }).use(Uppy.Dashboard, {
                 inline: true,
                 target: '#' + uploadFieldId
             }).use(Uppy.XHRUpload, {endpoint: `../upload/${field.owner.uniqueId}/${field.name}`})
 
             uppy.on('complete', (result) => {
+                let completed = result['successful'];
+                if (completed) {
+                    completed.forEach(function (entry) {
+                        let key = entry["response"]["body"]["key"];
+                        let arr = submitee.fileTemp[field.name];
+                        if (!arr) {
+                            arr = Array();
+                            submitee.fileTemp[field.name] = arr;
+                        }
+                        arr.push(key);
+                    })
+                }
                 console.log(result);
                 // todo
             })
@@ -243,33 +266,69 @@ class FileFieldController extends FieldController {
     }
 
     resolveSubmission(field) {
-        let dropFieldId = this.getContainerId(field) + "-drop-field";
-        document.getElementById(dropFieldId).getAttribute("data-blob-id");
+        return submitee.fileTemp[field.name];
     }
 
     generateConfigurationHtml(field) {
-        let id = "file-conf-" + field.name;
+        let id = this.getContainerId(field);
 
         let value = field.attributeMap.get("blob_storage");
-        let options = `<option name="${id}" value="">---------------</option>`;
+        let options = `<option name="${id}-storage" value="">---------------</option>`;
         Object.keys(configuration["blob_storages"]).forEach(storageName => {
             let providerName = configuration["blob_storage_providers"][configuration["blob_storages"][storageName]['provider']];
             let selected = value === storageName ? "selected" : ""
-            options += `<option name="${id}" value="${storageName}" ${selected}>${providerName}:${storageName}</option>`;
-        })
+            options += `<option name="${id}-storage" value="${storageName}" ${selected}>${storageName} (${providerName})</option>`;
+        });
+
+        let maxFiles = field.attributeMap.get("max-files");
+        let types = field.attributeMap.get("allowed-types")
+        let typesConfig = "";
+        if (types) {
+            types.forEach(function (val, index) {
+                typesConfig += val;
+                if (index !== types.length - 1) typesConfig += " ";
+            })
+        }
         return `
-<label class="w-100" for="${id}">使用文件存储:</label>
-<select id="${id}">
+<div class="row col">
+<label class="w-100" for="${id}-storage">使用文件存储:</label>
+</div>
+<div class="row col">
+<select id="${id}-storage">
 ${options}
 </select>
+</div>
+<div class="row mt-2 col">
+<label for="${id}-max-files">最大文件数量</label>
+</div>
+<div class="row col">
+<input type="number" value="${maxFiles}" id="${id}-max-files"/>
+</div>
+<div class="row mt-2 col">
+<label for="${id}-allowed-types">允许文件类型(使用空格分隔)</label>
+<p style="color: gray; font-style: italic; font-size: 0.8rem; margin: 0">例: image/* image/jpeg .jpg .jpeg .png .gif</p>
+</div>
+<div class="row col">
+<input type="text" value="${typesConfig}" id="${id}-allowed-types"/>
+</div>
 `;
     }
 
     applyConfiguration(field) {
-        let id = "file-conf-" + field.name;
+        let id = this.getContainerId(field);
 
-        let value = $(`#${id} option[name=${id}]:selected`).val();
-        field.attributeMap.set("blob_storage", value);
+        let storage = $(`#${id}-storage option:selected`).val();
+        field.attributeMap.set("blob_storage", storage);
+
+        let max = parseInt($(`#${id}-max-files`).val())
+        field.attributeMap.set("max-files", max);
+
+        let typesConfig = $(`#${id}-allowed-types`).val();
+        let types = Array();
+        typesConfig.split(" ").forEach(function (value) {
+            if (value) types.push(value);
+        })
+        field.attributeMap.set("allowed-types", types);
     }
 
     validateConfiguration(field) {
@@ -279,6 +338,11 @@ ${options}
         }
         if (!configuration["blob_storages"][value]) {
             return "配置的文件存储已不再可用";
+        }
+        if (configuration["blob_storage_errors"]) {
+            if (configuration["blob_storage_errors"][value]) {
+                return "配置的文件存储存在错误: " + configuration["blob_storage_errors"][value];
+            }
         }
     }
 }

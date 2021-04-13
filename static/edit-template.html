@@ -82,6 +82,11 @@
 <template id="template-present-field">
     <div class="row s-field" draggable="true" ondragstart=fieldDragStart(event) data-submitee-field-name>
         <div class="col col-2 s-field-type"></div>
+        <div class="position-relative require-mark d-none">
+            <div class="d-inline position-absolute">
+                <span style="color: red">*</span>
+            </div>
+        </div>
         <div class="col col-2 s-field-name"></div>
         <div class="col col-6 s-field-comment"></div>
         <div class="col col-2">
@@ -99,8 +104,19 @@
                     <div class="col s-field-type"></div>
                     <div class="col s-field-name"></div>
                 </div>
+                <div class="row mt-1">
+                    <hr class="w-100 mb-0"/>
+                    <label class="field-config-require-label mt-2 col">必填项</label>
+                    <div class="col d-flex flex-column justify-content-center">
+                        <input class="field-config-require-checkbox col" type="checkbox"
+                               data-toggle="toggle"
+                               data-on="是" data-off="否"
+                               data-size="sm"/>
+                    </div>
+                    <hr class="w-100 mt-0"/>
+                </div>
+
                 <div class="row ml-1">
-                    <hr class="w-100"/>
                     <h5>配置项</h5>
                     <div class="container field-configuration">
                     </div>
@@ -270,6 +286,8 @@
         field.name = container.querySelector(".s-field-name").querySelector("input").value;
         field.comment = field["commentEditor"].txt.html();
 
+        field.required = container.querySelector(".field-config-require-checkbox").checked;
+
         let controller = fieldControllers[field.type];
         if (controller) {
             controller.applyConfiguration(field);
@@ -285,20 +303,28 @@
      * @return {string|string|DocumentFragment|*}
      */
     function createFieldRow(field) {
-        let domTemplate = $("#template-present-field")[0];
+        let template = $("#template-present-field")[0];
 
-        domTemplate.content.querySelector(".s-field").setAttribute("data-submitee-field-name", field.name);
-        domTemplate.content.querySelector(".s-field-type").textContent = field.getTypeDisplayName();
-        domTemplate.content.querySelector(".s-field-name").textContent = field.name;
-        domTemplate.content.querySelector(".s-field-comment").innerHTML = field.comment;
-        $(domTemplate.content.querySelector(".field-error")).empty();
+        template.content.querySelector(".s-field").setAttribute("data-submitee-field-name", field.name);
+        template.content.querySelector(".s-field-type").textContent = field.getTypeDisplayName();
+        template.content.querySelector(".s-field-name").textContent = field.name;
+        template.content.querySelector(".s-field-comment").innerHTML = field.comment;
+        $(template.content.querySelector(".field-error")).empty();
+
+        // region require mark
+        if (field.required) {
+            template.content.querySelector(".require-mark").classList.remove("d-none");
+        } else {
+            template.content.querySelector(".require-mark").classList.add("d-none");
+        }
+        // endregion
 
         let error = fieldControllers[field.type].validateConfiguration(field);
         if (error) {
-            domTemplate.content.querySelector(".field-error").appendChild(createErrorTooltip(error));
+            template.content.querySelector(".field-error").appendChild(createErrorTooltip(error));
         }
 
-        return document.importNode(domTemplate.content, true);
+        return document.importNode(template.content, true);
     }
 
     /**
@@ -378,6 +404,19 @@
             field["commentEditor"] = commentEditor;
         }, 1);
 
+        // region required
+        let requireId = makeid(6);
+        let requireLabel = template.content.querySelector(".field-config-require-label");
+        requireLabel.setAttribute("for", requireId);
+        let requireCheckbox = template.content.querySelector(".field-config-require-checkbox");
+        requireCheckbox.id = requireId;
+        if (field.required) {
+            requireCheckbox.checked = true;
+        } else {
+            requireCheckbox.checked = false;
+        }
+        // endregion
+
         let controller = fieldControllers[field.type];
         let confHtml;
         if (controller && (confHtml = controller.generateConfigurationHtml(field))) {
@@ -387,7 +426,9 @@
         }
 
         setTimeout(() => {
-            $(`.s-field-editing[data-submitee-field-name=${field.name}]`)[0].scrollIntoView();
+            let container = $(`.s-field-editing[data-submitee-field-name=${field.name}]`)[0]
+            container.scrollIntoView();
+            $(container.querySelector(".field-config-require-checkbox")).bootstrapToggle();
         }, 1);
         return document.importNode(template.content, true);
     }
@@ -510,34 +551,41 @@
 
     configuration = {};
 
-    function fetchConfiguration() {
-        $.ajax({
-            url: "../configuration",
-            method: "GET",
-            success: function (data) {
-                configuration = data;
-            },
-            error: function (error) {
-                toast_ajax_error(error);
-            }
+    async function fetchConfiguration() {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: "../configuration",
+                method: "GET",
+                success: function (data) {
+                    configuration = data;
+                    resolve();
+                },
+                error: function (error) {
+                    toast_ajax_error(error);
+                    reject();
+                }
+            })
         })
+
     }
 
-    fetchConfiguration();
+    let fetchingConfiguration = fetchConfiguration();
     buildFieldTypeSelect();
 
     let currentTemplate;
     let currentTemplateId = getQueryValue("target");
 
     fetchSingleTemplateInfo(currentTemplateId).then(value => {
-        currentTemplate = value;
-        currentTemplate.latest = true;
+        fetchingConfiguration.then(() => {
+            currentTemplate = value;
+            currentTemplate.latest = true;
 
-        loadTemplateMetadata();
-        loadFieldRows();
+            loadTemplateMetadata();
+            loadFieldRows();
 
-        // check changes made every 2 seconds
-        setInterval(checkAndSync, 2000);
+            // check changes made every 2 seconds
+            setInterval(checkAndSync, 2000);
+        })
     }, reject => {
         alert(reject.message);
         window.history.back();

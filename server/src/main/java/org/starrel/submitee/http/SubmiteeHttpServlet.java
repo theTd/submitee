@@ -2,23 +2,17 @@ package org.starrel.submitee.http;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.io.ByteStreams;
-import lombok.SneakyThrows;
-import org.eclipse.jetty.http.HttpStatus;
-import org.starrel.submitee.ExceptionReporting;
-import org.starrel.submitee.FileLoadingCache;
-import org.starrel.submitee.I18N;
-import org.starrel.submitee.SubmiteeServer;
-import org.starrel.submitee.model.Session;
-import org.starrel.submitee.model.SessionImpl;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.SneakyThrows;
+import org.starrel.submitee.*;
+import org.starrel.submitee.model.Session;
+import org.starrel.submitee.model.SessionImpl;
 import org.starrel.submitee.model.SessionKeeper;
 
-import java.io.*;
+import java.io.File;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
@@ -114,37 +108,37 @@ public class SubmiteeHttpServlet extends HttpServlet {
         return errorPageCache.get(title, () -> result.getContent().replaceAll("%ERROR_TITLE%", title));
     }
 
-    public static void responseAccessDenied(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.Http.ACCESS_DENIED.format(req));
+    public static void responseAccessDenied(HttpServletRequest req, HttpServletResponse resp) {
+        responseClassifiedError(req, resp, ClassifiedErrors.ACCESS_DENIED);
     }
 
-    public static void responseBadRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        responseErrorPage(resp, HttpStatus.BAD_REQUEST_400, I18N.Http.INVALID_INPUT.format(req));
+    public static void responseBadRequest(HttpServletRequest req, HttpServletResponse resp) {
+        responseClassifiedError(req, resp, ClassifiedErrors.BAD_REQUEST);
     }
 
-    public static void responseBadRequest(HttpServletRequest req, HttpServletResponse resp, I18N.I18NKey messageKey, Object... messageParts) throws IOException {
-        responseErrorPage(resp, HttpStatus.BAD_REQUEST_400, messageKey.format(req, messageParts));
+    public static void responseInternalError(HttpServletRequest req, HttpServletResponse resp) {
+        responseClassifiedError(req, resp, ClassifiedErrors.INTERNAL_SERVER_ERROR);
     }
 
-    public static void responseInternalError(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        responseErrorPage(resp, HttpStatus.INTERNAL_SERVER_ERROR_500, I18N.Http.INTERNAL_ERROR.format(req));
+    public static void responseNotFound(HttpServletRequest req, HttpServletResponse resp) {
+        responseClassifiedError(req, resp, ClassifiedErrors.NOT_FOUND);
     }
 
-    public static void responseNotFound(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        responseErrorPage(resp, HttpStatus.NOT_FOUND_404, I18N.Http.NOT_FOUND.format(req));
+    public static void responseClassifiedError(HttpServletRequest req, HttpServletResponse resp, ClassifiedError error, Object... messageParts) {
+        responseErrorPage(resp, error.getHttpStatus(), error.getMessageKey().format(req, messageParts), error.getDistinguishName());
     }
 
-    public static void responseErrorPage(HttpServletResponse resp, int statusCode, String errorTitle) throws IOException {
-        responseErrorPage(resp, statusCode, errorTitle, null);
-    }
-
-    public static void responseErrorPage(HttpServletResponse resp, int statusCode, String errorTitle, String errorClassify) throws IOException {
-        resp.setHeader("SUBMITEE-ERROR-TITLE", URLEncoder.encode(errorTitle, StandardCharsets.UTF_8));
-        if (errorClassify != null) {
-            resp.setHeader("SUBMITEE-ERROR-CLASSIFY", URLEncoder.encode(errorClassify, StandardCharsets.UTF_8));
+    public static void responseErrorPage(HttpServletResponse resp, int statusCode, String errorTitle, String errorClassify) {
+        try {
+            resp.setHeader("SUBMITEE-ERROR-TITLE", URLEncoder.encode(errorTitle, StandardCharsets.UTF_8));
+            if (errorClassify != null) {
+                resp.setHeader("SUBMITEE-ERROR-CLASSIFY", URLEncoder.encode(errorClassify, StandardCharsets.UTF_8));
+            }
+            resp.setStatus(statusCode);
+            resp.setContentType("text/html");
+            resp.getWriter().println(createErrorPage(errorTitle));
+        } catch (Throwable e) {
+            ExceptionReporting.report(SubmiteeHttpServlet.class, "sending error page", e);
         }
-        resp.setStatus(statusCode);
-        resp.setContentType("text/html");
-        resp.getWriter().println(createErrorPage(errorTitle));
     }
 }

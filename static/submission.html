@@ -24,6 +24,25 @@
             margin-bottom: 2rem;
         }
 
+        .field-container {
+            padding-top: 0.2rem;
+            padding-bottom: 0.2rem;
+            transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+            border-radius: 10px;
+        }
+
+        .slow-fade {
+            transition: 5s ease !important;
+        }
+
+        .field-container.field-container-alert {
+            background-color: #ff7171;
+        }
+
+        .field-container:hover {
+            box-shadow: 0 0 0 3px rgb(255, 191, 110) !important;
+        }
+
         @media (max-width: 992px) {
             .container-field-name {
                 margin-bottom: 1rem;
@@ -43,9 +62,14 @@
         }
     </style>
 </head>
-<body>
+<body onbeforeunload="return ''">
 <template id="template-field-container">
     <div class="row field-container">
+        <div class="position-relative require-mark d-none">
+            <div class="d-inline position-absolute">
+                <span style="color: #ff8989">*</span>
+            </div>
+        </div>
         <div class="col-12 col-lg-2 container-field-name"></div>
         <div class="col-12 col-lg-10 container-field-body">
             <div class="container-field-input"></div>
@@ -77,28 +101,56 @@
 <script src="https://releases.transloadit.com/uppy/locales/v1.18.0/zh_CN.min.js"></script>
 
 <script src="js/model.js"></script>
+<script src="js/toast.js"></script>
 <script src="js/field-controllers.js"></script>
 
 <script>
 
     function createSubmission() {
+        let body = {};
         let result = "";
-        currentTemplate.fields.forEach(value => {
-            let controller = fieldControllers[value.type];
+
+        let missingRequired = false;
+        currentTemplate.fields.forEach(field => {
+            if (missingRequired) return;
+            let controller = fieldControllers[field.type];
             if (!controller) {
-                result += `[!]${value.name}: no controller`
+                result += `[!]${field.name}: no controller`
             } else {
                 try {
-                    let resolve = controller.resolveSubmission(value);
-                    result += resolve ? `[o]${value.name}: ${resolve}` : `[x]${value.name}`;
+                    let resolve = controller.resolveSubmission(field);
+                    if (Array.isArray(resolve) && resolve.length === 0) resolve = undefined;
+                    if (resolve === "") resolve = undefined;
+                    if (resolve === {}) resolve = undefined;
+                    if (resolve) {
+                        body[field.name] = resolve;
+                    } else if (field.required) {
+                        missingRequired = true;
+                        let container = $(`.field-container[data-submitee-field-name=${field.name}]`)[0];
+                        if (container) {
+                            container.classList.add("field-container-alert");
+                            container.scrollIntoView();
+                            setTimeout(() => {
+                                container.classList.add("slow-fade");
+                                container.classList.remove("field-container-alert");
+                            }, 1000);
+                            setTimeout(() => {
+                                container.classList.remove("slow-fade");
+                            }, 6000)
+                            create_toast("重要提示", field.name + "是必填项目");
+                        }
+                        return;
+                    }
+                    result += resolve ? `[o]${field.name}: ${resolve}` : `[x]${field.name}`;
                 } catch (e) {
                     console.log(e);
-                    result += `[!]${value.name}: internal error`
+                    result += `[!]${field.name}: internal error: ${JSON.stringify(e)}`
                 }
             }
             result += "\n";
         })
-        alert(result);
+        if (missingRequired) return;
+        console.log(result);
     }
 
     /**
@@ -122,14 +174,23 @@
             template.content.querySelector(".container-field-desc").innerHTML = "";
             template.content.querySelector(".container-field-desc").style.display = "none";
         }
+
+        // region require mark
+        if (field.required) {
+            template.content.querySelector(".require-mark").classList.remove("d-none");
+        } else {
+            template.content.querySelector(".require-mark").classList.add("d-none");
+        }
+        // endregion
+
         template.content.querySelector(".container-field-input").innerHTML = html;
-        template.content.querySelector(".field-container").setAttribute("submitee-field-name", field.name);
+        template.content.querySelector(".field-container").setAttribute("data-submitee-field-name", field.name);
         template.content.querySelector(".field-container").id = controller.getContainerId(field);
         return document.importNode(template.content, true);
     }
 
     function loadMetadata() {
-        document.title = currentTemplate.name;
+        setTitle(currentTemplate.name);
         $("#template-name").text(currentTemplate.name);
         $("#template-desc").html(currentTemplate.desc);
     }
@@ -158,7 +219,6 @@
             } else {
                 relative.parentNode.insertBefore(createFieldLine(typeController, value,
                     typeController.generateSubmissionHtml(value)), relative);
-                // value.resolveFunction = typeController.generateResolveFunction(value);
             }
         })
     }
@@ -167,18 +227,19 @@
     let currentTemplate;
 
     if (!target) {
-        alert("invalid target");
+        alert("出现了一些意料之外的异常，如需帮助请联系管理员");
         window.history.back();
     } else {
         fetchSingleTemplateInfo(target).then(value => {
             currentTemplate = value;
+            submitee.submission = {};
 
             loadMetadata();
             initControllers(buildFields, (error) => {
                 alert(error);
             })
         }, error => {
-            alert("invalid target");
+            alert("出现了一些意料之外的异常，如需帮助请联系管理员");
             window.history.back();
         });
     }

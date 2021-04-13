@@ -115,26 +115,27 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                     return;
                 }
                 if (grecaptcha && token == null) {
-                    responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.REQUIRE_CAPTCHA.format(req));
+                    responseClassifiedError(req, resp, ClassifiedErrors.REQUIRE_CAPTCHA);
                     return;
                 }
                 String finalToken = token;
                 AsyncContext asyncContext = req.startAsync();
                 asyncContext.start(() -> {
+                    String actualEmail = email;
+
                     try {
                         if (grecaptcha) {
                             if (!Util.grecaptchaVerify(finalToken, Util.getRemoteAddr(req),
                                     SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class))) {
-                                responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.CAPTCHA_FAILURE.format(req));
+                                responseClassifiedError(req, resp, ClassifiedErrors.CAPTCHA_FAILURE);
                                 return;
                             }
                         }
 
-                        String actualEmail = email;
                         if (email != null) {
                             Integer uid = SubmiteeServer.getInstance().getInternalAccountRealm().getUidFromEmail(email);
                             if (uid != null) {
-                                responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.USER_EXISTS_EMAIL.format(req, email));
+                                responseClassifiedError(req, resp, ClassifiedErrors.USER_EXISTS_EMAIL);
                                 return;
                             }
                         } else {
@@ -142,7 +143,7 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                             InternalAccountUser found = SubmiteeServer.getInstance().getInternalAccountRealm()
                                     .getUserFromUsernameOrEmail(resetPassword);
                             if (found == null) {
-                                responseErrorPage(resp, HttpStatus.NOT_FOUND_404, I18N.General.USER_NOT_EXISTS.format(req));
+                                responseClassifiedError(req, resp, ClassifiedErrors.USER_NOT_EXIST);
                                 return;
                             } else {
                                 actualEmail = found.getEmail();
@@ -150,7 +151,7 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         }
 
                         if (!checkVerifyCodeSending(req)) {
-                            responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.Http.TOO_MANY_REQUEST.format(req));
+                            responseClassifiedError(req, resp, ClassifiedErrors.TOO_MANY_REQUEST);
                             return;
                         }
 
@@ -161,12 +162,9 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         resp.setContentType("application/json");
                         resp.getWriter().println(SubmiteeServer.GSON.toJson(getVerifyCodeTimeout(req)));
                     } catch (Exception e) {
-                        ExceptionReporting.report(InternalAccountServlet.class, "processing send-verify-code", e);
-                        try {
-                            responseInternalError(req, resp);
-                        } catch (IOException ex) {
-                            throw new RuntimeException(ex);
-                        }
+                        ExceptionReporting.report(InternalAccountServlet.class, "processing send-verify-code",
+                                "email=" + actualEmail, e);
+                        responseInternalError(req, resp);
                     } finally {
                         asyncContext.complete();
                     }
@@ -184,11 +182,11 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                     return;
                 }
                 if (Util.grecaptchaConfigured() && captcha == null) {
-                    responseErrorPage(resp, HttpStatus.BAD_REQUEST_400, I18N.General.REQUIRE_CAPTCHA.format(req));
+                    responseClassifiedError(req, resp, ClassifiedErrors.REQUIRE_CAPTCHA);
                     return;
                 }
                 if (!Objects.equals(verifyCodeCache.getIfPresent(email.toLowerCase(Locale.ROOT)), verifyCode)) {
-                    responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.VERIFY_CODE_MISMATCH.format(req));
+                    responseClassifiedError(req, resp, ClassifiedErrors.VERIFY_CODE_MISMATCH);
                     return;
                 }
                 verifyCodeCache.invalidate(email.toLowerCase(Locale.ROOT));
@@ -198,14 +196,14 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         if (Util.grecaptchaConfigured()) {
                             if (!Util.grecaptchaVerify(captcha, Util.getRemoteAddr(req),
                                     SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class))) {
-                                responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.CAPTCHA_FAILURE.format(req));
+                                responseClassifiedError(req, resp, ClassifiedErrors.CAPTCHA_FAILURE);
                                 return;
                             }
                         }
 
                         Integer uid = SubmiteeServer.getInstance().getInternalAccountRealm().getUidFromEmail(email);
                         if (uid != null) {
-                            responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.USER_EXISTS_EMAIL.format(req, email));
+                            responseClassifiedError(req, resp, ClassifiedErrors.USER_EXISTS_EMAIL);
                             return;
                         }
 
@@ -218,11 +216,7 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         resp.setStatus(HttpStatus.OK_200);
                     } catch (Exception e) {
                         ExceptionReporting.report(InternalAccountServlet.class, "creating user", e);
-                        try {
-                            responseInternalError(req, resp);
-                        } catch (IOException ioException) {
-                            throw new RuntimeException(ioException);
-                        }
+                        responseInternalError(req, resp);
                     } finally {
                         asyncContext.complete();
                     }
@@ -240,7 +234,7 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                     return;
                 }
                 if (Util.grecaptchaConfigured() && captcha == null) {
-                    responseErrorPage(resp, HttpStatus.BAD_REQUEST_400, I18N.General.REQUIRE_CAPTCHA.format(req));
+                    responseClassifiedError(req, resp, ClassifiedErrors.REQUIRE_CAPTCHA);
                     return;
                 }
                 AsyncContext asyncContext = req.startAsync();
@@ -249,7 +243,7 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         if (Util.grecaptchaConfigured()) {
                             if (!Util.grecaptchaVerify(captcha, Util.getRemoteAddr(req),
                                     SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class))) {
-                                responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.CAPTCHA_FAILURE.format(req));
+                                responseClassifiedError(req, resp, ClassifiedErrors.CAPTCHA_FAILURE);
                                 return;
                             }
                         }
@@ -258,12 +252,12 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         InternalAccountUser found = SubmiteeServer.getInstance().getInternalAccountRealm()
                                 .getUserFromUsernameOrEmail(resetPassword);
                         if (found == null) {
-                            responseErrorPage(resp, HttpStatus.NOT_FOUND_404, I18N.General.USER_NOT_EXISTS.format(req));
+                            responseClassifiedError(req, resp, ClassifiedErrors.USER_NOT_EXIST);
                             return;
                         }
                         String email = found.getEmail();
                         if (!Objects.equals(verifyCodeCache.getIfPresent(email), verifyCode)) {
-                            responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.VERIFY_CODE_MISMATCH.format(req));
+                            responseClassifiedError(req, resp, ClassifiedErrors.VERIFY_CODE_MISMATCH);
                             return;
                         }
                         verifyCodeCache.invalidate(email);
@@ -272,11 +266,7 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         resp.setStatus(HttpStatus.OK_200);
                     } catch (Exception e) {
                         ExceptionReporting.report(InternalAccountServlet.class, "creating user", e);
-                        try {
-                            responseInternalError(req, resp);
-                        } catch (IOException ioException) {
-                            throw new RuntimeException(ioException);
-                        }
+                        responseInternalError(req, resp);
                     } finally {
                         asyncContext.complete();
                     }

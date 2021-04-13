@@ -1,19 +1,15 @@
 package org.starrel.submitee.model;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.Util;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
-import org.starrel.submitee.auth.AnonymousUser;
-
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpSession;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 public class SessionImpl implements Session {
     private final String sessionToken;
@@ -27,6 +23,7 @@ public class SessionImpl implements Session {
 
     private HttpSession httpSession;
     private User user;
+    private boolean closed = false;
 
     SessionImpl(String sessionToken) {
         this.sessionToken = sessionToken;
@@ -111,7 +108,9 @@ public class SessionImpl implements Session {
 
     @Override
     public void attributeUpdated(String path) {
-        // TODO: 2021-03-25-0025
+        if (closed) {
+            throw new RuntimeException("updating attribute map on a closed session");
+        }
     }
 
     @Override
@@ -119,7 +118,14 @@ public class SessionImpl implements Session {
         if (httpSession != null) {
             httpSession.setAttribute(SessionKeeper.HTTP_ATTRIBUTE_SESSION, null);
         }
+        this.attributeMap.delete();
         SubmiteeServer.getInstance().removeAttributeMap(Session.COLLECTION_NAME, getAttributePersistKey());
         SubmiteeServer.getInstance().getSessionKeeper().remove(this);
+        this.closed = true;
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closed;
     }
 }

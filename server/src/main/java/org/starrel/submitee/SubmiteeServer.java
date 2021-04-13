@@ -185,7 +185,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
                 }
 
                 SubmiteeHttpServlet.responseErrorPage(response, response.getStatus(),
-                        message == null ? I18N.Http.UNKNOWN_ERROR.format(request) : message);
+                        message == null ? I18N.Http.UNKNOWN_ERROR.format(request) : message, "UNKNOWN_ERROR");
             }
         });
     }
@@ -364,7 +364,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public STemplateImpl getTemplateFromUUID(UUID templateUUID) throws ExecutionException {
+    public STemplateImpl getTemplate(UUID templateUUID) throws ExecutionException {
         return templateKeeper.getTemplate(templateUUID);
     }
 

@@ -4,7 +4,6 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import de.mkammerer.argon2.Argon2;
 import de.mkammerer.argon2.Argon2Factory;
-import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.I18N;
 import org.starrel.submitee.ScriptRunner;
@@ -20,7 +19,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -213,15 +211,34 @@ public class InternalAccountRealm implements UserRealm {
 
         @Override
         public AuthResult handle(Session session, String username, String password) {
+            Integer uid;
+            try {
+                uid = getUidFromUsername(username);
+                if (uid == null) {
+                    uid = getUidFromEmail(username);
+                }
+            } catch (ExecutionException e) {
+                ExceptionReporting.report(AuthHandler.class, "searching user", e);
+                return new AbstractAuthResult("internal_error",
+                        I18N.General.INTERNAL_ERROR.format(session), null);
+            }
+            if (uid == null) {
+                return new AbstractAuthResult("user_not_exists",
+                        I18N.General.USER_NOT_EXIST.format(session), null);
+            }
+
             try (Connection conn = server.getDataSource().getConnection()) {
-                PreparedStatement stmt = conn.prepareStatement("SELECT password FROM internal_users WHERE username=?");
-                stmt.setString(1, username);
+                PreparedStatement stmt = conn.prepareStatement("SELECT password FROM internal_users WHERE uid=?");
+                stmt.setInt(1, uid);
                 ResultSet r = stmt.executeQuery();
-                if (!r.next()) return new AbstractAuthResult("user_not_exists",
-                        I18N.General.USER_NOT_EXISTS.format(session), null);
+                r.next();
                 String storedPassword = r.getString(1);
                 if (verifyPassword(password, storedPassword)) {
-                    return new AbstractAuthResult(getUser(username), null);
+                    InternalAccountUser loggedIn = getUser(uid);
+                    assert loggedIn != null;
+                    session.setAttribute("logged-in-user", loggedIn.getDescriptor());
+                    session.setAttribute("last-verify-password", System.currentTimeMillis());
+                    return new AbstractAuthResult(loggedIn, null);
                 } else {
                     return new AbstractAuthResult("incorrect_password",
                             I18N.General.INCORRECT_PASSWORD.format(session), null);
