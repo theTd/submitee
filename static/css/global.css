@@ -16,3 +16,11 @@
     top: 1rem;
     z-index: 50;
 }
+
+.center-box {
+    padding: 1rem 1.8rem;
+    background-color: #dddddd;
+    border-radius: 10px;
+    box-shadow: 0 0 0 2px white;
+    width: 20rem;
+}

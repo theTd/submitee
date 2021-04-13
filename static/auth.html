@@ -24,11 +24,6 @@
             align-items: center;
         }
 
-        .center-box-title {
-            padding-left: unset;
-            position: static;
-        }
-
         a {
             color: #e0e0e0;
         }
@@ -56,14 +51,14 @@
             font-size: 0.7rem !important;
             padding: 0.3rem 0.5rem;
             border-color: #e9ecef #e9ecef #dee2e6;
+            border-radius: 0 0 10px 10px;
             transition: 0.1s cubic-bezier(0.22, 0.61, 0.36, 1);
+            clip-path: inset(1px -10px -10px -10px);
         }
 
         #realm-tab .nav-link:hover {
             background-color: #dddddd;
             box-shadow: 0 0 0 2px white;
-            clip-path: inset(-10px -10px 0px -10px);
-            border-radius: 3px;
             color: #000000;
             text-shadow: unset;
         }
@@ -71,20 +66,22 @@
         #realm-tab .nav-link.active {
             background-color: #dddddd;
             box-shadow: 0 0 0 2px white;
-            clip-path: inset(-10px -10px 0px -10px);
-            border-radius: 3px;
+        }
+
+        #auth-scheme-container {
+            border-radius: 10px 10px 10px 0;
         }
     </style>
 </head>
 <body>
 <div class="main no-gutters">
-    <div class="container" style="width: auto">
+    <div class="container-fluid" style="width: auto">
         <h5 class="center-box-title">登入以进行下一步操作</h5>
+        <div id="auth-scheme-container" class="center-box"></div>
         <div>
-            <ul class="nav nav-tabs" id="realm-tab">
+            <ul class="nav" id="realm-tab">
             </ul>
         </div>
-        <div id="auth-scheme-container"></div>
     </div>
     <div class="position-fixed" style="bottom: 1rem">
         <a style="font-size: 0.8rem" href="https://github.com/theTd/submitee">POWERED BY SUBMITEE</a>
@@ -201,6 +198,18 @@
                 submitee.allowedRealms = response.filter(r => r["realm"] !== "anonymous")
                     .filter(r => Array.isArray(r["scheme"]) && r["scheme"].length > 0);
                 console.log(submitee.allowedRealms);
+                submitee.allowedRealms.push(
+                    {
+                        realm: "wechat",
+                        title: "微信登陆",
+                        scheme: [
+                            {
+                                name: "微信登陆",
+                                url: "auth-scheme-wechat.html"
+                            }
+                        ]
+                    }
+                )
 
                 if (!submitee.allowedRealms || submitee.allowedRealms.length === 0) {
                     alert("出现了一些意料之外的异常，如需帮助请联系管理人员");

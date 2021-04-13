@@ -42,7 +42,7 @@ public class SessionKeeper {
     public SessionImpl fromHttpRequest(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         String token = getSessionTokenFromCookies(cookies);
-        SessionImpl exists = getByToken(token);
+        SessionImpl exists = token == null ? null : getByToken(token);
         if (exists != null) {
             exists.setHttpSession(request.getSession());
             return exists;

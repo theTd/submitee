@@ -7,26 +7,19 @@
     <title></title>
 
     <style>
-        form {
-            width: 20rem;
-        }
-
-        #password-auth-scheme .container {
-            padding: 1rem 1.8rem;
-            background-color: #dddddd;
-            border-radius: 0 10px 10px 10px;
-            box-shadow: 0 0 0 2px white;
-        }
     </style>
 </head>
 <body>
-<form onsubmit="login();return false;" id="password-auth-scheme">
-    <div class="container d-flex justify-content-center align-items-center" style="height: 10rem; width: 20rem">
-        <button class="btn btn-primary btn-block">转到微信认证页</button>
+<form onsubmit="return false;" id="wechat-auth-scheme">
+    <div class="container d-flex justify-content-center align-items-center" style="height: 10rem">
+        <div class="w-100">
+            <button class="btn btn-primary btn-block disabled d-inline">转到微信认证页</button>
+            <div class="d-inline position-relative"></div>
+        </div>
     </div>
 </form>
 <script>
-
+    $("#wechat-auth-scheme div.d-inline")[0].appendChild(createErrorTooltip("UNIMPLEMENTED"))
 </script>
 </body>
 </html>
