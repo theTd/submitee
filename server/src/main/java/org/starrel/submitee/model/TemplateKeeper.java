@@ -5,7 +5,6 @@ import com.google.common.cache.CacheBuilder;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Projections;
-import lombok.SneakyThrows;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.starrel.submitee.ExceptionReporting;
@@ -14,14 +13,8 @@ import org.starrel.submitee.SubmiteeServer;
 
 import javax.sql.DataSource;
 import java.io.InputStreamReader;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.sql.*;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,7 +36,9 @@ public class TemplateKeeper {
     public void init() throws Exception {
         try {
             initTable();
-        } catch (SQLException t) {
+            cacheGrouping();
+            cacheLatestVersions();
+        } catch (Exception t) {
             throw new Exception("failed initializing template keeper", t);
         }
     }
@@ -55,6 +50,30 @@ public class TemplateKeeper {
                 SubmiteeServer.getInstance().getLogger().info("creating table templates");
                 new ScriptRunner(conn, true, true).runScript(new InputStreamReader(getClass().getResourceAsStream("/templates.sql")));
 
+            }
+        }
+    }
+
+    private void cacheGrouping() throws SQLException, ExecutionException {
+        try (Connection conn = dataSource.getConnection()) {
+            ResultSet r = conn.createStatement().executeQuery("SELECT DISTINCT `grouping` FROM templates");
+            while (r.next()) {
+                getGroupingId(r.getString(1));
+            }
+        }
+    }
+
+    private void cacheLatestVersions() throws SQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            ResultSet r = conn.createStatement()
+                    .executeQuery("SELECT DISTINCT `template_id`, MAX(version) FROM templates GROUP BY template_id");
+            while (r.next()) {
+                String templateId = r.getString(1);
+                int version = r.getInt(2);
+                ResultSet _r = conn.createStatement().executeQuery(
+                        "SELECT uuid FROM templates WHERE template_id=\"" + templateId + "\" AND version=" + version);
+                _r.next();
+                latestVersionCache.put(templateId, UUID.fromString(_r.getString(1)));
             }
         }
     }
@@ -101,9 +120,8 @@ public class TemplateKeeper {
         }
     }
 
-    @SneakyThrows
-    private String allocateTemplateId(String grouping) {
-        AtomicInteger id = groupingCache.get(grouping, () -> {
+    private AtomicInteger getGroupingId(String grouping) throws ExecutionException {
+        return groupingCache.get(grouping, () -> {
             try (Connection conn = dataSource.getConnection()) {
                 PreparedStatement stmt = conn.prepareStatement("SELECT count(*) OVER () FROM `templates` WHERE `grouping`=? GROUP BY `template_id` LIMIT 1");
                 stmt.setString(1, grouping);
@@ -115,6 +133,10 @@ public class TemplateKeeper {
                 }
             }
         });
+    }
+
+    private String allocateTemplateId(String grouping) throws ExecutionException {
+        AtomicInteger id = getGroupingId(grouping);
         return grouping + "-" + id.incrementAndGet();
     }
 
@@ -140,13 +162,24 @@ public class TemplateKeeper {
         return getTemplate(latestVersion);
     }
 
-    public List<STemplateImpl> getByQuery(Bson filters) throws ExecutionException {
-        MongoCollection<Document> templates = SubmiteeServer.getInstance().getMongoDatabase().getCollection("templates");
-        MongoCursor<Document> cursor = templates.find(filters).projection(Projections.fields(Projections.include("id"))).cursor();
+    public Set<String> getIds() {
+        return latestVersionCache.asMap().keySet();
+    }
 
-        List<STemplateImpl> list = new LinkedList<>();
+    public List<UUID> getUniqueIdsByQuery(Bson filters) {
+        MongoCollection<Document> collection = SubmiteeServer.getInstance().getMongoDatabase().getCollection("templates");
+        MongoCursor<Document> cursor = collection.find(filters).projection(Projections.fields(Projections.include("id"))).cursor();
+
+        List<UUID> list = new LinkedList<>();
         while (cursor.hasNext()) {
-            UUID uuid = UUID.fromString(cursor.next().getString("id"));
+            list.add(UUID.fromString(cursor.next().getString("id")));
+        }
+        return list;
+    }
+
+    public List<STemplateImpl> getByQuery(Bson filters) throws ExecutionException {
+        List<STemplateImpl> list = new ArrayList<>();
+        for (UUID uuid : getUniqueIdsByQuery(filters)) {
             STemplateImpl template = getTemplate(uuid);
             if (template == null) {
                 ExceptionReporting.report(TemplateKeeper.class, "template mismatch", "could not find template with uuid=" + uuid);

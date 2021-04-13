@@ -5,12 +5,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.http.HttpStatus;
-import org.starrel.submitee.ClassifiedErrors;
-import org.starrel.submitee.ClassifiedException;
-import org.starrel.submitee.ExceptionReporting;
-import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.*;
 import org.starrel.submitee.model.STemplate;
 import org.starrel.submitee.model.STemplateImpl;
+import org.starrel.submitee.model.Submission;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -33,9 +31,10 @@ public class CreateServlet extends AbstractJsonServlet {
                 try {
                     if (uriParts.length == 1) {
                         // create new
-                        STemplate template = SubmiteeServer.getInstance().createTemplate();
+                        STemplate created = SubmiteeServer.getInstance().createTemplate();
                         resp.setStatus(HttpStatus.OK_200);
-                        resp.getWriter().println(template.getUniqueId());
+                        resp.setContentType("application/json");
+                        resp.getWriter().println(SubmiteeServer.GSON.toJson(created.getUniqueId().toString()));
                     } else if (uriParts.length == 2) {
                         // create revision
                         String templateId = uriParts[1];
@@ -88,20 +87,36 @@ public class CreateServlet extends AbstractJsonServlet {
                         ExceptionReporting.report(CreateServlet.class, "target template not found",
                                 "template uuid=" + templateUniqueId);
                         responseNotFound(req, resp);
+                        return;
                     } else if (template.getLatestVersion() != template.getVersion()) {
                         responseClassifiedError(req, resp, ClassifiedErrors.SUBMIT_TO_OLD_TEMPLATE);
-                    } else {
-                        // TODO: 2021-04-14-0014
+                        return;
                     }
                 } catch (ExecutionException e) {
                     ExceptionReporting.report(CreateServlet.class, "fetching target template info", e);
                     responseInternalError(req, resp);
+                    return;
                 }
+
+                JsonObject submissionBody = JsonUtil.parseObject(body, "body");
+                String debugInfo = JsonUtil.parseString(body, "debug");
+
+                Submission submission = getSession(req).getUser().createSubmission(template);
+                submission.getAttributeMap().setAutoSaveAttribute(false);
+                submission.setBody(submissionBody);
+                if (debugInfo != null) {
+                    submission.setAttribute("debug", debugInfo);
+                }
+                submission.getAttributeMap().setAutoSaveAttribute(true);
+                resp.setStatus(HttpStatus.OK_200);
+                resp.setContentType("application/json");
+                resp.getWriter().println(SubmiteeServer.GSON.toJson(submission.getUniqueId().toString()));
                 break;
             }
             default: {
                 ExceptionReporting.report(CreateServlet.class, "parsing method", "unknown method: " + uriParts[0]);
                 responseBadRequest(req, resp);
+                break;
             }
         }
     }

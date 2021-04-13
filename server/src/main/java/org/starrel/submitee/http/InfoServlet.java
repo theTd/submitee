@@ -74,7 +74,7 @@ public class InfoServlet extends SubmiteeHttpServlet {
         }
 
         String scheme;
-        if (!(object instanceof AttributeHolder) || (scheme = ((AttributeHolder<?>) object).getAttributeScheme()) == null) {
+        if ((scheme = ((AttributeHolder<?>) object).getAttributeScheme()) == null) {
             ExceptionReporting.report(InfoServlet.class, "serializing resource",
                     "requested object is not instance of attribute holder or attribute holder returns null scheme, uuidString=" + uuid);
             responseInternalError(req, resp);
@@ -88,7 +88,7 @@ public class InfoServlet extends SubmiteeHttpServlet {
         jsonWriter.beginObject();
         // TODO: 2021/3/26 check ACLs
         jsonWriter.name("scheme").value(scheme);
-        jsonWriter.name("attributes").jsonValue(SubmiteeServer.GSON.toJson(((AttributeHolder<?>) object)
+        jsonWriter.name("body").jsonValue(SubmiteeServer.GSON.toJson(((AttributeHolder<?>) object)
                 .getAttributeMap().toJsonTree(path -> !path.equalsIgnoreCase("protected"))));
         jsonWriter.endObject();
         jsonWriter.close();

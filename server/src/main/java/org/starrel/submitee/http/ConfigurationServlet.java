@@ -12,10 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -67,7 +64,7 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                 storage.validateConfiguration();
             } catch (ClassifiedException e) {
                 blobStorageErrors.put(storage.getName(), I18N.fromKey(String.format("blob_storage.provider.%s.error.%s",
-                        storage.getTypeId(), e.getDistinguishName())).format(req));
+                        storage.getTypeId(), e.getDistinguishName().toLowerCase(Locale.ROOT))).format(req));
             } catch (Exception e) {
                 blobStorageErrors.put(storage.getName(), e.getMessage());
             }

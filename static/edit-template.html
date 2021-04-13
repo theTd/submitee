@@ -235,7 +235,7 @@
     function findFieldByElement(element) {
         let name = findParentAttributeByElement(element, "data-submitee-field-name")
         if (name) {
-            return currentTemplate.getFieldByName(name);
+            return submitee.currentTemplate.getFieldByName(name);
         }
     }
 
@@ -332,7 +332,7 @@
      */
     function loadFieldRows() {
         let nodes = Array();
-        currentTemplate.fields.forEach(value => {
+        submitee.currentTemplate.fields.forEach(value => {
             nodes.push(createFieldRow(value));
         });
 
@@ -372,7 +372,7 @@
 
         let dropAreaIdx = 0;
         container.insertBefore(createDropArea(0), relative);
-        currentTemplate.fields.forEach(field => {
+        submitee.currentTemplate.fields.forEach(field => {
             let row = rows[field.name];
             if (row) {
                 container.insertBefore(row, relative);
@@ -440,12 +440,14 @@
 
         if (!type || !name) {
             create_toast("重要提示", "<span style='color: red'>字段类型和名称是必填项目</span>", 2000);
+        } else if (submitee.currentTemplate.getFieldByName(name)) {
+            create_toast("重要提示", "字段名需要唯一");
         } else {
-            let field = new SField(currentTemplate, null);
+            let field = new SField(submitee.currentTemplate, null);
             field.type = type;
             field.name = name;
 
-            currentTemplate.addField(field).then(() => {
+            submitee.currentTemplate.addField(field).then(() => {
                 let relative = $("#insert-fields-before")[0];
                 relative.parentNode.insertBefore(createEditingFieldRows(field), relative);
             }, error => {
@@ -475,37 +477,37 @@
     }
 
     function loadTemplateMetadata() {
-        $("#breadcrumb-template-name")[0].textContent = currentTemplate.name || currentTemplate.templateId;
-        $("#template-metadata-name").val(currentTemplate.name).on("keyup", dirty)
-        $("#template-metadata-comment").val(currentTemplate.comment).on("keyup", dirty);
+        $("#breadcrumb-template-name")[0].textContent = submitee.currentTemplate.name || submitee.currentTemplate.templateId;
+        $("#template-metadata-name").val(submitee.currentTemplate.name).on("keyup", dirty)
+        $("#template-metadata-comment").val(submitee.currentTemplate.comment).on("keyup", dirty);
 
         let descContainer = $("#template-desc")[0];
-        descContainer.innerHTML = currentTemplate.desc;
+        descContainer.innerHTML = submitee.currentTemplate.desc;
         let editor = new window.wangEditor('#template-desc');
         editor.config.excludeMenus = ['todo'];
         editor.config.onchange = dirty;
         editor.create();
-        currentTemplate.descEditor = editor;
+        submitee.currentTemplate.descEditor = editor;
     }
 
     function checkAndSync() {
-        if (!currentTemplate.latest) {
-            currentTemplate.name = $("#template-metadata-name").val();
-            currentTemplate.comment = $("#template-metadata-comment").val();
-            currentTemplate.desc = currentTemplate.descEditor.txt.html();
+        if (!submitee.currentTemplate.latest) {
+            submitee.currentTemplate.name = $("#template-metadata-name").val();
+            submitee.currentTemplate.comment = $("#template-metadata-comment").val();
+            submitee.currentTemplate.desc = submitee.currentTemplate.descEditor.txt.html();
 
-            currentTemplate.sync().then(() => {
+            submitee.currentTemplate.sync().then(() => {
                 create_toast("提示", "对模板的更改已保存", 2000);
-                currentTemplate.latest = true;
+                submitee.currentTemplate.latest = true;
             }, error => {
-                currentTemplate.latest = false;
+                submitee.currentTemplate.latest = false;
                 create_toast("重要提示", "保存模板时出现问题: " + error, 10000);
             });
         }
     }
 
     function dirty() {
-        currentTemplate.latest = false;
+        submitee.currentTemplate.latest = false;
     }
 
     function fieldDragStart(evt) {
@@ -531,11 +533,11 @@
         // reset style
         dropAreaDragLeave(evt);
 
-        let field = currentTemplate.getFieldByName(evt.dataTransfer.getData("field-sort"));
+        let field = submitee.currentTemplate.getFieldByName(evt.dataTransfer.getData("field-sort"));
 
         // find target index
         let targetIndex = parseInt(evt.target.parentNode.getAttribute("data-drop-area-index"));
-        let originalIndex = currentTemplate.findFieldIndex(field);
+        let originalIndex = submitee.currentTemplate.findFieldIndex(field);
         if (originalIndex === targetIndex || originalIndex === targetIndex - 1) {
             console.log(`nothing changed, originalIndex=${originalIndex}, targetIndex==${targetIndex}`);
             return;
@@ -557,42 +559,39 @@
                 url: "../configuration",
                 method: "GET",
                 success: function (data) {
+                    // noinspection JSUndeclaredVariable
                     configuration = data;
-                    resolve();
+                    resolve(configuration);
                 },
-                error: function (error) {
-                    toast_ajax_error(error);
-                    reject();
-                }
+                error: reject
             })
         })
-
     }
 
     let fetchingConfiguration = fetchConfiguration();
     buildFieldTypeSelect();
 
-    let currentTemplate;
     let currentTemplateId = getQueryValue("target");
 
-    fetchSingleTemplateInfo(currentTemplateId).then(value => {
+    setCurrentTemplate(currentTemplateId, template => {
         fetchingConfiguration.then(() => {
-            currentTemplate = value;
-            currentTemplate.latest = true;
+            submitee.currentTemplate = template;
+            submitee.currentTemplate.latest = true;
 
             loadTemplateMetadata();
             loadFieldRows();
 
             // check changes made every 2 seconds
             setInterval(checkAndSync, 2000);
+        }, error => {
+            toast_ajax_error(error);
         })
-    }, reject => {
-        alert(reject.message);
-        window.history.back();
-    });
+    }, error => {
+        toast_ajax_error(error);
+    })
 
     submitee.beforeUnloadChecker = function () {
-        if (!currentTemplate.latest) {
+        if (!submitee.currentTemplate.latest) {
             return "saving template";
         }
     }

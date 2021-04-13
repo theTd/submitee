@@ -5,18 +5,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.starrel.submitee.SubmiteeServer;
 
-import javax.swing.plaf.basic.BasicTreeUI;
 import java.util.*;
 
 public class JsonTreeAttributeSource<TValue> implements AttributeSource {
     private final Class<TValue> rootType;
-    private JsonElement jsonRoot;
+    private JsonObject jsonRoot = new JsonObject();
 
     public JsonTreeAttributeSource(Class<TValue> rootType) {
         this.rootType = rootType;
     }
 
-    public JsonElement getJsonRoot() {
+    public JsonObject getJsonRoot() {
         return jsonRoot;
     }
 
@@ -62,13 +61,21 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
     public void setAttribute(String path, Object value) {
+        if (value == null) {
+            delete(path);
+            return;
+        }
+
         AttributeSerializer serializer = SubmiteeServer.getInstance().getAttributeSerializer(value.getClass());
         if (serializer == null)
             throw new RuntimeException("could not find serializer of type " + value.getClass().getName());
 
         // self
         if (path.isEmpty()) {
-            jsonRoot = serializer.write(value);
+            JsonElement write = serializer.write(value);
+            if (write == null) write = new JsonObject();
+            if (!write.isJsonObject()) throw new RuntimeException("setting json root to non json object");
+            jsonRoot = write.getAsJsonObject();
             return;
         }
 
@@ -84,17 +91,14 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
     }
 
     @Override
-    public void setAll(String path, JsonObject object) throws UnsupportedOperationException {
-        if (path.contains(".")) throw new IllegalArgumentException("cannot use high level path on setAll()");
-        // TODO: 2021-03-26-0026
-        if (jsonRoot == null) {
-            jsonRoot = new JsonObject();
-        }
+    public void setAll(String path, JsonObject object) {
         if (path.isEmpty()) {
-            jsonRoot = object;
-        } else {
-            jsonRoot.getAsJsonObject().add(path, object);
+            this.jsonRoot = object;
+            return;
         }
+
+        JsonObject fromPath = getObjectFromPath(parseParentPath(path), true);
+        fromPath.add(parsePathNodeName(path), object);
     }
 
     @Override

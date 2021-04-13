@@ -1,63 +1,37 @@
 package org.starrel.submitee.auth;
 
-import com.mongodb.client.model.Filters;
-import org.bson.conversions.Bson;
 import org.starrel.submitee.SubmiteeServer;
-import org.starrel.submitee.attribute.AttributeMap;
-import org.starrel.submitee.model.SubmissionImpl;
-import org.starrel.submitee.model.User;
-import org.starrel.submitee.model.UserDescriptor;
+import org.starrel.submitee.model.AbstractUser;
 
-import java.util.List;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-public class AnonymousUser implements User {
-    private final UserDescriptor descriptor;
-    private final String userId;
-    private final AttributeMap<AnonymousUser> attributeMap;
+public class AnonymousUser extends AbstractUser {
 
     public AnonymousUser(String userId) {
-        this.descriptor = new UserDescriptor(AnonymousUserRealm.TYPE_ID, userId);
-        this.userId = userId;
-        this.attributeMap = SubmiteeServer.getInstance().createOrReadAttributeMap(this, "users");
-        this.attributeMap.setAutoSaveAttribute(false);
+        super(AnonymousUserRealm.TYPE_ID, userId);
+        getAttributeMap().setAutoSaveAttribute(false);
     }
 
     @Override
-    public AttributeMap<? extends User> getAttributeMap() {
-        return attributeMap;
+    public boolean isAnonymous() {
+        return true;
+    }
+
+    private final static String[] IGNORED_ATTRIBUTES = new String[]
+            {"create-time", "last-seen", "preferred-language"};
+    private final static Set<String> SET_IGNORED_ATTRIBUTES;
+
+    static {
+        SET_IGNORED_ATTRIBUTES = Set.copyOf(Arrays.stream(IGNORED_ATTRIBUTES).collect(Collectors.toList()));
     }
 
     @Override
     public void attributeUpdated(String path) {
-    }
-
-    @Override
-    public String getTypeId() {
-        return AnonymousUserRealm.TYPE_ID;
-    }
-
-    @Override
-    public String getId() {
-        return userId;
-    }
-
-    @Override
-    public List<SubmissionImpl> getSubmissions(Bson query) {
-        return SubmiteeServer.getInstance().getSubmissions(Filters.eq("user", getDescriptor().toString()));
-    }
-
-    @Override
-    public String getPreferredLanguage() {
-        return this.attributeMap.get("preferred-language", String.class);
-    }
-
-    @Override
-    public void setPreferredLanguage(String language) {
-        this.attributeMap.set("preferred-language", language);
-    }
-
-    @Override
-    public UserDescriptor getDescriptor() {
-        return descriptor;
+        if (path == null) return;
+        if (path.isEmpty() || !SET_IGNORED_ATTRIBUTES.contains(path)) {
+            getAttributeMap().saveAttribute(SubmiteeServer.getInstance().getMongoDatabase());
+        }
     }
 }

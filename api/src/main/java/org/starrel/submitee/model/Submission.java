@@ -14,7 +14,9 @@ public interface Submission extends AttributeHolder<Submission> {
 
     UserDescriptor getSubmitUserDescriptor();
 
-    UUID getTemplateUUID();
+    UUID getTemplateUniqueId();
+
+    void setTemplateUniqueId(UUID uuid);
 
     STemplate getTemplate() throws ExecutionException;
 

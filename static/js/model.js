@@ -254,30 +254,48 @@ async function fetchTemplateInfo(filter, latest) {
             success: function (data) {
                 let all = Array();
                 for (let val of data) {
-                    all.push(new STemplate(val['attributes']));
+                    all.push(new STemplate(val['body']));
                 }
                 resolve(all);
             },
-            error: function (error) {
-                reject(error.responseText);
+            error: function (xhr) {
+                reject(xhr);
             }
         });
     });
 }
 
+/**
+ *
+ * @param uuid
+ * @returns {Promise<STemplate>}
+ */
 async function fetchSingleTemplateInfo(uuid) {
     return new Promise((resolve, reject) => {
         $.ajax({
             url: "../info/" + uuid,
             method: "GET",
             success: function (data) {
-                resolve(new STemplate(data["attributes"]));
+                resolve(new STemplate(data["body"]));
             },
             error: function (error) {
-                reject(error.statusCode);
+                reject(error);
             }
         });
     });
+}
+
+/**
+ *
+ * @param uuid
+ * @param callback
+ * @param errorCallback
+ */
+function setCurrentTemplate(uuid, callback, errorCallback) {
+    fetchSingleTemplateInfo(uuid).then(template => {
+        submitee.currentTemplate = template;
+        callback(template);
+    }, errorCallback);
 }
 
 fieldControllers = {};

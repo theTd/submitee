@@ -4,6 +4,7 @@ import org.bson.conversions.Bson;
 import org.starrel.submitee.attribute.AttributeHolder;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public interface User extends AttributeHolder<User> {
     String ATTRIBUTE_COLLECTION_NAME = "users";
@@ -21,7 +22,9 @@ public interface User extends AttributeHolder<User> {
 
     String getId();
 
-    List<? extends Submission> getSubmissions(Bson query);
+    List<? extends Submission> getSubmissions(Bson query) throws ExecutionException;
+
+    Submission createSubmission(STemplate template);
 
     String getPreferredLanguage();
 

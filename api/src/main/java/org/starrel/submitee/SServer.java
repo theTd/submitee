@@ -1,6 +1,5 @@
 package org.starrel.submitee;
 
-import com.google.gson.JsonObject;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
 import org.starrel.submitee.attribute.AttributeHolder;
@@ -8,13 +7,13 @@ import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSerializer;
 import org.starrel.submitee.auth.AuthScheme;
 import org.starrel.submitee.blob.Blob;
-import org.starrel.submitee.blob.BlobStorage;
 import org.starrel.submitee.blob.BlobStorageProvider;
 import org.starrel.submitee.model.*;
 
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -42,7 +41,7 @@ public interface SServer {
 
     <TContext extends AttributeHolder<?>> AttributeMap<TContext> createTemporaryAttributeMap(TContext context);
 
-    <TContext extends AttributeHolder<?>> AttributeMap<TContext> createOrReadAttributeMap(TContext context, String collection);
+    <TContext extends AttributeHolder<?>> AttributeMap<TContext> accessAttributeMap(TContext context, String collection);
 
     <TContext extends AttributeHolder<?>> AttributeMap<TContext> readAttributeMap(TContext context, String collection);
 
@@ -64,19 +63,19 @@ public interface SServer {
 
     List<? extends STemplate> getTemplateAllVersion(String templateId) throws ExecutionException;
 
-    List<String> getTemplateIds();
+    Set<String> getTemplateIds();
 
     STemplate getTemplateLatestVersion(String templateId) throws ExecutionException;
 
-    Submission getSubmission(UUID uniqueId);
+    Submission getSubmission(UUID uniqueId) throws ExecutionException;
 
-    List<? extends Submission> getSubmissions(Bson query);
+    List<? extends Submission> getSubmissions(Bson query) throws ExecutionException;
 
     List<UUID> getSubmissionIdsOfUser(UserDescriptor userDescriptor);
 
-    Submission createSubmission(UserDescriptor userDescriptor, STemplate template, JsonObject body);
+    Submission createSubmission(UserDescriptor userDescriptor, STemplate template);
 
-    Session getUserSession(UserDescriptor userDescriptor);
+    Session getUserSession(UserDescriptor userDescriptor) throws ExecutionException;
 
     AuthScheme createPasswordAuthScheme();
 

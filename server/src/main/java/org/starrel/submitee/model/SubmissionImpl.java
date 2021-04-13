@@ -3,6 +3,7 @@ package org.starrel.submitee.model;
 import com.google.gson.JsonObject;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeMap;
+import org.starrel.submitee.attribute.AttributeMapImpl;
 import org.starrel.submitee.attribute.AttributeSpec;
 
 import java.util.Date;
@@ -14,30 +15,30 @@ public class SubmissionImpl implements Submission {
 
     private final AttributeMap<SubmissionImpl> attributeMap;
 
-    private final AttributeSpec<UUID> templateUUIDSpec;
-    private final AttributeSpec<Date> submitTimeSpec;
-    private final AttributeSpec<UserDescriptor> submitUserDescriptorSpec;
+    private final AttributeSpec<UUID> templateUniqueId;
+    private final AttributeSpec<Date> submitTime;
+    private final AttributeSpec<UserDescriptor> submitUser;
 
-    public SubmissionImpl(UserDescriptor submitUserDescriptor, STemplateImpl template) {
-        this.uniqueId = UUID.randomUUID();
-        this.attributeMap = SubmiteeServer.getInstance().createOrReadAttributeMap(this, Submission.ATTRIBUTE_COLLECTION_NAME);
+    SubmissionImpl(UserDescriptor user, STemplate template) {
+        this(UUID.randomUUID());
+        this.attributeMap.setAutoSaveAttribute(false);
 
-        this.templateUUIDSpec = this.attributeMap.of("template-id", UUID.class);
-        this.submitUserDescriptorSpec = this.attributeMap.of("submit-user", UserDescriptor.class);
-        this.submitTimeSpec = this.attributeMap.of("submit-time", Date.class);
+        getAttributeMap().set("unique-id", uniqueId.toString());
+        setTemplateUniqueId(template.getUniqueId());
+        this.submitUser.set(user);
+        this.submitTime.set(new Date());
 
-        this.templateUUIDSpec.set(template.getUniqueId());
-        this.submitUserDescriptorSpec.set(submitUserDescriptor);
-        this.submitTimeSpec.set(new Date());
+        this.attributeMap.setAutoSaveAttribute(true);
     }
 
-    public SubmissionImpl(UUID uniqueId) {
+    SubmissionImpl(UUID uniqueId) {
         this.uniqueId = uniqueId;
 
-        this.attributeMap = SubmiteeServer.getInstance().readAttributeMap(this, ATTRIBUTE_COLLECTION_NAME);
-        this.templateUUIDSpec = this.attributeMap.of("template-id", UUID.class);
-        this.submitUserDescriptorSpec = this.attributeMap.of("submit-user", UserDescriptor.class);
-        this.submitTimeSpec = this.attributeMap.of("submit-time", Date.class);
+        this.attributeMap = SubmiteeServer.getInstance().accessAttributeMap(this, Submission.ATTRIBUTE_COLLECTION_NAME);
+
+        this.templateUniqueId = this.attributeMap.of("template-uuid", UUID.class);
+        this.submitUser = this.attributeMap.of("submit-user", UserDescriptor.class);
+        this.submitTime = this.attributeMap.of("submit-time", Date.class);
     }
 
     @Override
@@ -47,18 +48,23 @@ public class SubmissionImpl implements Submission {
 
     @Override
     public UserDescriptor getSubmitUserDescriptor() {
-        return submitUserDescriptorSpec.get();
+        return submitUser.get();
     }
 
     @Override
-    public UUID getTemplateUUID() {
-        return templateUUIDSpec.get();
+    public UUID getTemplateUniqueId() {
+        return templateUniqueId.get();
+    }
+
+    @Override
+    public void setTemplateUniqueId(UUID uuid) {
+        this.templateUniqueId.set(uuid);
     }
 
     @Override
     public STemplateImpl getTemplate() throws ExecutionException {
         UUID id;
-        if ((id = templateUUIDSpec.get()) == null) {
+        if ((id = templateUniqueId.get()) == null) {
             return null;
         }
         return SubmiteeServer.getInstance().getTemplate(id);
@@ -66,7 +72,7 @@ public class SubmissionImpl implements Submission {
 
     @Override
     public Date getSubmitTime() {
-        return submitTimeSpec.get();
+        return submitTime.get();
     }
 
     @Override

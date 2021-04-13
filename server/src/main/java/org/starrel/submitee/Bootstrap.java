@@ -8,6 +8,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import lombok.SneakyThrows;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -80,6 +81,13 @@ public class Bootstrap {
             System.exit(-1);
             return;
         }
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @SneakyThrows
+            @Override
+            public void run() {
+                server.shutdown();
+            }
+        });
         try {
             server.start();
             server.join();

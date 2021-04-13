@@ -5,7 +5,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import jakarta.servlet.DispatcherType;
@@ -72,6 +71,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private final Map<String, NotificationScheme> notificationSchemeMap = Maps.newConcurrentMap();
 
     private final SessionKeeper sessionKeeper = new SessionKeeper();
+    private final SubmissionKeeper submissionKeeper = new SubmissionKeeper();
 
     // endregion
     private final Logger logger;
@@ -197,6 +197,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         addAttributeSerializer(Double.class, AttributeSerializers.DOUBLE);
         addAttributeSerializer(Boolean.class, AttributeSerializers.BOOLEAN);
         addAttributeSerializer(Date.class, AttributeSerializers.DATE);
+        addAttributeSerializer(UUID.class, AttributeSerializers.UUID);
         addAttributeSerializer(UserDescriptor.class, UserDescriptor.SERIALIZER);
         addAttributeSerializer(HistoryAddressEntry.class, HistoryAddressEntry.SERIALIZER);
 
@@ -249,6 +250,14 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
             templateKeeper.init();
         } catch (Exception e) {
             throw new IOException("failed initializing template keeper", e);
+        }
+        // endregion
+
+        // region setup submission keeper
+        try {
+            submissionKeeper.init();
+        } catch (Exception e) {
+            throw new IOException("failed initializing submission keeper", e);
         }
         // endregion
 
@@ -314,7 +323,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public <TContext extends AttributeHolder<?>> AttributeMap<TContext> createOrReadAttributeMap(TContext context, String collection) {
+    public <TContext extends AttributeHolder<?>> AttributeMap<TContext> accessAttributeMap(TContext context, String collection) {
         return new AttributeMapImpl<>(context, collection);
     }
 
@@ -364,8 +373,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public STemplateImpl getTemplate(UUID templateUUID) throws ExecutionException {
-        return templateKeeper.getTemplate(templateUUID);
+    public STemplateImpl getTemplate(UUID templateUniqueId) throws ExecutionException {
+        return templateKeeper.getTemplate(templateUniqueId);
     }
 
     @Override
@@ -374,9 +383,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public List<String> getTemplateIds() {
-        // TODO: 2021/4/4 implement
-        throw new UnsupportedOperationException();
+    public Set<String> getTemplateIds() {
+        return templateKeeper.getIds();
     }
 
     @Override
@@ -385,24 +393,23 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public Submission getSubmission(UUID uniqueId) {
-        // TODO: 2021/4/4 implement
-        throw new UnsupportedOperationException();
+    public Submission getSubmission(UUID uniqueId) throws ExecutionException {
+        return submissionKeeper.getSubmission(uniqueId);
     }
 
     @Override
-    public List<SubmissionImpl> getSubmissions(Bson query) {
-        throw new UnsupportedOperationException();
+    public List<SubmissionImpl> getSubmissions(Bson filter) throws ExecutionException {
+        return submissionKeeper.getSubmissions(filter);
     }
 
     @Override
     public List<UUID> getSubmissionIdsOfUser(UserDescriptor userDescriptor) {
-        return null;
+        return submissionKeeper.getSubmissionUUIDs(Filters.eq("body.submit-user"));
     }
 
     @Override
-    public Submission createSubmission(UserDescriptor userDescriptor, STemplate template, JsonObject body) {
-        return null;
+    public Submission createSubmission(UserDescriptor userDescriptor, STemplate template) {
+        return submissionKeeper.create(userDescriptor, template);
     }
 
     @SuppressWarnings("unchecked")
@@ -411,10 +418,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public Session getUserSession(UserDescriptor userDescriptor) {
-
-        // TODO: 2021-04-13-0013
-        return null;
+    public Session getUserSession(UserDescriptor userDescriptor) throws ExecutionException {
+        return sessionKeeper.getByUser(userDescriptor);
     }
 
     @Override
@@ -493,7 +498,10 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     public User resumeSession(SessionImpl session) {
-        // TODO: 2021-04-09-0009
+        for (UserRealm r : userRealmMap.values()) {
+            User resumed = r.resumeSession(session);
+            if (resumed != null) return resumed;
+        }
         return null;
     }
 

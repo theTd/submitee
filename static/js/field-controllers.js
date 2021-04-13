@@ -233,6 +233,7 @@ class FileFieldController extends FieldController {
 
         let maxFiles = field.attributeMap.get("max-files");
         let allowedTypes = field.attributeMap.get("allowed-types");
+        if (allowedTypes.length === 0) allowedTypes = ["*/*"];
         setTimeout(function () {
             let uppy = Uppy.Core({
                 locale: Uppy.locales.zh_CN,

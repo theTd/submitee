@@ -154,7 +154,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     public void setAll(String path, JsonObject jsonObject) {
         if (isList) throw new UnsupportedOperationException("not object");
         getSource().setAll(path, jsonObject);
-        childUpdated(path);
+//        childUpdated(path);
     }
 
     @Override

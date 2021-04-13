@@ -88,7 +88,8 @@
     <hr/>
     <form class="mb-3" id="field-container" onsubmit="createSubmission();return false;">
         <hr id="insert-fields-before"/>
-        <input type="submit" class="btn btn-primary" value="提交"/>
+        <button id="button-submit" class="btn btn-lg btn-success">提交</button>
+        <input type="submit" class="d-none"/>
     </form>
 </div>
 <!-- Optional JavaScript -->
@@ -107,15 +108,20 @@
 <script>
 
     function createSubmission() {
+        let button = $("#button-submit");
+        if (button.hasClass("disabled")) return;
+        button.addClass("disabled");
+        button.innerHTML = "<span class='spinner-border spinner-border-sm'></span>";
+
         let body = {};
-        let result = "";
+        let debug = "";
 
         let missingRequired = false;
-        currentTemplate.fields.forEach(field => {
+        submitee.currentTemplate.fields.forEach(field => {
             if (missingRequired) return;
             let controller = fieldControllers[field.type];
             if (!controller) {
-                result += `[!]${field.name}: no controller`
+                debug += `[!]${field.name}: no controller`
             } else {
                 try {
                     let resolve = controller.resolveSubmission(field);
@@ -141,16 +147,37 @@
                         }
                         return;
                     }
-                    result += resolve ? `[o]${field.name}: ${resolve}` : `[x]${field.name}`;
+                    debug += resolve ? `[o]${field.name}: ${resolve}` : `[x]${field.name}`;
                 } catch (e) {
                     console.log(e);
-                    result += `[!]${field.name}: internal error: ${JSON.stringify(e)}`
+                    debug += `[!]${field.name}: internal error: ${JSON.stringify(e)}`
                 }
             }
-            result += "\n";
-        })
-        if (missingRequired) return;
-        console.log(result);
+            debug += "\n";
+        });
+        if (missingRequired) {
+            button.text("提交");
+            button.removeClass("disabled");
+            return;
+        }
+
+        $.ajax({
+            url: "../create/submission/" + submitee.currentTemplate.uniqueId,
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                debug: debug,
+                body: body
+            }),
+            success: function (response) {
+                create_toast("提示", "<p>已完成提交</p><p>正在跳转...</p>");
+            },
+            error: function (xhr) {
+                toast_ajax_error(xhr);
+                button.text("提交");
+                button.removeClass("disabled");
+            }
+        });
     }
 
     /**
@@ -190,16 +217,16 @@
     }
 
     function loadMetadata() {
-        setTitle(currentTemplate.name);
-        $("#template-name").text(currentTemplate.name);
-        $("#template-desc").html(currentTemplate.desc);
+        setTitle(submitee.currentTemplate.name);
+        $("#template-name").text(submitee.currentTemplate.name);
+        $("#template-desc").html(submitee.currentTemplate.desc);
     }
 
     initializedControllers = Array();
 
     function initControllers(callback, error) {
         let promises = Array();
-        currentTemplate.fields.forEach(field => {
+        submitee.currentTemplate.fields.forEach(field => {
             if (!initializedControllers.includes(field.type)) {
                 initializedControllers.push(field.type);
                 let controller = fieldControllers[field.type];
@@ -212,7 +239,7 @@
     function buildFields() {
         let relative = $("#insert-fields-before")[0];
 
-        currentTemplate.fields.forEach((value, index) => {
+        submitee.currentTemplate.fields.forEach((value, index) => {
             let typeController = fieldControllers[value.type];
             if (!typeController) {
                 relative.parentNode.insertBefore(createErrorLine(value), relative);
@@ -224,24 +251,21 @@
     }
 
     let target = getQueryValue("target");
-    let currentTemplate;
 
     if (!target) {
         alert("出现了一些意料之外的异常，如需帮助请联系管理员");
         window.history.back();
     } else {
-        fetchSingleTemplateInfo(target).then(value => {
-            currentTemplate = value;
+        setCurrentTemplate(target, template => {
             submitee.submission = {};
 
             loadMetadata();
             initControllers(buildFields, (error) => {
-                alert(error);
+                create_toast("重要提示", error, 10000);
             })
         }, error => {
-            alert("出现了一些意料之外的异常，如需帮助请联系管理员");
-            window.history.back();
-        });
+            toast_ajax_error(error);
+        })
     }
 </script>
 </body>

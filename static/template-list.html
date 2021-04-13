@@ -40,6 +40,7 @@
         <div class="col col-2"></div>
     </div>
     <hr/>
+    <div class="row empty-mark d-none col-12 justify-content-center" style="color: gray; font-style: italic">(空)</div>
     <hr id="insert-template-before"/>
     <nav class="row col">
         <ul class="pagination" id="template-list-pagination">
@@ -51,32 +52,23 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>
-<script src="js/model.js"></script>
 <script>
-
     function createTemplate() {
         $.ajax({
-            url: "../create/",
+            url: "../create/template",
             method: "POST",
             contentType: "application/json",
-            data: JSON.stringify({
-                type: 'STemplate'
-            }),
+            data: JSON.stringify({}),
             success: function (data) {
-                window.location.href = "?method=edit-template&target=" + data;
+                create_toast("提示", "<p>创建成功</p><p>正在重定向...</p>");
+                setTimeout(() => {
+                    window.location.href = "?method=edit-template&target=" + data;
+                }, 500);
             },
-            error: function (error) {
-                console.log(Object.keys(error));
-                if (error.responseText) {
-                    alert(error.responseText);
-                } else {
-                    alert(error.status);
-                }
+            error: function (xhr) {
+                toast_ajax_error(xhr)
             }
         });
-        // todo apply new template then switch to editing template page
     }
 
     function findTemplateIdByElement(element) {
@@ -157,6 +149,10 @@
     const pageSize = 10;
     let page = parseInt(getQueryValue("page")) || 1;
     fetchTemplateInfo({}, true).then(array => {
+        if (array.length === 0) {
+            $(".empty-mark").removeClass("d-none");
+            return;
+        }
         let maxPages = Math.ceil(array.length / pageSize);
         if (page > maxPages) page = maxPages;
         buildPagination(page, maxPages);

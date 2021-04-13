@@ -27,7 +27,7 @@ public class SessionImpl implements Session {
 
     SessionImpl(String sessionToken) {
         this.sessionToken = sessionToken;
-        this.attributeMap = SubmiteeServer.getInstance().createOrReadAttributeMap(this, Session.COLLECTION_NAME);
+        this.attributeMap = SubmiteeServer.getInstance().accessAttributeMap(this, Session.COLLECTION_NAME);
         this.attributeMap.setAutoSaveAttribute(false);
 
         this.lastUA = attributeMap.of("last-ua", String.class);

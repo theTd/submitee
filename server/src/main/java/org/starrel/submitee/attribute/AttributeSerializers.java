@@ -1,12 +1,11 @@
 package org.starrel.submitee.attribute;
 
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import org.starrel.submitee.SubmiteeServer;
-import org.starrel.submitee.model.UserDescriptor;
 
 import java.util.Date;
+import java.util.UUID;
 
 public abstract class AttributeSerializers {
     public static AttributeSerializer<String> STRING = new AttributeSerializer<String>() {
@@ -78,6 +77,18 @@ public abstract class AttributeSerializers {
         @Override
         public JsonElement write(Date date) {
             return SubmiteeServer.GSON.toJsonTree(date.getTime());
+        }
+    };
+
+    public static AttributeSerializer<UUID> UUID = new AttributeSerializer<UUID>() {
+        @Override
+        public UUID parse(JsonElement json) {
+            return java.util.UUID.fromString(json.getAsString());
+        }
+
+        @Override
+        public JsonElement write(UUID uuid) {
+            return SubmiteeServer.GSON.toJsonTree(uuid);
         }
     };
 }
