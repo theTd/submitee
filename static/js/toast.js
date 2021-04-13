@@ -24,6 +24,7 @@ function _init_toast() {
     container.style.minHeight = '0';
     container.style.top = '0';
     container.style.right = '0';
+    container.style.zIndex = '20000';
     document.body.appendChild(container);
 }
 
@@ -91,13 +92,21 @@ function _init_icon_tooltip() {
     let template = document.createElement("template");
     template.id = "template-icon-tooltip";
     template.innerHTML = `
-<a>
+<i data-toggle="popover" data-container="body" data-placement="left" 
+type="button" data-html="true" class="material-icons" 
+style="font-size:2rem;color:red">error</i>
+`;
+    document.body.appendChild(template);
+
+    template = document.createElement("template");
+    template.id = "template-icon-tooltip-link";
+    template.innerHTML = `
+<a style="line-height: 0">
 <i data-toggle="popover" data-container="body" data-placement="left" 
 type="button" data-html="true" class="material-icons" 
 style="font-size:2rem;color:red">error</i>
 </a>
 `;
-
     document.body.appendChild(template);
 }
 
@@ -111,7 +120,7 @@ function createIconTooltip(icon, size, color, html, placement, link) {
     let elem = document.createElement("div");
     elem.innerHTML = html;
 
-    let template = $("#template-icon-tooltip")[0];
+    let template = link ? $("#template-icon-tooltip-link")[0] : $("#template-icon-tooltip")[0];
     let i = template.content.querySelector("i");
 
     i.textContent = icon;
@@ -122,8 +131,6 @@ function createIconTooltip(icon, size, color, html, placement, link) {
 
     if (link) {
         template.content.querySelector("a").href = link;
-    } else {
-        template.content.querySelector("a").href = undefined;
     }
 
     let node = document.importNode(template.content, true);

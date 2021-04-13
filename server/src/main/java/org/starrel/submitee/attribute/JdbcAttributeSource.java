@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -22,7 +23,7 @@ public class JdbcAttributeSource implements AttributeSource {
     public JdbcAttributeSource(DataSource dataSource, String table, String whereClause) {
         this.dataSource = dataSource;
         this.table = table;
-        this.whereClause = whereClause;
+        this.whereClause = whereClause.toLowerCase(Locale.ROOT).startsWith("where") ? whereClause : "WHERE " + whereClause;
     }
 
     @SuppressWarnings("unchecked")
@@ -31,7 +32,7 @@ public class JdbcAttributeSource implements AttributeSource {
         try {
             return (TValue) cache.get(path, () -> {
                 try (Connection conn = dataSource.getConnection()) {
-                    ResultSet r = conn.createStatement().executeQuery(String.format("SELECT %s FROM %s WHERE %s", path, table, whereClause));
+                    ResultSet r = conn.createStatement().executeQuery(String.format("SELECT %s FROM %s %s", path, table, whereClause));
                     if (r.next()) {
                         return r.getObject(1);
                     } else {

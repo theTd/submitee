@@ -9,5 +9,7 @@ public interface PasswordAuthScheme extends AuthScheme {
 
     interface AuthHandler {
         AuthResult handle(Session session, String username, String password);
+
+        String getResetPasswordLink();
     }
 }

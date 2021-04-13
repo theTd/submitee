@@ -1,27 +1,22 @@
 package org.starrel.submitee.auth;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.SneakyThrows;
 import org.starrel.submitee.*;
 import org.starrel.submitee.model.Session;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 public class PasswordAuthSchemeImpl implements PasswordAuthScheme {
     private final static String RESULT_BAD_REQUEST = "bad_request";
     private final static String RESULT_INTERNAL_ERROR = "internal_error";
     private final static String RESULT_REQUIRE_CAPTCHA = "require_captcha";
     private final static String RESULT_CAPTCHA_FAILURE = "captcha_failure";
-
-    private final Cache<String, Integer> failureCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(1, TimeUnit.HOURS).maximumSize(1000).build();
-
-    private Map<String, String> params = null;
 
     private AuthHandler authHandler;
 
@@ -38,47 +33,24 @@ public class PasswordAuthSchemeImpl implements PasswordAuthScheme {
     @SneakyThrows
     @Override
     public Map<String, String> getParams(Session session) {
-        if (requireCaptcha(session)) {
-            String grecaptchaSitekey = SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class);
-            String grecaptchaSecretKey = SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class);
-            if (grecaptchaSitekey != null && grecaptchaSecretKey != null) {
-                if (params == null) {
-                    params = new LinkedHashMap<>();
-                    params.put("g", grecaptchaSitekey);
-                }
-                return params;
-            }
+        Map<String, String> params = new LinkedHashMap<>();
+        String rst = authHandler.getResetPasswordLink();
+        if (rst != null) params.put("rst", Base64.getEncoder().encodeToString(rst.getBytes(StandardCharsets.UTF_8)));
+        if (Util.grecaptchaConfigured()) {
+            params.put("g", SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class));
         }
-        return null;
-    }
-
-    @SneakyThrows
-    private boolean requireCaptcha(Session session) {
-        Integer failure = failureCache.get(session.getLastActiveAddress(), () -> 0);
-        return failure > 5;
-    }
-
-    @SneakyThrows
-    private void markAuthFailure(Session session) {
-        Integer failure = failureCache.get(session.getLastActiveAddress(), () -> 0);
-        failureCache.put(session.getLastActiveAddress(), ++failure);
-    }
-
-    private void clearAuthFailure(Session session) {
-        failureCache.invalidate(session.getLastActiveAddress());
+        return params;
     }
 
     @Override
     public AuthResult auth(Session session, JsonElement content) {
         if (authHandler == null) {
-            markAuthFailure(session);
             ExceptionReporting.report(PasswordAuthSchemeImpl.class, "authenticating user", "auth handler not set");
             return new AbstractAuthResult(RESULT_INTERNAL_ERROR,
                     I18N.Http.INTERNAL_ERROR.format(session.getUser().getPreferredLanguage()), null);
         }
 
         if (!content.isJsonObject()) {
-            markAuthFailure(session);
             ExceptionReporting.report(PasswordAuthSchemeImpl.class, "authenticating user",
                     "unexpected request body: " + SubmiteeServer.GSON.toJson(content));
             return new AbstractAuthResult(RESULT_BAD_REQUEST,
@@ -87,7 +59,6 @@ public class PasswordAuthSchemeImpl implements PasswordAuthScheme {
         JsonObject body = content.getAsJsonObject();
         if (!body.has("username") ||
                 !body.has("password")) {
-            markAuthFailure(session);
             ExceptionReporting.report(PasswordAuthSchemeImpl.class, "authenticating user",
                     "unexpected request body: " + SubmiteeServer.GSON.toJson(content));
             return new AbstractAuthResult(RESULT_BAD_REQUEST,
@@ -100,10 +71,9 @@ public class PasswordAuthSchemeImpl implements PasswordAuthScheme {
                     "missing grecaptcha sitekey", "will not verifying captcha until grecaptcha sitekey is configured");
         } else {
             // region check for captcha
-            if (requireCaptcha(session)) {
+            if (Util.grecaptchaConfigured()) {
                 String captcha = body.has("captcha") ? body.get("captcha").getAsString() : null;
                 if (captcha == null) {
-                    markAuthFailure(session);
                     return new AbstractAuthResult(RESULT_REQUIRE_CAPTCHA,
                             I18N.General.REQUIRE_CAPTCHA.format(session.getUser().getPreferredLanguage()), null);
                 } else {
@@ -123,13 +93,7 @@ public class PasswordAuthSchemeImpl implements PasswordAuthScheme {
 
         String username = body.get("username").getAsString();
         String password = body.get("password").getAsString();
-        AuthResult result = authHandler.handle(session, username, password);
-        if (!result.isAccepted()) {
-            markAuthFailure(session);
-        } else {
-            clearAuthFailure(session);
-        }
-        return result;
+        return authHandler.handle(session, username, password);
     }
 
     @Override

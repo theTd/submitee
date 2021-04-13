@@ -9,7 +9,6 @@
 
     <link rel="stylesheet" href="css/global.css">
 
-    <script src=""></script>
     <style>
         .main {
             height: 100vh !important;
@@ -58,7 +57,7 @@
 <body>
 <div class="main no-gutters">
     <div class="container" style="width: auto">
-        <h5 style="color: white; text-shadow: #8d8d8d 2px 0 7px">站内用户注册</h5>
+        <h5 class="center-box-title">站内用户注册</h5>
         <div id="register-container">
             <form onsubmit="register();return false;" id="register-form" class="collapse">
                 <div class="container">
@@ -66,7 +65,7 @@
                         <label for="input-email">电子邮箱</label>
                     </div>
                     <div class="row">
-                        <input type="text" id="input-email" autocomplete="email" class="form-control"/>
+                        <input type="text" id="input-email" autocomplete="username" class="form-control"/>
                     </div>
                     <div class="row verify-code pt-1 collapse">
                         <div class="d-flex flex-row flex-nowrap">
@@ -129,7 +128,7 @@
 <script src="js/toast.js"></script>
 <script>
     let redirect = getQueryValue("d");
-    if (redirect) redirect = btoa(redirect);
+    if (redirect) redirect = atob(redirect);
 
     function register() {
         let email = $("#input-email").val();

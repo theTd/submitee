@@ -95,6 +95,7 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
 
     @Override
     public void childUpdated(String path) {
+        // TODO: 2021-04-13-0013 partial update
         if (autoSaveAttribute) {
             saveAttribute(SubmiteeServer.getInstance().getMongoDatabase());
         }

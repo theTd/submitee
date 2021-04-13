@@ -16,6 +16,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.starrel.submitee.model.SessionKeeper;
 
 import java.io.*;
 import java.net.URLEncoder;
@@ -69,7 +70,7 @@ public class SubmiteeHttpServlet extends HttpServlet {
     }
 
     public Session getSession(HttpServletRequest request) {
-        SessionImpl session = (SessionImpl) request.getSession().getAttribute(SessionImpl.HTTP_ATTRIBUTE_SESSION);
+        SessionImpl session = (SessionImpl) request.getSession().getAttribute(SessionKeeper.HTTP_ATTRIBUTE_SESSION);
         if (session == null) {
             throw new RuntimeException("could not get session instance for servlet request");
         }

@@ -24,6 +24,11 @@
             align-items: center;
         }
 
+        .center-box-title {
+            padding-left: unset;
+            position: static;
+        }
+
         a {
             color: #e0e0e0;
         }
@@ -74,7 +79,7 @@
 <body>
 <div class="main no-gutters">
     <div class="container" style="width: auto">
-        <h5 style="color: white; text-shadow: #8d8d8d 2px 0 7px">登入以进行下一步操作</h5>
+        <h5 class="center-box-title">登入以进行下一步操作</h5>
         <div>
             <ul class="nav nav-tabs" id="realm-tab">
             </ul>
@@ -93,11 +98,33 @@
 <script src="js/model.js"></script>
 <script src="js/toast.js"></script>
 <script>
+    function getCompleteSchemeQuery(realm, scheme) {
+        let appendParams = "";
+        if (scheme) {
+            let params = scheme["params"];
+            if (params) {
+                Object.keys(params).forEach(function (key) {
+                    appendParams += `&${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`;
+                })
+            }
+        }
+        let redirectParam = "";
+        if (redirect) {
+            redirectParam += `&d=${btoa(redirect)}`;
+        }
+
+        return `?${redirectParam}&t=${encodeURIComponent(target)}` +
+            `&r=${encodeURIComponent(realm["realm"])}&s=${encodeURIComponent(scheme["name"])}${appendParams}`;
+    }
+
     function createRealmTabItem(realm) {
         let tab = document.createElement("li");
         tab.classList.add("nav-item");
         let active = realm["realm"] === submitee.currentRealmName ? "active" : "";
-        tab.innerHTML = `<a class='nav-link ${active}' href="?target=${target}&realm=${realm["realm"]}">${realm["title"]}</a>`;
+        // todo supports multiple auth scheme
+        let uri = getCompleteSchemeQuery(realm, realm["scheme"][0]);
+
+        tab.innerHTML = `<a class='nav-link ${active}' href="${uri}">${realm["title"]}</a>`;
         return tab;
     }
 
@@ -120,32 +147,34 @@
     function loadAuthScheme() {
         let realm;
         if (submitee.currentRealmName) {
-            let find = submitee.allowedRealms.filter(r => r["name"] === submitee.currentRealmName);
-            // noinspection EqualityComparisonWithCoercionJS
-            if (find == true) {
-                realm = find[0];
-            } else {
+            realm = submitee.allowedRealms.filter(r => r["realm"] === submitee.currentRealmName)[0];
+            if (!realm) {
                 alert("出现了一些意料之外的异常，如需帮助请联系管理人员");
                 window.history.back();
                 return;
             }
         } else {
             realm = submitee.allowedRealms[0];
+            submitee.currentRealmName = realm["realm"];
         }
 
         let scheme;
         if (submitee.currentSchemeName) {
-            let find = realm["scheme"].filter(s => s["name"] === submitee.currentSchemeName)
+            scheme = realm["scheme"].filter(s => s["name"] === submitee.currentSchemeName)[0];
             // noinspection EqualityComparisonWithCoercionJS
-            if (find == true) {
-                scheme = find[0];
-            } else {
+            if (!scheme) {
                 alert("出现了一些意料之外的异常，如需帮助请联系管理人员");
                 window.history.back();
                 return;
             }
         } else {
             scheme = realm["scheme"][0];
+            submitee.currentSchemeName = scheme["name"];
+        }
+
+        let query = getCompleteSchemeQuery(realm, scheme);
+        if (query !== window.location.search) {
+            window.location.href = query;
         }
 
         let url = scheme["url"];
@@ -169,28 +198,8 @@
             method: "GET",
             contentType: "application/json",
             success: function (response) {
-                // allowedRealms = [
-                //     {
-                //         realm: "统一认证",
-                //         title: "统一认证",
-                //         scheme: [{name: "密码", url: "/static/auth-scheme-password.html"}]
-                //     },
-                //     {
-                //         realm: "wechat",
-                //         title: "微信登录",
-                //         scheme: [{name: "微信登录", url: "/static/auth-scheme-wechat.html"}]
-                //     },
-                //     {
-                //         realm: "internal",
-                //         title: "站内用户",
-                //         scheme: [{name: "密码", url: "/static/auth-scheme-password.html"}]
-                //     },
-                // ];
-
-                console.log(response);
-                // noinspection EqualityComparisonWithCoercionJS
                 submitee.allowedRealms = response.filter(r => r["realm"] !== "anonymous")
-                    .filter(r => r["scheme"] == true);
+                    .filter(r => Array.isArray(r["scheme"]) && r["scheme"].length > 0);
                 console.log(submitee.allowedRealms);
 
                 if (!submitee.allowedRealms || submitee.allowedRealms.length === 0) {
@@ -209,8 +218,11 @@
     }
 
     let target = getQueryValue("t");
-    submitee.currentRealmName = getQueryValue("realm");
-    submitee.currentSchemeName = getQueryValue("scheme");
+    let redirect = getQueryValue("d");
+    if (redirect) redirect = atob(redirect);
+
+    submitee.currentRealmName = getQueryValue("r");
+    submitee.currentSchemeName = getQueryValue("s");
 
     if (!target) {
         alert("未知认证目的");

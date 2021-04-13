@@ -101,12 +101,16 @@ public class InternalAccountServlet extends AbstractJsonServlet {
             case "send-verify-code": {
                 boolean grecaptcha = Util.grecaptchaConfigured();
                 String email = body.has("mail") ? body.get("mail").getAsString() : null;
+                String resetPassword = body.has("reset-password") ? body.get("reset-password").getAsString() : null;
                 String token = null;
                 if (grecaptcha) {
                     token = body.has("captcha") ? body.get("captcha").getAsString() : null;
                 }
-
-                if (email == null) {
+                if (email == null && resetPassword == null) {
+                    responseBadRequest(req, resp);
+                    return;
+                }
+                if (email != null && resetPassword != null) {
                     responseBadRequest(req, resp);
                     return;
                 }
@@ -126,10 +130,23 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                             }
                         }
 
-                        Integer uid = SubmiteeServer.getInstance().getInternalAccountRealm().getUidFromEmail(email);
-                        if (uid != null) {
-                            responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.USER_EXISTS_EMAIL.format(req, email));
-                            return;
+                        String actualEmail = email;
+                        if (email != null) {
+                            Integer uid = SubmiteeServer.getInstance().getInternalAccountRealm().getUidFromEmail(email);
+                            if (uid != null) {
+                                responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.USER_EXISTS_EMAIL.format(req, email));
+                                return;
+                            }
+                        } else {
+                            // search for email or username
+                            InternalAccountUser found = SubmiteeServer.getInstance().getInternalAccountRealm()
+                                    .getUserFromUsernameOrEmail(resetPassword);
+                            if (found == null) {
+                                responseErrorPage(resp, HttpStatus.NOT_FOUND_404, I18N.General.USER_NOT_EXISTS.format(req));
+                                return;
+                            } else {
+                                actualEmail = found.getEmail();
+                            }
                         }
 
                         if (!checkVerifyCodeSending(req)) {
@@ -137,9 +154,9 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                             return;
                         }
 
-                        verifyCodeCache.invalidate(email.toLowerCase(Locale.ROOT));
-                        String gen = verifyCodeCache.get(email.toLowerCase(Locale.ROOT));
-                        Util.sendVerifyCodeEmail(email, gen, Util.getPreferredLanguage(req)).get();
+                        verifyCodeCache.invalidate(actualEmail.toLowerCase(Locale.ROOT));
+                        String gen = verifyCodeCache.get(actualEmail.toLowerCase(Locale.ROOT));
+                        Util.sendVerifyCodeEmail(actualEmail, gen, Util.getPreferredLanguage(req)).get();
                         resp.setStatus(HttpStatus.OK_200);
                         resp.setContentType("application/json");
                         resp.getWriter().println(SubmiteeServer.GSON.toJson(getVerifyCodeTimeout(req)));
@@ -184,21 +201,75 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                                 responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.CAPTCHA_FAILURE.format(req));
                                 return;
                             }
+                        }
 
-                            Integer uid = SubmiteeServer.getInstance().getInternalAccountRealm().getUidFromEmail(email);
-                            if (uid != null) {
-                                responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.USER_EXISTS_EMAIL.format(req, email));
+                        Integer uid = SubmiteeServer.getInstance().getInternalAccountRealm().getUidFromEmail(email);
+                        if (uid != null) {
+                            responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.USER_EXISTS_EMAIL.format(req, email));
+                            return;
+                        }
+
+                        User created = SubmiteeServer.getInstance().getInternalAccountRealm().createUser(email, password);
+                        created.setAttribute("create-time", System.currentTimeMillis());
+                        created.setAttribute("last-seen", System.currentTimeMillis());
+                        created.setAttribute("preferred-language", Util.getPreferredLanguage(req));
+
+                        getSession(req).setUser(created);
+                        resp.setStatus(HttpStatus.OK_200);
+                    } catch (Exception e) {
+                        ExceptionReporting.report(InternalAccountServlet.class, "creating user", e);
+                        try {
+                            responseInternalError(req, resp);
+                        } catch (IOException ioException) {
+                            throw new RuntimeException(ioException);
+                        }
+                    } finally {
+                        asyncContext.complete();
+                    }
+                });
+                break;
+            }
+            case "reset-password": {
+                String resetPassword = body.has("reset-password") ? body.get("reset-password").getAsString() : null;
+                String captcha = body.has("captcha") ? body.get("captcha").getAsString() : null;
+                String verifyCode = body.has("verify-code") ? body.get("verify-code").getAsString() : null;
+                String newPassword = body.has("new-password") ? body.get("new-password").getAsString() : null;
+
+                if (resetPassword == null || verifyCode == null || newPassword == null || newPassword.isEmpty()) {
+                    responseBadRequest(req, resp);
+                    return;
+                }
+                if (Util.grecaptchaConfigured() && captcha == null) {
+                    responseErrorPage(resp, HttpStatus.BAD_REQUEST_400, I18N.General.REQUIRE_CAPTCHA.format(req));
+                    return;
+                }
+                AsyncContext asyncContext = req.startAsync();
+                asyncContext.start(() -> {
+                    try {
+                        if (Util.grecaptchaConfigured()) {
+                            if (!Util.grecaptchaVerify(captcha, Util.getRemoteAddr(req),
+                                    SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class))) {
+                                responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.CAPTCHA_FAILURE.format(req));
                                 return;
                             }
-
-                            User created = SubmiteeServer.getInstance().getInternalAccountRealm().createUser(email, password);
-                            created.setAttribute("create-time", System.currentTimeMillis());
-                            created.setAttribute("last-seen", System.currentTimeMillis());
-                            created.setAttribute("preferred-language", Util.getPreferredLanguage(req));
-
-                            getSession(req).setUser(created);
-                            resp.setStatus(HttpStatus.OK_200);
                         }
+
+                        // search for email or username
+                        InternalAccountUser found = SubmiteeServer.getInstance().getInternalAccountRealm()
+                                .getUserFromUsernameOrEmail(resetPassword);
+                        if (found == null) {
+                            responseErrorPage(resp, HttpStatus.NOT_FOUND_404, I18N.General.USER_NOT_EXISTS.format(req));
+                            return;
+                        }
+                        String email = found.getEmail();
+                        if (!Objects.equals(verifyCodeCache.getIfPresent(email), verifyCode)) {
+                            responseErrorPage(resp, HttpStatus.FORBIDDEN_403, I18N.General.VERIFY_CODE_MISMATCH.format(req));
+                            return;
+                        }
+                        verifyCodeCache.invalidate(email);
+
+                        found.setPassword(newPassword);
+                        resp.setStatus(HttpStatus.OK_200);
                     } catch (Exception e) {
                         ExceptionReporting.report(InternalAccountServlet.class, "creating user", e);
                         try {

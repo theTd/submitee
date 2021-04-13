@@ -4,6 +4,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import de.mkammerer.argon2.Argon2;
 import de.mkammerer.argon2.Argon2Factory;
+import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.I18N;
 import org.starrel.submitee.ScriptRunner;
@@ -40,6 +41,10 @@ public class InternalAccountRealm implements UserRealm {
             .build();
 
     private final Cache<String, Integer> emailUidCache = CacheBuilder.newBuilder()
+            .expireAfterAccess(30, TimeUnit.MINUTES)
+            .build();
+
+    private final Cache<String, Integer> usernameUidCache = CacheBuilder.newBuilder()
             .expireAfterAccess(30, TimeUnit.MINUTES)
             .build();
 
@@ -94,7 +99,7 @@ public class InternalAccountRealm implements UserRealm {
             try {
                 return getUser(Integer.parseInt(loggedInUser.getUserId()));
             } catch (ExecutionException e) {
-                e.printStackTrace();
+                ExceptionReporting.report(InternalAccountRealm.class, "resuming session", e);
             }
         }
         return null;
@@ -171,6 +176,39 @@ public class InternalAccountRealm implements UserRealm {
         }
     }
 
+    public Integer getUidFromUsername(String username) throws ExecutionException {
+        username = username.toLowerCase(Locale.ROOT);
+        try {
+            String finalUsername = username;
+            return usernameUidCache.get(finalUsername, () -> {
+                try (Connection conn = server.getDataSource().getConnection()) {
+                    PreparedStatement stmt = conn.prepareStatement("SELECT uid FROM internal_users WHERE username=?");
+                    stmt.setString(1, finalUsername);
+                    ResultSet r = stmt.executeQuery();
+                    if (r.next()) {
+                        return r.getInt(1);
+                    }
+                    throw NotExistsSignal.INSTANCE;
+                }
+            });
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof NotExistsSignal) {
+                return null;
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    public InternalAccountUser getUserFromUsernameOrEmail(String query) throws ExecutionException {
+        // search for email or username
+        Integer uid = getUidFromEmail(query);
+        if (uid != null) return getUser(uid);
+        uid = getUidFromUsername(query);
+        if (uid != null) return getUser(uid);
+        return null;
+    }
+
     private class AuthHandler implements PasswordAuthScheme.AuthHandler {
 
         @Override
@@ -193,6 +231,11 @@ public class InternalAccountRealm implements UserRealm {
                 return new AbstractAuthResult("internal_error",
                         I18N.General.INTERNAL_ERROR.format(session), null);
             }
+        }
+
+        @Override
+        public String getResetPasswordLink() {
+            return "reset-password.html";
         }
     }
 }

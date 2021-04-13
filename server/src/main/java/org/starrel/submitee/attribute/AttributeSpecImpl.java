@@ -208,8 +208,8 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     }
 
     @Override
-    public void delete() {
-        getSource().delete(path);
+    public void delete(String path) {
+        getSource().delete(fullPath(path));
         childUpdated(path);
     }
 

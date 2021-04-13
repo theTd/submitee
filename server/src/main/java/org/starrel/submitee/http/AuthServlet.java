@@ -5,6 +5,7 @@ import com.google.gson.stream.JsonWriter;
 import jakarta.servlet.AsyncContext;
 import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.ExceptionReporting;
+import org.starrel.submitee.I18N;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.auth.AuthResult;
 import org.starrel.submitee.auth.AuthScheme;
@@ -79,9 +80,6 @@ public class AuthServlet extends AbstractJsonServlet {
                 realms.add(SubmiteeServer.getInstance().getInternalAccountRealm());
                 break;
             }
-            case "register": {
-                realms.add(SubmiteeServer.getInstance().getInternalAccountRealm());
-            }
             default: {
                 ExceptionReporting.report(AuthServlet.class, "parsing method", "unknown method: " + uriParts[0]);
                 responseBadRequest(req, resp);
@@ -95,6 +93,7 @@ public class AuthServlet extends AbstractJsonServlet {
         for (UserRealm realm : realms) {
             writer.beginObject();
             writer.name("realm").value(realm.getTypeId());
+            writer.name("title").value(I18N.fromKey(String.format("user_realm.%s.title", realm.getTypeId())).format(req));
             writer.name("scheme").beginArray();
             for (AuthScheme scheme : realm.getSupportedAuthSchemes()) {
                 writer.beginObject();

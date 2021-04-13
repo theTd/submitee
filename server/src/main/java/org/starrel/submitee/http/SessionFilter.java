@@ -7,6 +7,7 @@ import org.starrel.submitee.model.SessionImpl;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import org.starrel.submitee.model.SessionKeeper;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -32,10 +33,10 @@ public class SessionFilter extends HttpFilter {
     protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
         HttpSession httpSession = req.getSession();
 
-        SessionImpl session = (SessionImpl) httpSession.getAttribute(SessionImpl.HTTP_ATTRIBUTE_SESSION);
+        SessionImpl session = (SessionImpl) httpSession.getAttribute(SessionKeeper.HTTP_ATTRIBUTE_SESSION);
         if (session == null) {
-            session = SessionImpl.createFromHttpRequest(req);
-            Cookie cookie = new Cookie(SessionImpl.COOKIE_NAME_SESSION_TOKEN, session.getSessionToken());
+            session = SubmiteeServer.getInstance().getSessionKeeper().fromHttpRequest(req);
+            Cookie cookie = new Cookie(SessionKeeper.COOKIE_NAME_SESSION_TOKEN, session.getSessionToken());
             res.addCookie(cookie);
         }
 

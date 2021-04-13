@@ -55,7 +55,11 @@ public interface AttributeSpec<TValue> {
         return getKeys("");
     }
 
-    void delete();
+    void delete(String path);
+
+    default void delete() {
+        delete("");
+    }
 
     void childUpdated(String path);
 

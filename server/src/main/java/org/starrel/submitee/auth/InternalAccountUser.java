@@ -5,9 +5,7 @@ import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
 import org.starrel.submitee.attribute.JdbcAttributeSource;
-import org.starrel.submitee.model.Submission;
-import org.starrel.submitee.model.User;
-import org.starrel.submitee.model.UserDescriptor;
+import org.starrel.submitee.model.*;
 
 import java.util.List;
 
@@ -32,7 +30,7 @@ public class InternalAccountUser implements User {
         this.preferredLanguage = attributeMap.of("preferred-language", String.class);
 
         JdbcAttributeSource jdbcAttributeSource = new JdbcAttributeSource(SubmiteeServer.getInstance().getDataSource()
-                , "internal_users", "id=" + uid);
+                , "internal_users", "uid=" + uid);
         (this.username = attributeMap.of("username", String.class)).setSource(jdbcAttributeSource);
         (this.password = attributeMap.of("password", String.class)).setSource(jdbcAttributeSource);
         (this.email = attributeMap.of("email", String.class)).setSource(jdbcAttributeSource);
@@ -76,12 +74,12 @@ public class InternalAccountUser implements User {
         this.username.set(username);
     }
 
-    public String getPassword() {
-        return password.get();
-    }
-
     public void setPassword(String password) {
-        this.password.set(password);
+        this.password.set(InternalAccountRealm.hashPassword(password));
+        Session session = SubmiteeServer.getInstance().getUserSession(getDescriptor());
+        if (session != null) {
+            session.close();
+        }
     }
 
     public String getEmail() {

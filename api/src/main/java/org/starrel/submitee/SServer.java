@@ -46,6 +46,8 @@ public interface SServer {
 
     <TContext extends AttributeHolder<?>> AttributeMap<TContext> readAttributeMap(TContext context, String collection);
 
+    boolean attributeMapExist(String persistId, String collection);
+
     <TValue> void addAttributeSerializer(Class<TValue> type, AttributeSerializer<TValue> serializer);
 
     User getUser(String realmType, String userId);
@@ -74,7 +76,7 @@ public interface SServer {
 
     Submission createSubmission(UserDescriptor userDescriptor, STemplate template, JsonObject body);
 
-    Session getUserSession(String userRealmTypeId, String userId);
+    Session getUserSession(UserDescriptor userDescriptor);
 
     AuthScheme createPasswordAuthScheme();
 

@@ -5,8 +5,14 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
@@ -33,17 +39,11 @@ import org.starrel.submitee.http.*;
 import org.starrel.submitee.language.TextContainer;
 import org.starrel.submitee.model.*;
 
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 
 public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> {
@@ -70,6 +70,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     private InternalAccountRealm internalAccountRealm;
 
     private final Map<String, NotificationScheme> notificationSchemeMap = Maps.newConcurrentMap();
+
+    private final SessionKeeper sessionKeeper = new SessionKeeper();
 
     // endregion
     private final Logger logger;
@@ -324,6 +326,12 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
+    public boolean attributeMapExist(String persistId, String collection) {
+        Document found = mongoDatabase.getCollection(collection).find(Filters.eq("id", persistId)).first();
+        return found != null;
+    }
+
+    @Override
     public <TValue> void addAttributeSerializer(Class<TValue> type, AttributeSerializer<TValue> serializer) {
         attributeSerializerMap.put(type, serializer);
     }
@@ -403,8 +411,9 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public Session getUserSession(String userRealmTypeId, String userId) {
-        // TODO: 2021/3/23 query session from session database
+    public Session getUserSession(UserDescriptor userDescriptor) {
+
+        // TODO: 2021-04-13-0013
         return null;
     }
 
@@ -511,5 +520,9 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     public String getStaticDirectory() {
         String staticDirectory = System.getenv("STATIC_DIRECTORY");
         return staticDirectory == null || staticDirectory.isEmpty() ? "static" : staticDirectory;
+    }
+
+    public SessionKeeper getSessionKeeper() {
+        return sessionKeeper;
     }
 }

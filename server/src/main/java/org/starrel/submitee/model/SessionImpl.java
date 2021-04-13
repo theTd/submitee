@@ -16,10 +16,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 public class SessionImpl implements Session {
-    public final static String HTTP_ATTRIBUTE_SESSION = "submitee_session";
-    public final static String COOKIE_NAME_SESSION_TOKEN = "sess";
-
-    private final HttpSession httpSession;
     private final String sessionToken;
 
     private final AttributeMap<SessionImpl> attributeMap;
@@ -29,15 +25,11 @@ public class SessionImpl implements Session {
     private final AttributeSpec<String> lastActiveAddress;
     private final AttributeSpec<HistoryAddressEntry> historyAddress;
 
+    private HttpSession httpSession;
     private User user;
 
-    private SessionImpl(HttpServletRequest req, Cookie[] cookies) {
-        this.httpSession = req.getSession();
-        String token = getSessionTokenFromCookies(cookies);
-        if (token == null) {
-            token = generateNewSessionToken();
-        }
-        this.sessionToken = token;
+    SessionImpl(String sessionToken) {
+        this.sessionToken = sessionToken;
         this.attributeMap = SubmiteeServer.getInstance().createOrReadAttributeMap(this, Session.COLLECTION_NAME);
         this.attributeMap.setAutoSaveAttribute(false);
 
@@ -48,41 +40,11 @@ public class SessionImpl implements Session {
         this.historyAddress = attributeMap.ofList("history-address", HistoryAddressEntry.class);
     }
 
-    private static String generateNewSessionToken() {
-        return UUID.randomUUID().toString().replace("-", "");
+    void setHttpSession(HttpSession httpSession) {
+        this.httpSession = httpSession;
     }
 
-    private static String getSessionTokenFromCookies(Cookie[] cookies) {
-        if (cookies == null) return null;
-        for (Cookie cookie : cookies) {
-            if (Objects.equals(cookie.getName(), COOKIE_NAME_SESSION_TOKEN)) {
-                return cookie.getValue();
-            }
-        }
-        return null;
-    }
-
-    @SuppressWarnings("UnusedReturnValue")
-    public static SessionImpl createFromHttpRequest(HttpServletRequest request) {
-        SessionImpl session = new SessionImpl(request, request.getCookies());
-
-        User resumedUser = SubmiteeServer.getInstance().resumeSession(session);
-        if (resumedUser == null) {
-            session.setUser(SubmiteeServer.getInstance().getAnonymousUserRealm().createAnonymousUser(session));
-            session.setUser(new AnonymousUser(session.getSessionToken()));
-            session.getUser().setPreferredLanguage(Util.getPreferredLanguage(request));
-        } else {
-            session.setUser(resumedUser);
-        }
-
-        session.setLastUA(request.getHeader("User-Agent"));
-        session.pushLastActive(request);
-
-        request.getSession().setAttribute(HTTP_ATTRIBUTE_SESSION, session);
-        return session;
-    }
-
-    private void pushLastActive(HttpServletRequest request) {
+    void pushLastActive(HttpServletRequest request) {
         String addr = Util.getRemoteAddr(request);
         Date now = new Date();
 
@@ -154,8 +116,10 @@ public class SessionImpl implements Session {
 
     @Override
     public void close() {
-        httpSession.setAttribute(HTTP_ATTRIBUTE_SESSION, null);
+        if (httpSession != null) {
+            httpSession.setAttribute(SessionKeeper.HTTP_ATTRIBUTE_SESSION, null);
+        }
         SubmiteeServer.getInstance().removeAttributeMap(Session.COLLECTION_NAME, getAttributePersistKey());
-        // TODO: 2021/3/23 invalidate token
+        SubmiteeServer.getInstance().getSessionKeeper().remove(this);
     }
 }
