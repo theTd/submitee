@@ -123,8 +123,8 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
             jsonRoot = new JsonObject();
             return;
         }
-        String parentPath = path.substring(0, path.lastIndexOf("."));
-        String nodeName = path.substring(path.lastIndexOf(".") + 1);
+        String parentPath = parseParentPath(path);
+        String nodeName = parsePathNodeName(path);
         JsonObject object = getObjectFromPath(parentPath, false);
         if (object == null) return;
         object.remove(nodeName);

@@ -118,7 +118,7 @@ public class SessionImpl implements Session {
     @Override
     public void close() {
         if (httpSession != null) {
-            httpSession.setAttribute(SessionKeeper.HTTP_ATTRIBUTE_SESSION, null);
+            httpSession.removeAttribute(SessionKeeper.HTTP_ATTRIBUTE_SESSION);
         }
         this.attributeMap.delete();
         SubmiteeServer.getInstance().removeAttributeMap(Session.COLLECTION_NAME, getAttributePersistKey());

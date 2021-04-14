@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.http.HttpStatus;
+import org.starrel.submitee.ClassifiedErrors;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.STemplateImpl;
@@ -50,6 +51,14 @@ public class PasteServlet extends AbstractJsonServlet {
             case "template": {
                 try {
                     STemplateImpl template = SubmiteeServer.getInstance().getTemplateKeeper().getTemplate(uuid);
+                    if (template.isPublished()) {
+                        responseClassifiedError(req, resp, ClassifiedErrors.TEMPLATE_ALREADY_PUBLISHED);
+                        return;
+                    }
+//                    STemplateImpl.CONSTANT_ATTRIBUTES.forEach(content::remove);
+//                    for (String constantAttribute : STemplateImpl.CONSTANT_ATTRIBUTES) {
+//                        content.
+//                    }
                     template.getAttributeMap().set("", content);
                     // TODO: 2021-04-06-0006 switch to apply method
                     resp.setStatus(HttpStatus.OK_200);

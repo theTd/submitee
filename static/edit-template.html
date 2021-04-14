@@ -232,9 +232,9 @@
     <p class="alert alert-warning">模板发布后已经被修改，使用修订模板按钮来发布修订后的模板</p>
     <hr class="w-100"/>
     <form onsubmit="return false">
-        <button class="btn btn-primary disabled" id="btn-publish-template">发布模板</button>
-        <button class="btn btn-danger disabled" id="btn-cancel-template">停止发布模板</button>
-        <button class="btn btn-secondary disabled" id="btn-republish-template">修订模板</button>
+        <button class="btn btn-primary d-none" id="btn-publish-template">发布模板</button>
+        <button class="btn btn-danger d-none" id="btn-cancel-template">停止发布模板</button>
+        <button class="btn btn-info d-none" id="btn-revision-template">修订模板</button>
         <div class="btn-group">
             <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown">
                 其他
@@ -507,27 +507,36 @@
         submitee.currentTemplate.descEditor = editor;
     }
 
+    function readTemplateConfig() {
+        let currentTemplate = submitee.currentTemplate;
+        currentTemplate.name = $("#template-metadata-name").val();
+        currentTemplate.comment = $("#template-metadata-comment").val();
+        currentTemplate.desc = currentTemplate.descEditor.txt.html();
+        // todo apply distinguish
+        currentTemplate.attributeMap.set("allow-anonymous", !!$("#checkbox-allow-anonymous").prop('checked'));
+        let distinguishConfig = {};
+        let distinguishContainers = $(".distinguish-config");
+        distinguishContainers.each(function (idx) {
+            let container = $(distinguishContainers[idx]);
+            let realmName = container.attr('data-realm-name');
+            let enabled = container.find(".realm-enabled").prop("checked");
+            let whitelist = container.find(".realm-whitelist").val();
+            distinguishConfig[realmName] = {};
+            distinguishConfig[realmName]['enabled'] = enabled;
+            distinguishConfig[realmName]['whitelist'] = whitelist;
+        })
+        currentTemplate.attributeMap.set("protected.user-distinguish", distinguishConfig);
+    }
+
     function checkAndSync() {
         let currentTemplate = submitee.currentTemplate;
-        if (!currentTemplate.latest) {
-            currentTemplate.name = $("#template-metadata-name").val();
-            currentTemplate.comment = $("#template-metadata-comment").val();
-            currentTemplate.desc = currentTemplate.descEditor.txt.html();
-            // todo apply distinguish
-            currentTemplate.attributeMap.set("allow-anonymous", !!$("#checkbox-allow-anonymous").prop('checked'));
-            let distinguishConfig = {};
-            let distinguishContainers = $(".distinguish-config");
-            distinguishContainers.each(function (idx) {
-                let container = $(distinguishContainers[idx]);
-                let realmName = container.attr('data-realm-name');
-                let enabled = container.find(".realm-enabled").prop("checked");
-                let whitelist = container.find(".realm-whitelist").val();
-                distinguishConfig[realmName] = {};
-                distinguishConfig[realmName]['enabled'] = enabled;
-                distinguishConfig[realmName]['whitelist'] = whitelist;
-            })
-            currentTemplate.attributeMap.set("protected.user-distinguish", distinguishConfig);
 
+        if (!currentTemplate.latest) {
+            if (currentTemplate.published) {
+                create_toast("重要提示", "当前模板已经发布，如需编辑模板信息请使用修订模板");
+                return;
+            }
+            readTemplateConfig();
             currentTemplate.sync().then(() => {
                 create_toast("提示", "对模板的更改已保存", 2000);
                 currentTemplate.latest = true;
@@ -625,6 +634,65 @@
         })
     }
 
+    function loadActions() {
+        if (submitee.currentTemplate.published) {
+            $("#btn-cancel-template").removeClass("d-none").on("click", () => {
+                $.ajax({
+                    url: "../create/cancel-template/" + submitee.currentTemplate.uniqueId,
+                    method: "POST",
+                    contentType: "application/json",
+                    success: function (response) {
+                        create_toast("提示", "已完成");
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500)
+                    },
+                    error: function (xhr) {
+                        toast_ajax_error(xhr);
+                    }
+                });
+            });
+            $("#btn-revision-template").removeClass("d-none").on("click", () => {
+                readTemplateConfig();
+                submitee.currentTemplate.latest = true;
+                $.ajax({
+                    url: "../create/template/" + submitee.currentTemplate.attributeMap.get("template-id"),
+                    method: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        content: submitee.currentTemplate.attributeMap.root
+                    }),
+                    success: function (response) {
+                        create_toast("提示", "<p>已完成</p><p>正在跳转...</p>");
+                        setTimeout(() => {
+                            window.location.href = "?method=edit-template&target=" + response;
+                        }, 500)
+                    },
+                    error: function (xhr) {
+                        toast_ajax_error(xhr);
+                    }
+                });
+            });
+        } else {
+            $("#btn-publish-template").removeClass("d-none").on('click', () => {
+                $.ajax({
+                    url: "../create/publish-template/" + submitee.currentTemplate.uniqueId,
+                    method: "POST",
+                    contentType: "application/json",
+                    success: function (response) {
+                        create_toast("提示", "已完成");
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500)
+                    },
+                    error: function (xhr) {
+                        toast_ajax_error(xhr);
+                    }
+                });
+            });
+        }
+    }
+
     configuration = {};
 
     async function fetchConfiguration() {
@@ -656,6 +724,8 @@
                 loadTemplateMetadata();
                 loadFieldRows();
                 loadDistinguish();
+
+                loadActions();
 
                 // check changes made every 2 seconds
                 setInterval(checkAndSync, 2000);

@@ -175,6 +175,11 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     }
 
     @Override
+    public void merge(String path, JsonObject jsonObject) {
+        // TODO: 2021-04-14-0014
+    }
+
+    @Override
     public List<String> getKeys(String path) {
         if (isList) throw new UnsupportedOperationException("not object");
 

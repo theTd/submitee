@@ -47,11 +47,12 @@
         <div class="col col-2 s-template-name"></div>
         <div class="col col-6 s-template-comment"></div>
         <div class="col col-2">
+            <div class="template-link-container position-relative d-none" style="right: 2.5rem"></div>
             <button class="btn btn-sm btn-secondary button-edit-template d-none" onclick="editTemplate(this)">编辑
             </button>
             <button class="btn btn-sm btn-danger button-delete-template d-none" onclick="deleteTemplate(this)">删除
             </button>
-            <button class="btn btn-sm btn-info button-view-template d-none" onclick="viewTemplate(this)">查看
+            <button class="btn btn-sm btn-info button-view-template d-none" onclick="editTemplate(this)">查看
             </button>
             <button class="btn btn-sm btn-warning button-revision-template d-none" onclick="revisionTemplate(this)">修订
             </button>
@@ -88,6 +89,33 @@
 </div>
 
 <script>
+    function deleteTemplate(element) {
+        // todo
+    }
+
+    function viewTemplate(element) {
+        // todo
+    }
+
+    function revisionTemplate(element) {
+        let id = findTemplateIdByElement(element);
+        $.ajax({
+            url: "../create/template/" + id,
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({}),
+            success: function (data) {
+                create_toast("提示", "<p>正在重定向...</p>");
+                setTimeout(() => {
+                    window.location.href = "?method=edit-template&target=" + data;
+                }, 500);
+            },
+            error: function (xhr) {
+                toast_ajax_error(xhr)
+            }
+        });
+    }
+
     function createTemplate() {
         $.ajax({
             url: "../create/template",
@@ -129,26 +157,32 @@
      * @param {STemplate} template
      */
     function createTemplateElement(template) {
-        let element = document.querySelector("#template-s-template-row");
-        element.content.querySelector(".template-container").setAttribute("data-submitee-template-id", template.uniqueId);
-        element.content.querySelector(".s-template-id").textContent = template.templateId + ":" + template.version;
-        element.content.querySelector(".s-template-status").innerHTML = template.status;
-        element.content.querySelector(".s-template-name").textContent = template.name;
-        element.content.querySelector(".s-template-comment").textContent = template.comment;
+        let t = document.querySelector("#template-s-template-row");
+        t.content.querySelector(".template-container").setAttribute("data-submitee-template-id", template.uniqueId);
+        t.content.querySelector(".s-template-id").textContent = template.templateId + ":" + template.version;
+        t.content.querySelector(".s-template-status").innerHTML = template.status;
+        t.content.querySelector(".s-template-name").textContent = template.name;
+        t.content.querySelector(".s-template-comment").textContent = template.comment;
 
         if (template.published) {
-            element.content.querySelector(".button-revision-template").classList.remove("d-none");
-            element.content.querySelector(".button-view-template").classList.remove("d-none");
-            element.content.querySelector(".button-edit-template").classList.add("d-none");
-            element.content.querySelector(".button-delete-template").classList.add("d-none");
+            let link = t.content.querySelector(".template-link-container");
+            link.classList.remove("d-none");
+            link.appendChild(createOutFlowIconTooltip("link", "2rem", "gray", "转到", "top",
+                "submission.html?target=" + template.uniqueId));
+
+            t.content.querySelector(".button-revision-template").classList.remove("d-none");
+            t.content.querySelector(".button-view-template").classList.remove("d-none");
+            t.content.querySelector(".button-edit-template").classList.add("d-none");
+            t.content.querySelector(".button-delete-template").classList.add("d-none");
         } else {
-            element.content.querySelector(".button-revision-template").classList.add("d-none");
-            element.content.querySelector(".button-view-template").classList.add("d-none");
-            element.content.querySelector(".button-edit-template").classList.remove("d-none");
-            element.content.querySelector(".button-delete-template").classList.remove("d-none");
+            t.content.querySelector(".template-link-container").classList.add("d-none");
+            t.content.querySelector(".button-revision-template").classList.add("d-none");
+            t.content.querySelector(".button-view-template").classList.add("d-none");
+            t.content.querySelector(".button-edit-template").classList.remove("d-none");
+            t.content.querySelector(".button-delete-template").classList.remove("d-none");
         }
 
-        return document.importNode(element.content, true);
+        return document.importNode(t.content, true);
     }
 
     function buildTemplateList(templateList) {

@@ -57,8 +57,6 @@ public interface SServer {
 
     STemplate createTemplate(String grouping) throws Exception;
 
-    STemplate getTemplate(String templateId);
-
     STemplate getTemplate(UUID templateUUID) throws ExecutionException;
 
     List<? extends STemplate> getTemplateAllVersion(String templateId) throws ExecutionException;

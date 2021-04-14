@@ -255,7 +255,7 @@ async function fetchTemplateInfo(filter, latest) {
             method: "POST",
             contentType: "application/json",
             data: JSON.stringify({
-                latest: latest,
+                latest: false,
                 filter: filter
             }),
             success: function (data) {

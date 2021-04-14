@@ -2,6 +2,7 @@ package org.starrel.submitee.model;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.gson.JsonObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Filters;
@@ -93,14 +94,14 @@ public class TemplateKeeper {
             stmt.setString(3, templateId);
             stmt.executeUpdate();
 
-            STemplateImpl t = new STemplateImpl(this, uniqueId, grouping, templateId, 0, 0, true);
+            STemplateImpl t = new STemplateImpl(this, uniqueId, grouping, templateId, 0, 0, true, null);
             latestVersionCache.put(templateId, uniqueId);
             templateCache.put(uniqueId, t);
             return t;
         }
     }
 
-    public STemplateImpl createRevisionTemplate(String templateId) throws Exception {
+    public STemplateImpl createRevisionTemplate(String templateId, JsonObject inherit) throws Exception {
         STemplateImpl revision = getTemplateLatestVersion(templateId);
         if (revision == null) throw new RuntimeException("failed to load revision template");
 
@@ -114,7 +115,7 @@ public class TemplateKeeper {
             stmt.setInt(4, version);
             stmt.executeUpdate();
 
-            STemplateImpl t = new STemplateImpl(this, uniqueId, revision.getGrouping(), templateId, version, version, true);
+            STemplateImpl t = new STemplateImpl(this, uniqueId, revision.getGrouping(), templateId, version, version, true, inherit);
             latestVersionCache.put(templateId, uniqueId);
             templateCache.put(uniqueId, t);
             return t;
@@ -226,7 +227,7 @@ public class TemplateKeeper {
                     } else {
                         latestVersion = version;
                     }
-                    return new STemplateImpl(this, uniqueId, grouping, templateId, version, latestVersion, false);
+                    return new STemplateImpl(this, uniqueId, grouping, templateId, version, latestVersion, false, null);
                 }
             });
         } catch (ExecutionException e) {

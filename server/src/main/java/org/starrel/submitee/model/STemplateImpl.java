@@ -2,6 +2,7 @@ package org.starrel.submitee.model;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
@@ -10,8 +11,17 @@ import org.starrel.submitee.http.SFieldImpl;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
+    public final static Set<String> CONSTANT_ATTRIBUTES;
+
+    static {
+        CONSTANT_ATTRIBUTES = Set.copyOf(Arrays.stream(new String[]{
+                "uuid", "grouping", "template-id", "version"
+        }).collect(Collectors.toList()));
+    }
+
     private final TemplateKeeper keeper;
     private final UUID uniqueId;
     private final String grouping;
@@ -26,7 +36,8 @@ public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
     private final AttributeSpec<UserDescriptor> publishedBy;
     private final AttributeSpec<Date> publishTime;
 
-    public STemplateImpl(TemplateKeeper keeper, UUID uniqueId, String grouping, String templateId, int version, int latestVersion, boolean createAttributeMap) {
+    STemplateImpl(TemplateKeeper keeper, UUID uniqueId, String grouping, String templateId, int version,
+                  int latestVersion, boolean createAttributeMap, JsonObject content) {
         this.keeper = keeper;
         this.uniqueId = uniqueId;
         this.grouping = grouping;
@@ -34,8 +45,9 @@ public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
         this.version = version;
         this.latestVersion = new AtomicInteger(latestVersion);
 
-        this.attributeMap = createAttributeMap ? SubmiteeServer.getInstance().readAttributeMap(this, "templates") :
-                SubmiteeServer.getInstance().readAttributeMap(this, "templates");
+        this.attributeMap = SubmiteeServer.getInstance().accessAttributeMap(this, "templates");
+        if (!createAttributeMap) this.attributeMap.read();
+        if (content != null) this.attributeMap.setAll("", content);
 
         this.comment = attributeMap.of("comment", String.class);
         this.fields = attributeMap.of("fields", JsonArray.class);
@@ -51,6 +63,8 @@ public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
             this.attributeMap.set("template-id", templateId);
             this.attributeMap.set("version", version);
             this.attributeMap.set("published", false);
+            this.attributeMap.set("published-by", null);
+            this.attributeMap.set("publish-time", null);
 
             this.attributeMap.setAutoSaveAttribute(save);
         }

@@ -147,8 +147,8 @@ function createIconTooltip(icon, size, color, html, placement, link) {
     return node;
 }
 
-function createOutFlowIconTooltip(icon, size, color, message, placement) {
-    return createOutFlow(createIconTooltip(icon, size, color, message, placement));
+function createOutFlowIconTooltip(icon, size, color, message, placement, link) {
+    return createOutFlow(createIconTooltip(icon, size, color, message, placement, link));
 }
 
 function _init_out_flow() {

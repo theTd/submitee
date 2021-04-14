@@ -35,6 +35,8 @@ public interface AttributeSpec<TValue> {
 
     void setAll(String path, JsonObject jsonObject);
 
+    void merge(String path, JsonObject jsonObject);
+
     TValue get(int index);
 
     void add(TValue value);

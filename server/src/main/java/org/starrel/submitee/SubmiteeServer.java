@@ -369,11 +369,6 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public STemplateImpl getTemplate(String templateId) {
-        return null;
-    }
-
-    @Override
     public STemplateImpl getTemplate(UUID templateUniqueId) throws ExecutionException {
         return templateKeeper.getTemplate(templateUniqueId);
     }

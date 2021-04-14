@@ -89,13 +89,26 @@ public class CreateServlet extends AbstractJsonServlet {
                     } else if (uriParts.length == 2) {
                         // create revision
                         String templateId = uriParts[1];
-                        STemplateImpl revision = SubmiteeServer.getInstance().getTemplate(templateId);
+                        STemplateImpl revision = SubmiteeServer.getInstance().getTemplateLatestVersion(templateId);
+                        if (revision == null) {
+                            try {
+                                UUID uuid = UUID.fromString(templateId);
+                                revision = SubmiteeServer.getInstance().getTemplateLatestVersion(
+                                        SubmiteeServer.getInstance().getTemplate(uuid).getTemplateId());
+                            } catch (Exception ignored) {
+                            }
+                        }
                         if (revision == null) {
                             responseNotFound(req, resp);
                             return;
                         }
+                        JsonObject content = JsonUtil.parseObject(body, "content");
+                        if (content == null) {
+                            // inherit
+                            content = revision.getAttributeMap().toJsonTree().getAsJsonObject().deepCopy();
+                        }
                         STemplateImpl revisionTemplate = SubmiteeServer.getInstance().getTemplateKeeper()
-                                .createRevisionTemplate(revision.getTemplateId());
+                                .createRevisionTemplate(revision.getTemplateId(), content);
 
                         resp.setStatus(HttpStatus.OK_200);
                         resp.setContentType("application/json");
