@@ -2,6 +2,7 @@ package org.starrel.submitee.attribute;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import org.starrel.submitee.model.NotExistsSignal;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -32,23 +33,23 @@ public class JdbcAttributeSource implements AttributeSource {
         try {
             return (TValue) cache.get(path, () -> {
                 try (Connection conn = dataSource.getConnection()) {
-                    ResultSet r = conn.createStatement().executeQuery(String.format("SELECT %s FROM %s %s", path, table, whereClause));
-                    if (r.next()) {
-                        return r.getObject(1);
-                    } else {
-                        return null;
-                    }
+                    ResultSet r = conn.createStatement().executeQuery(String.format("SELECT %s FROM %s %s", getColumnName(path), table, whereClause));
+                    if (!r.next()) throw NotExistsSignal.INSTANCE;
+                    Object obj = r.getObject(1);
+                    if (obj == null) throw NotExistsSignal.INSTANCE;
+                    return obj;
                 }
             });
         } catch (ExecutionException e) {
-            throw new RuntimeException(e);
+            if (e.getCause() instanceof NotExistsSignal) return null;
+            throw new RuntimeException(e.getCause());
         }
     }
 
     @Override
     public void setAttribute(String path, Object value) {
         try (Connection conn = dataSource.getConnection()) {
-            PreparedStatement stmt = conn.prepareStatement(String.format("UPDATE %s SET %s=? %s", table, path, whereClause));
+            PreparedStatement stmt = conn.prepareStatement(String.format("UPDATE %s SET %s=? %s", table, getColumnName(path), whereClause));
             stmt.setObject(1, value);
             stmt.executeUpdate();
 
@@ -66,7 +67,7 @@ public class JdbcAttributeSource implements AttributeSource {
     @Override
     public void delete(String path) {
         try (Connection conn = dataSource.getConnection()) {
-            conn.createStatement().executeUpdate(String.format("UPDATE %s SET %s=NULL %s", table, path, whereClause));
+            conn.createStatement().executeUpdate(String.format("UPDATE %s SET %s=NULL %s", table, getColumnName(path), whereClause));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -90,5 +91,11 @@ public class JdbcAttributeSource implements AttributeSource {
     @Override
     public <TValue> List<TValue> getListAttributes(String path, Class<TValue> type) {
         throw new UnsupportedOperationException();
+    }
+
+    public String getColumnName(String path) {
+        int idx = path.lastIndexOf(".");
+        if (idx == -1) return path;
+        return path.substring(idx + 1);
     }
 }

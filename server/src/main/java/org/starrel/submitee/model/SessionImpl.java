@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class SessionImpl implements Session {
+    private final SessionKeeper keeper;
     private final String sessionToken;
 
     private final AttributeMap<SessionImpl> attributeMap;
@@ -25,7 +26,8 @@ public class SessionImpl implements Session {
     private User user;
     private boolean closed = false;
 
-    SessionImpl(String sessionToken) {
+    SessionImpl(SessionKeeper keeper, String sessionToken) {
+        this.keeper = keeper;
         this.sessionToken = sessionToken;
         this.attributeMap = SubmiteeServer.getInstance().accessAttributeMap(this, Session.COLLECTION_NAME);
         this.attributeMap.setAutoSaveAttribute(false);
@@ -120,7 +122,7 @@ public class SessionImpl implements Session {
         }
         this.attributeMap.delete();
         SubmiteeServer.getInstance().removeAttributeMap(Session.COLLECTION_NAME, getAttributePersistKey());
-        SubmiteeServer.getInstance().getSessionKeeper().remove(this);
+        keeper.remove(this);
         this.closed = true;
     }
 

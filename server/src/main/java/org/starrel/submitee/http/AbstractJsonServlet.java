@@ -31,6 +31,7 @@ public abstract class AbstractJsonServlet extends SubmiteeHttpServlet {
             responseBadRequest(req, resp);
             return;
         }
+        if (json == null || json.isJsonNull()) json = new JsonObject();
         if (!json.isJsonObject()) {
             ExceptionReporting.report(AbstractJsonServlet.class, "parsing request body", "expected json object, got " + json);
             responseBadRequest(req, resp);

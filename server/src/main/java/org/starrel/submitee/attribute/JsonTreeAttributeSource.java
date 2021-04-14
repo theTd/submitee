@@ -19,6 +19,13 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
         return jsonRoot;
     }
 
+    public JsonElement getElementFromPath(String path) {
+        if (path.isEmpty()) return jsonRoot;
+        JsonObject parent = getObjectFromPath(parseParentPath(path), false);
+        if (parent == null) return null;
+        return parent.get(parsePathNodeName(path));
+    }
+
     @Override
     public <TSubValue> TSubValue getAttribute(String path, Class<TSubValue> type) {
         AttributeSerializer<TSubValue> serializer = SubmiteeServer.getInstance().getAttributeSerializer(type);

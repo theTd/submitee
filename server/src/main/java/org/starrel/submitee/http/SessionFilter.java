@@ -35,8 +35,10 @@ public class SessionFilter extends HttpFilter {
 
         SessionImpl session = (SessionImpl) httpSession.getAttribute(SessionKeeper.HTTP_ATTRIBUTE_SESSION);
         if (session == null) {
-            session = SubmiteeServer.getInstance().getSessionKeeper().fromHttpRequest(req);
+            session = SubmiteeServer.getInstance().getSessionKeeper().resumeFromHttpRequest(req);
+            httpSession.setAttribute(SessionKeeper.HTTP_ATTRIBUTE_SESSION, session);
             Cookie cookie = new Cookie(SessionKeeper.COOKIE_NAME_SESSION_TOKEN, session.getSessionToken());
+            cookie.setPath("/");
             res.addCookie(cookie);
         }
 

@@ -1,5 +1,6 @@
 package org.starrel.submitee.attribute;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mongodb.client.MongoCollection;
@@ -32,11 +33,10 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
         return holder;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public JsonObject toJsonTree(Predicate<String> pathFilter) {
+        JsonObject obj = super.toJsonTree().getAsJsonObject();
         List<String> removes = new ArrayList<>(0);
-        JsonObject obj = ((JsonTreeAttributeSource<Void>) owningSource).getJsonRoot().getAsJsonObject();
         for (String path : obj.keySet()) {
             if (!pathFilter.test(path)) {
                 removes.add(path);
@@ -49,14 +49,9 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
     }
 
     @Override
-    public JsonObject toJsonTree() {
-        return toJsonTree(path -> true);
-    }
-
-    @Override
     public void setAutoSaveAttribute(boolean autoSaveAttribute) {
         if (!this.autoSaveAttribute && autoSaveAttribute) {
-            saveAttribute(SubmiteeServer.getInstance().getMongoDatabase());
+            save();
         }
         this.autoSaveAttribute = autoSaveAttribute;
     }
@@ -67,9 +62,9 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
     }
 
     @Override
-    public void saveAttribute(MongoDatabase mongoDatabase) {
+    public void save() {
         if (collectionName == null) throw new RuntimeException("this attribute map cannot be saved");
-        MongoCollection<Document> collection = mongoDatabase.getCollection(collectionName);
+        MongoCollection<Document> collection = SubmiteeServer.getInstance().getMongoDatabase().getCollection(collectionName);
         Document body = Document.parse(SubmiteeServer.GSON.toJson(toJsonTree()));
         if (collection.find(Filters.eq("id", holder.getAttributePersistKey())).first() != null) {
             collection.updateOne(Filters.eq("id", holder.getAttributePersistKey()), Updates.set("body", body));
@@ -82,9 +77,9 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
     }
 
     @Override
-    public void readAttribute(MongoDatabase mongoDatabase) {
+    public void read() {
         if (collectionName == null) throw new RuntimeException("this attribute map cannot be saved");
-        MongoCollection<Document> collection = mongoDatabase.getCollection(collectionName);
+        MongoCollection<Document> collection = SubmiteeServer.getInstance().getMongoDatabase().getCollection(collectionName);
         Document found = collection.find(Filters.eq("id", holder.getAttributePersistKey())).first();
         if (found != null) {
             Document body = (Document) found.get("body");
@@ -97,9 +92,7 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
     @Override
     public void childUpdated(String path) {
         // TODO: 2021-04-13-0013 partial update
-        if (autoSaveAttribute) {
-            saveAttribute(SubmiteeServer.getInstance().getMongoDatabase());
-        }
+        if (autoSaveAttribute) save();
         try {
             holder.attributeUpdated(path);
         } catch (Exception e) {

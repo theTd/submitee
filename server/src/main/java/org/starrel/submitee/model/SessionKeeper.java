@@ -39,33 +39,35 @@ public class SessionKeeper {
         return null;
     }
 
-    public SessionImpl fromHttpRequest(HttpServletRequest request) {
+    public SessionImpl resumeFromHttpRequest(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         String token = getSessionTokenFromCookies(cookies);
-        SessionImpl exists = token == null ? null : getByToken(token);
-        if (exists != null) {
-            exists.setHttpSession(request.getSession());
-            return exists;
-        }
-        token = generateNewSessionToken();
-        SessionImpl created = new SessionImpl(token);
-        created.setHttpSession(request.getSession());
-        cache.put(token, created);
-
-        User resumedUser = SubmiteeServer.getInstance().resumeSession(created);
-        if (resumedUser == null) {
-            created.setUser(SubmiteeServer.getInstance().getAnonymousUserRealm().createAnonymousUser(created));
-            created.setUser(new AnonymousUser(created.getSessionToken()));
-            created.getUser().setPreferredLanguage(Util.getPreferredLanguage(request));
+        SessionImpl sess = token == null ? null : getByToken(token);
+        if (sess != null) {
+            sess.setHttpSession(request.getSession());
         } else {
-            created.setUser(resumedUser);
+            token = generateNewSessionToken();
+            sess = new SessionImpl(this, token);
+            sess.setHttpSession(request.getSession());
+            cache.put(token, sess);
+        }
+        sess.getAttributeMap().setAutoSaveAttribute(false);
+
+        User resumedUser = SubmiteeServer.getInstance().resumeSession(sess);
+        if (resumedUser == null) {
+
+            sess.setUser(SubmiteeServer.getInstance().getAnonymousUserRealm().createAnonymousUser(sess));
+            sess.getUser().setPreferredLanguage(Util.getPreferredLanguage(request));
+            sess.setAttribute("logged-in-user", sess.getUser().getDescriptor());
+        } else {
+            sess.setUser(resumedUser);
         }
 
-        created.setLastUA(request.getHeader("User-Agent"));
-        created.pushLastActive(request);
+        sess.setLastUA(request.getHeader("User-Agent"));
+        sess.pushLastActive(request);
+        sess.getAttributeMap().setAutoSaveAttribute(true);
 
-        request.getSession().setAttribute(HTTP_ATTRIBUTE_SESSION, created);
-        return created;
+        return sess;
     }
 
     @SneakyThrows
@@ -73,7 +75,9 @@ public class SessionKeeper {
         try {
             return cache.get(token, () -> {
                 if (SubmiteeServer.getInstance().attributeMapExist(token, Session.COLLECTION_NAME)) {
-                    return new SessionImpl(token);
+                    SessionImpl sess = new SessionImpl(this, token);
+                    sess.getAttributeMap().read();
+                    return sess;
                 }
                 throw NotExistsSignal.INSTANCE;
             });

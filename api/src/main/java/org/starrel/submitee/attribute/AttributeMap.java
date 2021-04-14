@@ -1,7 +1,6 @@
 package org.starrel.submitee.attribute;
 
 import com.google.gson.JsonObject;
-import com.mongodb.client.MongoDatabase;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -30,14 +29,12 @@ public interface AttributeMap<TContext extends AttributeHolder<?>> extends Attri
 
     JsonObject toJsonTree(Predicate<String> pathFilter);
 
-    JsonObject toJsonTree();
-
     boolean getAutoSaveAttribute();
 
     void setAutoSaveAttribute(boolean autoSaveAttribute);
 
-    void saveAttribute(MongoDatabase mongoDatabase);
+    void save();
 
-    void readAttribute(MongoDatabase mongoDatabase);
+    void read();
 
 }

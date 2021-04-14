@@ -26,7 +26,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
-public class Util {
+public abstract class Util {
     public static String getRemoteAddr(HttpServletRequest req) {
         String set = (String) req.getAttribute("REMOTE-ADDR");
         if (set != null) return set;

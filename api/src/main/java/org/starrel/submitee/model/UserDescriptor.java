@@ -1,5 +1,6 @@
 package org.starrel.submitee.model;
 
+import com.google.common.base.Preconditions;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.AllArgsConstructor;
@@ -12,12 +13,19 @@ import java.util.Date;
 
 @Builder
 @Data
-@AllArgsConstructor
 public class UserDescriptor {
     @Getter
     String realmType;
     @Getter
     String userId;
+
+    public UserDescriptor(String realmType, String userId) {
+        Preconditions.checkNotNull(realmType);
+        Preconditions.checkNotNull(userId);
+        if (realmType.contains(":")) throw new IllegalArgumentException("realm type should not contains :");
+        this.realmType = realmType;
+        this.userId = userId;
+    }
 
     public String toString() {
         return realmType + ":" + userId;

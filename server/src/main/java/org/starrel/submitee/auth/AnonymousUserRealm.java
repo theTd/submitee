@@ -31,9 +31,7 @@ public class AnonymousUserRealm implements UserRealm {
     }
 
     public User createAnonymousUser(Session session) {
-        User user = getUser(session.getSessionToken());
-        session.setAttribute("logged-in-user", user.getDescriptor());
-        return user;
+        return getUser(session.getSessionToken());
     }
 
     @Override

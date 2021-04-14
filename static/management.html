@@ -18,12 +18,11 @@
     <title>正在载入</title>
 </head>
 <body onbeforeunload="return beforeUnloadCheck();">
-<div class="container-fluid">
-    <div class="row col mb-3 mt-3 align-bottom">
-        <h4>logged in as thetd</h4><a href="#" class="pl-2">登出</a>
-    </div>
+<div id="session-header"></div>
+<div class="container-fluid mt-1">
     <div class="row">
         <div class="order-2 col-12 order-xl-0 col-xl-3">
+            <h4 class="row ml-3 text-dark">配置列表</h4>
             <div class="list-group" id="management-methods">
                 <a href="?method=template-list" data-submitee-management-method-alt="edit-template"
                    class="list-group-item list-group-item-action">编辑模板</a>
@@ -33,7 +32,7 @@
                 <a href="?method=settings" class="list-group-item list-group-item-action">系统选项</a>
             </div>
         </div>
-        <div class="col-12 col-xl-9" id="management-container">
+        <div class="col-12 col-xl-9 mt-4" id="management-container">
         </div>
     </div>
 </div>
@@ -47,6 +46,7 @@
 <script src="js/model.js"></script>
 <script src="js/field-controllers.js"></script>
 <script src="js/toast.js"></script>
+<script src="js/session.js"></script>
 
 <script>
     submitee.beforeUnloadChecker = null;
@@ -76,7 +76,7 @@
                 $("#management-container").html(data);
             },
             error: function (error) {
-                alert(error.statusCode);
+                toast_ajax_error(error);
             }
         });
     }
@@ -109,6 +109,9 @@
             break;
         }
     }
+
+    setAuthTarget("management");
+    createSessionHeader("session-header");
 </script>
 </body>
 </html>

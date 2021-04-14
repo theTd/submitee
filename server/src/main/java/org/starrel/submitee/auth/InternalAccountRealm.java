@@ -95,7 +95,7 @@ public class InternalAccountRealm implements UserRealm {
         UserDescriptor loggedInUser = session.getAttribute("logged-in-user", UserDescriptor.class);
         if (loggedInUser != null && Objects.equals(loggedInUser.getRealmType(), TYPE_ID)) {
             try {
-                return getUser(Integer.parseInt(loggedInUser.getUserId()));
+                return getUser(Integer.parseInt(loggedInUser.getUserId().substring(4)));
             } catch (ExecutionException e) {
                 ExceptionReporting.report(InternalAccountRealm.class, "resuming session", e);
             }
@@ -238,6 +238,7 @@ public class InternalAccountRealm implements UserRealm {
                     assert loggedIn != null;
                     session.setAttribute("logged-in-user", loggedIn.getDescriptor());
                     session.setAttribute("last-verify-password", System.currentTimeMillis());
+                    session.getAttributeMap().save();
                     return new AbstractAuthResult(loggedIn, null);
                 } else {
                     return new AbstractAuthResult("incorrect_password",

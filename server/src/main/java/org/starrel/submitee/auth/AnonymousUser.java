@@ -1,6 +1,5 @@
 package org.starrel.submitee.auth;
 
-import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.AbstractUser;
 
 import java.util.Arrays;
@@ -9,7 +8,7 @@ import java.util.stream.Collectors;
 
 public class AnonymousUser extends AbstractUser {
 
-    public AnonymousUser(String userId) {
+    AnonymousUser(String userId) {
         super(AnonymousUserRealm.TYPE_ID, userId);
         getAttributeMap().setAutoSaveAttribute(false);
     }
@@ -31,7 +30,7 @@ public class AnonymousUser extends AbstractUser {
     public void attributeUpdated(String path) {
         if (path == null) return;
         if (path.isEmpty() || !SET_IGNORED_ATTRIBUTES.contains(path)) {
-            getAttributeMap().saveAttribute(SubmiteeServer.getInstance().getMongoDatabase());
+            getAttributeMap().save();
         }
     }
 }

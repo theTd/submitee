@@ -20,13 +20,13 @@ public class InternalAccountUser extends AbstractUser {
         super(InternalAccountRealm.TYPE_ID, "uid:" + uid);
         this.uid = uid;
 
-        this.sms = getAttributeMap().of("sms", String.class);
+        this.sms = getAttributeMap().of("profile.sms", String.class);
 
         JdbcAttributeSource jdbcAttributeSource = new JdbcAttributeSource(SubmiteeServer.getInstance().getDataSource()
                 , "internal_users", "uid=" + uid);
-        (this.username = getAttributeMap().of("username", String.class)).setSource(jdbcAttributeSource);
+        (this.username = getAttributeMap().of("profile.username", String.class)).setSource(jdbcAttributeSource);
+        (this.email = getAttributeMap().of("profile.email", String.class)).setSource(jdbcAttributeSource);
         (this.password = getAttributeMap().of("password", String.class)).setSource(jdbcAttributeSource);
-        (this.email = getAttributeMap().of("email", String.class)).setSource(jdbcAttributeSource);
     }
 
     public int getUid() {

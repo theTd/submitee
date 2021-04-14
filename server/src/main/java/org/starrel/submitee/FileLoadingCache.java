@@ -5,6 +5,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.io.ByteStreams;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.SneakyThrows;
 
 import java.io.ByteArrayOutputStream;
@@ -67,17 +68,17 @@ public class FileLoadingCache {
     @Data
     @AllArgsConstructor
     public static class Result {
-        Exception exception;
-        String content;
-        boolean cached;
+        @Getter Exception exception;
+        @Getter String content;
+        @Getter boolean cached;
     }
 
     @Data
     @AllArgsConstructor
     public static class CacheEntry {
-        String path;
-        String content;
-        long lastCheck;
-        long loadedVersion;
+        @Getter String path;
+        @Getter String content;
+        @Getter long lastCheck;
+        @Getter long loadedVersion;
     }
 }

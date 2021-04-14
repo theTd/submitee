@@ -137,6 +137,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         servletHandler.addServlet(UploadServlet.class, "/upload/*");
         servletHandler.addServlet(GetFileServlet.class, "/get-file/*");
         servletHandler.addServlet(ConfigurationServlet.class, "/configuration/*");
+        servletHandler.addServlet(SessionServlet.class, "/session/*");
         return servletHandler;
     }
 
@@ -330,7 +331,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     @Override
     public <TContext extends AttributeHolder<?>> AttributeMap<TContext> readAttributeMap(TContext context, String collection) {
         AttributeMapImpl<TContext> map = new AttributeMapImpl<>(context, collection);
-        map.readAttribute(getMongoDatabase());
+        map.read();
         return map;
     }
 
@@ -499,10 +500,11 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     public User resumeSession(SessionImpl session) {
         for (UserRealm r : userRealmMap.values()) {
+            if (r instanceof AnonymousUserRealm) continue;
             User resumed = r.resumeSession(session);
             if (resumed != null) return resumed;
         }
-        return null;
+        return anonymousUserRealm.resumeSession(session);
     }
 
     public TemplateKeeper getTemplateKeeper() {

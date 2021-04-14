@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.SneakyThrows;
 import org.starrel.submitee.ExceptionReporting;
+import org.starrel.submitee.SubmiteeServer;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -15,8 +16,8 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     private final String path;
     private final boolean isList;
     private final Class<TValue> rootType;
-    private final Cache<String, AttributeSpec<?>> specCache = CacheBuilder.newBuilder().build();
-    private final TreeMap<String, AttributeSpec<?>> specTreeMap =
+    private final Cache<String, AttributeSpecImpl<?>> specCache = CacheBuilder.newBuilder().build();
+    private final TreeMap<String, AttributeSpecImpl<?>> specTreeMap =
             new TreeMap<>(Comparator.comparingInt(o -> o.split("\\.").length));
 
     protected AttributeSource owningSource;
@@ -71,17 +72,25 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         this.owningSource = source;
     }
 
-    private String fullPath(String path) {
-        if (parent == null) return path;
-        return parent.fullPath(this.path) + (path.isEmpty() ? "" : "." + path);
+    private String fullPath(String subPath) {
+        if (parent == null) return subPath;
+        return parent.fullPath(this.path) + (subPath.isEmpty() ? "" : "." + subPath);
     }
 
     @SneakyThrows
     @SuppressWarnings("unchecked")
     @Override
-    public <TSubValue> AttributeSpec<TSubValue> of(String path, Class<TSubValue> type) {
-        AttributeSpec<TSubValue> spec = (AttributeSpec<TSubValue>) specCache.get(path,
+    public <TSubValue> AttributeSpecImpl<TSubValue> of(String path, Class<TSubValue> type) {
+        int idx = path.indexOf(".");
+        if (idx != -1) {
+            return of(path.substring(0, idx), Void.class).of(path.substring(idx + 1), type);
+        }
+
+        AttributeSpecImpl<TSubValue> spec = (AttributeSpecImpl<TSubValue>) specCache.get(path,
                 () -> new AttributeSpecImpl<>(AttributeSpecImpl.this, path, type));
+        if (spec.rootType != type)
+            throw new RuntimeException("type mismatch: " + fullPath(path) + ".path got " + spec.rootType + " expected " + type);
+
         specTreeMap.put(path, spec);
         return spec;
     }
@@ -94,9 +103,17 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     @SuppressWarnings("unchecked")
     @SneakyThrows
     @Override
-    public <TListValue> AttributeSpec<TListValue> ofList(String path, Class<TListValue> type) {
-        AttributeSpec<TListValue> spec = (AttributeSpec<TListValue>) specCache.get(path,
+    public <TListValue> AttributeSpecImpl<TListValue> ofList(String path, Class<TListValue> type) {
+        int idx = path.indexOf(".");
+        if (idx != -1) {
+            return of(path.substring(0, idx), Void.class).of(path.substring(idx + 1), type);
+        }
+
+        AttributeSpecImpl<TListValue> spec = (AttributeSpecImpl<TListValue>) specCache.get(path,
                 () -> new AttributeSpecImpl<>(AttributeSpecImpl.this, path, type, true));
+        if (spec.rootType != type)
+            throw new RuntimeException("type mismatch: " + fullPath(path) + ".path got " + spec.rootType + " expected " + type);
+
         specTreeMap.put(path, spec);
         return spec;
     }
@@ -106,7 +123,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
 
         try {
             return specCache.get(path, () -> {
-                for (Map.Entry<String, AttributeSpec<?>> pathSpecEntry : specTreeMap.entrySet()) {
+                for (Map.Entry<String, AttributeSpecImpl<?>> pathSpecEntry : specTreeMap.entrySet()) {
                     if (path.startsWith(pathSpecEntry.getKey())) {
                         return pathSpecEntry.getValue();
                     }
@@ -216,7 +233,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     @Override
     public void childUpdated(String path) {
         if (this.parent != null) {
-            parent.childUpdated(this.path + "." + path);
+            parent.childUpdated(this.path + (path.isEmpty() ? "" : "." + path));
             return;
         }
         ExceptionReporting.report(AttributeSpecImpl.class, "unhandled top level child update", "");
@@ -225,10 +242,59 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     @SuppressWarnings("unchecked")
     @Override
     public JsonElement toJsonTree() {
-        if (isList) {
-            return ((JsonTreeAttributeSource<Void>) getSource()).getArrayFromPath(fullPath(""), false);
+        if (getSource() instanceof JsonTreeAttributeSource) {
+            if (isList) {
+                return ((JsonTreeAttributeSource<Void>) getSource()).getArrayFromPath(fullPath(""), false);
+            }
+            if (rootType == Void.class) {
+                // is object
+                JsonObject external = collectExternalSource(getRootSource());
+                JsonObject self = ((JsonTreeAttributeSource<Void>) getSource()).getObjectFromPath(fullPath(""), false);
+                if (self == null) self = new JsonObject();
+                if (external != null) {
+                    // merge
+                    for (Map.Entry<String, JsonElement> entry : external.entrySet()) {
+                        if (!self.has(entry.getKey())) {
+                            self.add(entry.getKey(), entry.getValue());
+                        }
+                    }
+                }
+                return self;
+            } else {
+                // is primitive
+                return ((JsonTreeAttributeSource<?>) getSource()).getElementFromPath(fullPath(""));
+            }
         } else {
-            return ((JsonTreeAttributeSource<Void>) getSource()).getObjectFromPath(fullPath(""), false);
+            if (isList) throw new UnsupportedOperationException();
+            if (rootType == Void.class) throw new UnsupportedOperationException();
+            AttributeSerializer<TValue> serializer = SubmiteeServer.getInstance().getAttributeSerializer(rootType);
+            if (serializer == null) {
+                ExceptionReporting.report(AttributeSpecImpl.class, "missing serializer", "missing serializer for " + rootType);
+                return null;
+            }
+            return serializer.write(get());
         }
+    }
+
+    private AttributeSource getRootSource() {
+        return parent == null ? owningSource : parent.getRootSource();
+    }
+
+    private JsonObject collectExternalSource(AttributeSource rootSource) {
+        JsonObject obj = null;
+
+        for (Map.Entry<String, AttributeSpecImpl<?>> entry : specCache.asMap().entrySet()) {
+            if (entry.getValue().rootType != Void.class && entry.getValue().getSource() != rootSource) {
+                if (obj == null) obj = new JsonObject();
+                obj.add(entry.getKey(), entry.getValue().toJsonTree());
+            } else if (entry.getValue() != this) {
+                JsonObject sub = entry.getValue().collectExternalSource(rootSource);
+                if (sub != null) {
+                    if (obj == null) obj = new JsonObject();
+                    obj.add(entry.getKey(), sub);
+                }
+            }
+        }
+        return obj;
     }
 }

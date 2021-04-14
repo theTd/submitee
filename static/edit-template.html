@@ -451,7 +451,7 @@
                 let relative = $("#insert-fields-before")[0];
                 relative.parentNode.insertBefore(createEditingFieldRows(field), relative);
             }, error => {
-                alert(error);
+                create_toast("重要提示", error);
             })
         }
         if (evt) {

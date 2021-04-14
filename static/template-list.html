@@ -47,8 +47,12 @@
         </ul>
     </nav>
     <hr/>
-    <div class="row col justify-content-end mb-3">
-        <a class="btn btn-primary" href="#" onclick="createTemplate()">创建模板</a>
+    <div class="row justify-content-end mb-3">
+        <div class="col col-10"></div>
+        <div class="col">
+            <a class="btn btn-primary" href="#" onclick="createTemplate()">创建<br/>模板</a>
+        </div>
+
     </div>
 </div>
 
@@ -163,9 +167,8 @@
         }
 
         buildTemplateList(shown);
-    }, reject => {
-        alert(reject);
-        window.location.refresh();
+    }, xhr => {
+        toast_ajax_error(xhr);
     });
 </script>
 </body>
