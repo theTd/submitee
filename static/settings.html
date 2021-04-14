@@ -250,19 +250,7 @@
     </div>
 </div>
 
-<!--<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>-->
-<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>-->
-<!--<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>-->
-<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>-->
-<!--<script src="https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js"></script>-->
-<!--<script src="js/model.js"></script>-->
-<!--<script src="js/field-controllers.js"></script>-->
-<!--<script src="js/toast.js"></script>-->
-
-
 <script>
-    // $('#checkbox-user-register').bootstrapToggle();
-
     function createBlobStorage() {
         $.ajax({
             url: "../configuration/create-blob-storage",
@@ -617,7 +605,7 @@
     function testGrecaptcha() {
         let status = $("#grecaptcha-test-status");
         status.html("<span class='spinner-border spinner-border-sm'></span>");
-        submitee.loadScript("https://www.recaptcha.net/recaptcha/api.js?render=" +
+        submitee_safe.loadScript("https://www.recaptcha.net/recaptcha/api.js?render=" +
             configuration['grecaptcha-sitekey'], "grecaptcha", () => {
             grecaptcha.ready(function () {
                 grecaptcha.execute(configuration['grecaptcha-sitekey'], {action: 'submit'}).then(function (token) {

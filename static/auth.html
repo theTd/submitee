@@ -94,7 +94,8 @@
 <!--<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>-->
 <!--<script src="js/model.js"></script>-->
 <!--<script src="js/toast.js"></script>-->
-<script src="js/model.js"></script>
+<!--<script src="js/model.js"></script>-->
+<script src="js/safe.js"></script>
 <script>
     function getCompleteSchemeQuery(realm, scheme) {
         let appendParams = "";
@@ -227,10 +228,11 @@
         });
     }
 
-    submitee.loadAllScript([
+    submitee_safe.loadAllScript([
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
         "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js",
         "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js",
+        "js/model.js",
         "js/toast.js"
     ]).then(() => {
         let target = getQueryValue("t");

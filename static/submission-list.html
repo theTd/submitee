@@ -4,9 +4,131 @@
     <meta charset="UTF-8">
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <title>正在载入</title>
+    <title></title>
 </head>
 <body>
+<div class="container-fluid">
+    <template id="template-submission-page-item">
+        <li class="page-item"><a class="page-link" href="#">3</a></li>
+    </template>
+    <template id="template-submission-row">
+        <div class="row submission-row">
+            <div class="col-1 submission-template-id">模板</div>
+            <div class="col-1 submission-user">提交者</div>
+            <div class="col-2 submission-time">时间</div>
+            <div class="col-6 submission-debug">摘要</div>
+            <div class="col-2"></div>
+        </div>
+    </template>
+    <div class="row">
+        <div class="col-1">模板名</div>
+        <div class="col-1">提交者</div>
+        <div class="col-2">时间</div>
+        <div class="col-6">摘要</div>
+        <div class="col-2"></div>
+    </div>
 
+    <hr id="insert-submission-before"/>
+    <nav class="row col">
+        <ul class="pagination" id="submission-list-pagination">
+        </ul>
+    </nav>
+</div>
+<script>
+    /**
+     *
+     * @param {Submission} submission
+     * @returns {*}
+     */
+    function createSubmissionElement(submission) {
+        let t = document.querySelector("#template-submission-row");
+
+        t.content.querySelector(".submission-row").setAttribute("data-submitee-submission-uuid", submission.attributeMap.get("unique-id"));
+
+        t.content.querySelector(".submission-template-id").innerHTML = "<p class='spinner-border spinner-border-sm'></p>";
+        t.content.querySelector(".submission-debug").textContent = submission.debug;
+        t.content.querySelector(".submission-time").textContent = submission.submitTime;
+        t.content.querySelector(".submission-user").innerHTML = submission.submitUser;
+        setTimeout(() => {
+            updateTemplateInfo(submission);
+        })
+        return document.importNode(t.content, true);
+    }
+
+    async function updateTemplateInfo(submission) {
+        let t = await fetchSingleTemplateInfo(submission.attributeMap.get("template-uuid"));
+        let container = $(`.submission-row[data-submitee-submission-uuid=${submission.attributeMap.get("unique-id")}]`);
+        container.find(".submission-template-id").text(t.name + ":" + t.version);
+        // resolve();
+    }
+
+    function buildSubmissionList(submissionList) {
+        let relative = $("#insert-submission-before")[0];
+        submissionList.forEach(function (value, key) {
+            relative.parentNode.insertBefore(createSubmissionElement(value), relative);
+        })
+    }
+
+    function buildPagination(currentPage, maxPages) {
+        let paginationContainer = $("#submission-list-pagination")[0];
+        let prevPage = currentPage - 1;
+        if (prevPage < 1) prevPage = null;
+        let nextPage = currentPage + 1;
+        if (nextPage > maxPages) nextPage = null;
+
+        let node;
+        node = createPageItem("上一页", prevPage ? "?method=submission-list&page=" + prevPage : "");
+        if (!prevPage) {
+            $(node.querySelector(".page-item")).addClass("disabled");
+        }
+        paginationContainer.appendChild(node);
+
+        for (let i = 1; i <= maxPages; i++) {
+            paginationContainer.appendChild(createPageItem(i, "?method=submission-list&page=" + i, i === currentPage));
+        }
+
+        node = createPageItem("下一页", nextPage ? "?method=submission-list&page=" + nextPage : "");
+        if (!nextPage) {
+            $(node.querySelector(".page-item")).addClass("disabled");
+        }
+        paginationContainer.appendChild(node);
+    }
+
+    function createPageItem(text, href, active) {
+        let t = $("#template-submission-page-item")[0];
+        t.content.querySelector(".page-link").href = href;
+        t.content.querySelector(".page-link").textContent = text;
+        if (active) {
+            $(t.content.querySelector(".page-item")).addClass("active");
+        } else {
+            $(t.content.querySelector(".page-item")).removeClass("active");
+        }
+        return document.importNode(t.content, true);
+    }
+
+    const pageSize = 10;
+    let page = parseInt(getQueryValue("page")) || 1;
+
+    fetchSubmissionInfo({}).then(array => {
+        console.log(array)
+
+        if (array.length === 0) {
+            $(".empty-mark").removeClass("d-none");
+            return;
+        }
+        let maxPages = Math.ceil(array.length / pageSize);
+        if (page > maxPages) page = maxPages;
+        buildPagination(page, maxPages);
+
+        let shown = Array();
+        for (let i = pageSize * (page - 1); i < pageSize * page && i < array.length; i++) {
+            shown.push(array[i]);
+        }
+
+        buildSubmissionList(shown);
+    }, xhr => {
+        toast_ajax_error(xhr);
+    });
+</script>
 </body>
 </html>

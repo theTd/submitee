@@ -28,7 +28,7 @@
                    class="list-group-item list-group-item-action">模板列表</a>
                 <a href="?method=published-templates" class="list-group-item list-group-item-action disabled">已发布的模板</a>
                 <a href="?method=unread-submissions" class="list-group-item list-group-item-action disabled">未读提交</a>
-                <a href="?method=all-submissions" class="list-group-item list-group-item-action disabled">提交列表</a>
+                <a href="?method=submission-list" class="list-group-item list-group-item-action">提交列表</a>
                 <a href="?method=settings" class="list-group-item list-group-item-action">系统选项</a>
             </div>
         </div>
@@ -37,20 +37,9 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js"></script>
-<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>-->
-<script src="https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js"></script>
-<script src="js/model.js"></script>
-<script src="js/field-controllers.js"></script>
-<script src="js/toast.js"></script>
-<script src="js/session.js"></script>
+<script src="js/safe.js"></script>
 
 <script>
-    submitee.beforeUnloadChecker = null;
-
     function highlightCurrentMethod(method) {
         let links = $("#management-methods a");
         links.each(function (index) {
@@ -81,37 +70,55 @@
         });
     }
 
-    let method = getQueryValue("method");
-    if (!method) method = "template-list"; // for default option
+    submitee_safe.loadAllScript([
+        "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js",
+        "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js",
+        "https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js",
+        "https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js",
+        "js/model.js",
+        "js/field-controllers.js",
+        "js/toast.js",
+        "js/session.js",
+    ]).then(() => {
+        submitee.beforeUnloadChecker = null;
 
-    highlightCurrentMethod(method);
+        let method = getQueryValue("method");
+        if (!method) method = "template-list"; // for default option
 
-    switch (method) {
-        case "template-list": {
-            loadPage("template-list.html");
-            setTitle("模板列表");
-            break;
-        }
-        case "edit-template": {
-            loadPage("edit-template.html");
-            setTitle("编辑模板");
-            break;
-        }
-        case "published-templates": {
-            break;
-        }
-        case "unread-submissions": {
-            break;
-        }
-        case "settings": {
-            loadPage("settings.html");
-            setTitle("系统选项");
-            break;
-        }
-    }
+        highlightCurrentMethod(method);
 
-    setAuthTarget("management");
-    createSessionHeader("session-header");
+        switch (method) {
+            case "template-list": {
+                loadPage("template-list.html");
+                setTitle("模板列表");
+                break;
+            }
+            case "edit-template": {
+                loadPage("edit-template.html");
+                setTitle("编辑模板");
+                break;
+            }
+            case "published-templates": {
+                break;
+            }
+            case "unread-submissions": {
+                break;
+            }
+            case "submission-list": {
+                loadPage("submission-list.html");
+                setTitle("提交列表");
+                break
+            }
+            case "settings": {
+                loadPage("settings.html");
+                setTitle("系统选项");
+                break;
+            }
+        }
+        setAuthTarget("management");
+        createSessionHeader("session-header");
+    });
 </script>
 </body>
 </html>

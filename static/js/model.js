@@ -90,6 +90,31 @@ class SField {
     }
 }
 
+class Submission {
+    constructor(attributes) {
+        this.attributeMap = new AttributeMap(attributes);
+    }
+
+    get submitUser() {
+        if (this.attributeMap.get("submit-user.realm-type") === "anonymous") return "匿名用户";
+        return this.attributeMap.get("submit-user.realm-type") + ":" + this.attributeMap.get("submit-user.user-id");
+    }
+
+    get submitTime() {
+        console.log(this.attributeMap.get("submit-time"));
+        let date = new Date(this.attributeMap.get("submit-time"));
+        return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+    }
+
+    get debug() {
+        return this.attributeMap.get("debug");
+    }
+
+    get content() {
+        return this.attributeMap.get("body");
+    }
+}
+
 class STemplate {
     constructor(attributes) {
         this.attributeMap = new AttributeMap(attributes);
@@ -292,6 +317,29 @@ async function fetchSingleTemplateInfo(uuid) {
     });
 }
 
+async function fetchSubmissionInfo(filter, latest) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: "../batch-get/submission",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                filter: filter
+            }),
+            success: function (data) {
+                let all = Array();
+                for (let val of data) {
+                    all.push(new Submission(val['body']));
+                }
+                resolve(all);
+            },
+            error: function (xhr) {
+                reject(xhr);
+            }
+        });
+    });
+}
+
 /**
  *
  * @param uuid
@@ -376,51 +424,6 @@ function findParentAttributeByElement(element, attribute) {
         node = node.parentNode;
     }
     return name;
-}
-
-submitee.loadScript = function (url, distinct, callback) {
-    if (!submitee.distinctLoadedScripts) submitee.distinctLoadedScripts = {};
-    if (!submitee.loadedScripts) submitee.loadedScripts = {}
-
-    let element = document.createElement("script");
-    element.src = url;
-    element.addEventListener("load", callback);
-
-    if (distinct) {
-        let loadedId = submitee.distinctLoadedScripts[distinct];
-        if (loadedId) {
-            let s = document.getElementById(loadedId);
-            s.parentNode.removeChild(s);
-        }
-        element.id = makeid(6);
-        submitee.distinctLoadedScripts[distinct] = element.id;
-    } else {
-        if (submitee.loadedScripts[url]) {
-            callback();
-            return;
-        }
-        submitee.loadedScripts[url] = '1';
-    }
-    document.querySelector("body").appendChild(element);
-}
-
-submitee.loadScriptPromise = function (url, distinct) {
-    return new Promise(function (resolve) {
-        submitee.loadScript(url, distinct, resolve);
-    });
-}
-
-/**
- *
- * @param {string[]} scripts
- */
-submitee.loadAllScript = async function (scripts) {
-    return new Promise(async resolve => {
-        for (let url of scripts) {
-            await submitee.loadScriptPromise(url, null);
-        }
-        resolve();
-    })
 }
 
 function beforeUnloadCheck() {

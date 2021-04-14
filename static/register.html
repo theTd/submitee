@@ -121,14 +121,8 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-<script src="js/model.js"></script>
-<script src="js/toast.js"></script>
+<script src="js/safe.js"></script>
 <script>
-    let redirect = getQueryValue("d");
-    if (redirect) redirect = atob(redirect);
 
     function register() {
         let email = $("#input-email").val();
@@ -172,8 +166,8 @@
                     success: function (response) {
                         create_toast("提示", "<p>注册已完成</p><p>正在重定向...</p>", 2000)
                         setInterval(function () {
-                            if (redirect) {
-                                window.location.href = redirect
+                            if (submitee.redirect) {
+                                window.location.href = submitee.redirect
                             } else {
                                 window.location.href = "auth.html";
                             }
@@ -259,41 +253,57 @@
         // todo
     }
 
-    $.ajax({
-        url: "../internal-account",
-        method: "GET",
-        success: function (response) {
-            if (!response["register-enabled"]) {
-                let disableMessage = $("#register-disable-message");
-                disableMessage.find("div").html(response["register-disable-message"] || "");
-                disableMessage.collapse({toggle: true});
-            } else {
-                $("#register-form").collapse({toggle: true});
-            }
-            submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
-            if (submitee.grecaptchaSitekey) {
-                submitee.loadScript("https://www.recaptcha.net/recaptcha/api.js?render=" + submitee.grecaptchaSitekey, "grecaptcha");
-            }
-            submitee.verifyCodeTimeout = response["verify-code-timeout"];
-            setVerifyCodeTimeout();
-        },
-        error: function (xhr) {
-            toast_ajax_error(xhr);
+
+    submitee_safe.loadAllScript([
+        "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js",
+        "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js",
+        "js/model.js",
+        "js/toast.js",
+        "js/safe.js",
+    ]).then(() => {
+        let redirect = getQueryValue("d");
+        if (redirect) {
+            redirect = atob(redirect);
+            submitee.redirect = redirect;
         }
-    });
 
-    let emailCollapseScheduleBroker = new ScheduleBroker(false);
+        $.ajax({
+            url: "../internal-account",
+            method: "GET",
+            success: function (response) {
+                if (!response["register-enabled"]) {
+                    let disableMessage = $("#register-disable-message");
+                    disableMessage.find("div").html(response["register-disable-message"] || "");
+                    disableMessage.collapse({toggle: true});
+                } else {
+                    $("#register-form").collapse({toggle: true});
+                }
+                submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
+                if (submitee.grecaptchaSitekey) {
+                    submitee_safe.loadScript("https://www.recaptcha.net/recaptcha/api.js?render=" + submitee.grecaptchaSitekey, "grecaptcha");
+                }
+                submitee.verifyCodeTimeout = response["verify-code-timeout"];
+                setVerifyCodeTimeout();
+            },
+            error: function (xhr) {
+                toast_ajax_error(xhr);
+            }
+        });
 
-    $("#input-email").on('keyup change', function (evt) {
-        let test = submitee.mailPattern.test(evt.target.value);
-        emailCollapseScheduleBroker.submitState(() => {
-            $(".verify-code").collapse(test ? 'show' : 'hide');
-        }, test);
-    });
-    $(".verify-code").on("hidden.bs.collapse", function () {
-        emailCollapseScheduleBroker.setState(false);
-    }).on("shown.bs.collapse", function () {
-        emailCollapseScheduleBroker.setState(true);
+        let emailCollapseScheduleBroker = new ScheduleBroker(false);
+
+        $("#input-email").on('keyup change', function (evt) {
+            let test = submitee.mailPattern.test(evt.target.value);
+            emailCollapseScheduleBroker.submitState(() => {
+                $(".verify-code").collapse(test ? 'show' : 'hide');
+            }, test);
+        });
+        $(".verify-code").on("hidden.bs.collapse", function () {
+            emailCollapseScheduleBroker.setState(false);
+        }).on("shown.bs.collapse", function () {
+            emailCollapseScheduleBroker.setState(true);
+        });
     });
 </script>
 </body>

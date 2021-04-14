@@ -11,6 +11,7 @@ import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.JsonUtil;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.model.STemplateImpl;
+import org.starrel.submitee.model.SubmissionImpl;
 import org.starrel.submitee.model.User;
 
 import java.io.IOException;
@@ -77,6 +78,36 @@ public class BatchGetServlet extends AbstractJsonServlet {
                 break;
             }
             case "submission": {
+                User user = getSession(req).getUser();
+                if (!user.isSuperuser()) {
+                    // TODO: 2021-04-14-0014 allows per use control
+                    responseAccessDenied(req, resp);
+                    return;
+                }
+
+                try {
+                    Document query = Document.parse(SubmiteeServer.GSON.toJson(filter));
+                    alterPath(query);
+                    // TODO: 2021-04-14-0014 pagination
+                    List<SubmissionImpl> list = SubmiteeServer.getInstance().getSubmissions(query);
+
+                    resp.setStatus(HttpStatus.OK_200);
+                    resp.setContentType("application/json");
+
+                    JsonWriter jsonWriter = new JsonWriter(resp.getWriter());
+                    jsonWriter.beginArray();
+                    for (SubmissionImpl submission : list) {
+                        jsonWriter.beginObject();
+                        jsonWriter.name("scheme").value(submission.getAttributeScheme());
+                        jsonWriter.name("body").jsonValue(SubmiteeServer.GSON.toJson(submission.getAttributeMap().toJsonTree()));
+                        jsonWriter.endObject();
+                    }
+                    jsonWriter.endArray();
+                    jsonWriter.close();
+                } catch (ExecutionException e) {
+                    ExceptionReporting.report(BatchGetServlet.class, "fetching templates", e);
+                    responseInternalError(req, resp);
+                }
 
                 break;
             }

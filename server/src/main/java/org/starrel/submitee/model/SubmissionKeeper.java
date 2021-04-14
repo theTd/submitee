@@ -11,6 +11,9 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.json.Converter;
+import org.bson.json.JsonWriterSettings;
+import org.bson.json.StrictJsonWriter;
 import org.starrel.submitee.JsonUtil;
 import org.starrel.submitee.SubmiteeServer;
 
@@ -54,7 +57,13 @@ public class SubmissionKeeper {
                 Document document = mongoDatabase.getCollection(Submission.ATTRIBUTE_COLLECTION_NAME)
                         .find(Filters.eq("id", uuid.toString())).first();
                 if (document == null) throw NotExistsSignal.INSTANCE;
-                JsonElement jsonElement = JsonParser.parseString(document.toJson());
+                String json = document.toJson(JsonWriterSettings.builder().int64Converter(new Converter<Long>() {
+                    @Override
+                    public void convert(Long value, StrictJsonWriter writer) {
+                        writer.writeNumber(value+"");
+                    }
+                }).build());
+                JsonElement jsonElement = JsonParser.parseString(json);
                 JsonObject body = JsonUtil.parseObject(jsonElement, "body");
                 SubmissionImpl access = new SubmissionImpl(uuid);
                 access.getAttributeMap().set("", body);
