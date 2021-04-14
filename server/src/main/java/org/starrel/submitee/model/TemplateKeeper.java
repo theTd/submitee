@@ -4,6 +4,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
+import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -186,6 +187,14 @@ public class TemplateKeeper {
             } else {
                 list.add(template);
             }
+        }
+        return list;
+    }
+
+    public List<STemplateImpl> getAllVersionTemplates(String templateId) throws ExecutionException {
+        List<STemplateImpl> list = new ArrayList<>();
+        for (UUID uuid : getUniqueIdsByQuery(Filters.eq("body.template-id", templateId))) {
+            list.add(getTemplate(uuid));
         }
         return list;
     }

@@ -30,5 +30,9 @@ public interface User extends AttributeHolder<User> {
 
     void setPreferredLanguage(String language);
 
+    boolean isSuperuser();
+
+    void setSuperuser(boolean superuser);
+
     UserDescriptor getDescriptor();
 }

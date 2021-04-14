@@ -45,4 +45,13 @@ public abstract class ClassifiedErrors {
 
     public final static ClassifiedError SUBMIT_TO_OLD_TEMPLATE = create(
             "SUBMIT_TO_OLD_TEMPLATE", HttpStatus.FORBIDDEN_403, I18N.General.SUBMIT_TO_OLD_TEMPLATE);
+
+    public final static ClassifiedError PUBLISH_OLDER_VERSION = create(
+            "PUBLISH_OLDER_VERSION", HttpStatus.FORBIDDEN_403, I18N.General.PUBLISH_OLDER_VERSION);
+
+    public final static ClassifiedError TEMPLATE_ALREADY_PUBLISHED = create(
+            "TEMPLATE_ALREADY_PUBLISHED", HttpStatus.FORBIDDEN_403, I18N.General.TEMPLATE_ALREADY_PUBLISHED);
+
+    public final static ClassifiedError TEMPLATE_NOT_PUBLISHED = create(
+            "TEMPLATE_NOT_PUBLISHED", HttpStatus.NOT_FOUND_404, I18N.General.TEMPLATE_NOT_PUBLISHED);
 }

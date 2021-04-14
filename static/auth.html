@@ -89,11 +89,12 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<!--<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>-->
+<!--<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>-->
+<!--<script src="js/model.js"></script>-->
+<!--<script src="js/toast.js"></script>-->
 <script src="js/model.js"></script>
-<script src="js/toast.js"></script>
 <script>
     function getCompleteSchemeQuery(realm, scheme) {
         let appendParams = "";
@@ -106,11 +107,11 @@
             }
         }
         let redirectParam = "";
-        if (redirect) {
-            redirectParam += `&d=${btoa(redirect)}`;
+        if (submitee.redirect) {
+            redirectParam += `&d=${btoa(submitee.redirect)}`;
         }
 
-        return `?${redirectParam}&t=${encodeURIComponent(target)}` +
+        return `?${redirectParam}&t=${encodeURIComponent(submitee.target)}` +
             `&r=${encodeURIComponent(realm["realm"])}&s=${encodeURIComponent(scheme["name"])}${appendParams}`;
     }
 
@@ -226,19 +227,29 @@
         });
     }
 
-    let target = getQueryValue("t");
-    let redirect = getQueryValue("d");
-    if (redirect) redirect = atob(redirect);
+    submitee.loadAllScript([
+        "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js",
+        "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js",
+        "js/toast.js"
+    ]).then(() => {
+        let target = getQueryValue("t");
+        submitee.target = target;
+        let redirect = getQueryValue("d");
+        if (redirect) {
+            submitee.redirect = atob(redirect);
+        }
 
-    submitee.currentRealmName = getQueryValue("r");
-    submitee.currentSchemeName = getQueryValue("s");
+        submitee.currentRealmName = getQueryValue("r");
+        submitee.currentSchemeName = getQueryValue("s");
 
-    if (!target) {
-        alert("未知认证目的");
-        window.history.back();
-    } else {
-        queryAuthSchemes(target);
-    }
+        if (!target) {
+            alert("未知认证目的");
+            window.history.back();
+        } else {
+            queryAuthSchemes(submitee.target);
+        }
+    })
 </script>
 </body>
 </html>

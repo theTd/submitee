@@ -1,7 +1,9 @@
 package org.starrel.submitee.http;
 
+import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
 import org.eclipse.jetty.http.HttpStatus;
+import org.starrel.submitee.ClassifiedErrors;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.attribute.AttributeHolder;
@@ -9,6 +11,7 @@ import org.starrel.submitee.attribute.AttributeHolder;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -73,8 +76,10 @@ public class InfoServlet extends SubmiteeHttpServlet {
             return;
         }
 
+        AttributeHolder<?> obj = (AttributeHolder<?>) object;
+
         String scheme;
-        if ((scheme = ((AttributeHolder<?>) object).getAttributeScheme()) == null) {
+        if ((scheme = obj.getAttributeScheme()) == null) {
             ExceptionReporting.report(InfoServlet.class, "serializing resource",
                     "requested object is not instance of attribute holder or attribute holder returns null scheme, uuidString=" + uuid);
             responseInternalError(req, resp);
@@ -84,13 +89,21 @@ public class InfoServlet extends SubmiteeHttpServlet {
         resp.setStatus(HttpStatus.OK_200);
         resp.setContentType("application/json");
 
-        JsonWriter jsonWriter = new JsonWriter(resp.getWriter());
-        jsonWriter.beginObject();
-        // TODO: 2021/3/26 check ACLs
-        jsonWriter.name("scheme").value(scheme);
-        jsonWriter.name("body").jsonValue(SubmiteeServer.GSON.toJson(((AttributeHolder<?>) object)
-                .getAttributeMap().toJsonTree(path -> !path.equalsIgnoreCase("protected"))));
-        jsonWriter.endObject();
-        jsonWriter.close();
+        boolean superuser = getSession(req).getUser().isSuperuser();
+        boolean pub = obj.isPublicAccessible();
+        if (superuser || pub) {
+            JsonWriter jsonWriter = new JsonWriter(resp.getWriter());
+            jsonWriter.beginObject();
+            // TODO: 2021/3/26 check ACLs
+            jsonWriter.name("scheme").value(scheme);
+            JsonElement expose = superuser ? obj.getAttributeMap().toJsonTree() : obj.getAttributeMap()
+                    .toJsonTree(path -> !path.equalsIgnoreCase("protected"));
+            jsonWriter.name("body").jsonValue(SubmiteeServer.GSON.toJson(expose));
+            jsonWriter.endObject();
+            jsonWriter.close();
+        } else {
+            responseClassifiedError(req, resp, ClassifiedErrors.TEMPLATE_NOT_PUBLISHED);
+            return;
+        }
     }
 }

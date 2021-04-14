@@ -25,5 +25,9 @@ public interface AttributeHolder<THolder extends AttributeHolder<?>> {
         getAttributeMap().set(path, value);
     }
 
+    default boolean isPublicAccessible() {
+        return false;
+    }
+
     void attributeUpdated(String path);
 }

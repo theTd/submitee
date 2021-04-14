@@ -11,6 +11,9 @@ import org.starrel.submitee.model.STemplateImpl;
 import org.starrel.submitee.model.Submission;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -27,6 +30,54 @@ public class CreateServlet extends AbstractJsonServlet {
             return;
         }
         switch (uriParts[0]) {
+            case "publish-template": {
+                if (uriParts.length != 2) {
+                    responseBadRequest(req, resp);
+                    return;
+                }
+                UUID targetTemplate = UUID.fromString(uriParts[1]);
+                STemplateImpl toPublish;
+                try {
+                    toPublish = SubmiteeServer.getInstance().getTemplate(targetTemplate);
+                } catch (ExecutionException e) {
+                    ExceptionReporting.report(CreateServlet.class, "fetching template info", e);
+                    responseInternalError(req, resp);
+                    return;
+                }
+                if (toPublish.isPublished()) {
+                    responseClassifiedError(req, resp, ClassifiedErrors.TEMPLATE_ALREADY_PUBLISHED);
+                    return;
+                }
+
+                List<STemplateImpl> allVersionTemplates;
+                try {
+                    allVersionTemplates = SubmiteeServer.getInstance().getTemplateKeeper()
+                            .getAllVersionTemplates(toPublish.getTemplateId());
+                } catch (ExecutionException e) {
+                    ExceptionReporting.report(CreateServlet.class, "fetching template info", e);
+                    responseInternalError(req, resp);
+                    return;
+                }
+                Collections.sort(allVersionTemplates);
+
+                for (STemplateImpl t : allVersionTemplates) {
+                    if (t.isPublished()) {
+                        if (t.getVersion() > toPublish.getVersion()) {
+                            responseClassifiedError(req, resp, ClassifiedErrors.PUBLISH_OLDER_VERSION);
+                            return;
+                        }
+                        t.setPublished(false);
+                    }
+                }
+
+                toPublish.getAttributeMap().setAutoSaveAttribute(false);
+                toPublish.setPublished(true);
+                toPublish.setPublishedBy(getSession(req).getUser().getDescriptor());
+                toPublish.setPublishTime(new Date());
+                toPublish.getAttributeMap().setAutoSaveAttribute(true);
+                resp.setStatus(HttpStatus.OK_200);
+                break;
+            }
             case "template": {
                 try {
                     if (uriParts.length == 1) {

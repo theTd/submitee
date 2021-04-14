@@ -451,6 +451,11 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
+    public List<UserRealm> getUserRealms() {
+        return new ArrayList<>(userRealmMap.values());
+    }
+
+    @Override
     public void shutdown() throws Exception {
         jettyServer.stop();
     }

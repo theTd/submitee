@@ -2,6 +2,7 @@ package org.starrel.submitee.model;
 
 import org.starrel.submitee.attribute.AttributeHolder;
 
+import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -16,13 +17,21 @@ public interface STemplate extends AttributeHolder<STemplate> {
 
     int getLatestVersion() throws ExecutionException;
 
-    User getCommittedBy();
+    User getPublishedBy();
 
-    void setCommittedBy(User user);
+    void setPublishedBy(UserDescriptor user);
 
     String getComment();
 
     void setComment(String comment);
+
+    boolean isPublished();
+
+    void setPublished(boolean published);
+
+    Date getPublishTime();
+
+    void setPublishTime(Date time);
 
     Map<String, ? extends SField> getFields();
 

@@ -8,6 +8,7 @@ import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.blob.Blob;
+import org.starrel.submitee.model.User;
 
 import java.io.IOException;
 
@@ -36,6 +37,13 @@ public class GetFileServlet extends SubmiteeHttpServlet {
                 responseNotFound(req, resp);
                 return;
             }
+
+            User user = getSession(req).getUser();
+            if (!user.isSuperuser() && !blob.getUploader().equals(user.getDescriptor())) {
+                responseAccessDenied(req, resp);
+                return;
+            }
+
             resp.setStatus(HttpStatus.OK_200);
             resp.setContentType(blob.getContentType());
             resp.setContentLengthLong(blob.getSize());

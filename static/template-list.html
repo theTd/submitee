@@ -14,17 +14,47 @@
             margin-top: 0.5rem;
             margin-bottom: 0.5rem;
         }
+
+        .template-container > .col {
+            align-self: center;
+        }
+
+        .s-template-id, .s-template-status {
+            font-size: 0.8rem;
+        }
+
+        .template-container span {
+            padding: 0.1rem 0.2rem;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .template-container span.text-info {
+            border: 1px #17a2b8 solid;
+        }
+
+        .template-container span.text-success {
+            border: 1px #28a745 solid;
+        }
     </style>
 </head>
 <body>
 
 <template id="template-s-template-row">
     <div class="row template-container" data-submitee-template-id>
-        <div class="col col-2 s-template-id"></div>
+        <div class="col col-1 s-template-id"></div>
+        <div class="col col-1 s-template-status"></div>
         <div class="col col-2 s-template-name"></div>
         <div class="col col-6 s-template-comment"></div>
         <div class="col col-2">
-            <a class="btn btn-secondary" href="#" onclick="editTemplate(this)">编辑</a>
+            <button class="btn btn-sm btn-secondary button-edit-template d-none" onclick="editTemplate(this)">编辑
+            </button>
+            <button class="btn btn-sm btn-danger button-delete-template d-none" onclick="deleteTemplate(this)">删除
+            </button>
+            <button class="btn btn-sm btn-info button-view-template d-none" onclick="viewTemplate(this)">查看
+            </button>
+            <button class="btn btn-sm btn-warning button-revision-template d-none" onclick="revisionTemplate(this)">修订
+            </button>
         </div>
     </div>
 </template>
@@ -34,7 +64,8 @@
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col col-2">编号</div>
+        <div class="col col-1">编号</div>
+        <div class="col col-1">状态</div>
         <div class="col col-2">标题</div>
         <div class="col col-6">注释</div>
         <div class="col col-2"></div>
@@ -100,9 +131,23 @@
     function createTemplateElement(template) {
         let element = document.querySelector("#template-s-template-row");
         element.content.querySelector(".template-container").setAttribute("data-submitee-template-id", template.uniqueId);
-        element.content.querySelector(".s-template-id").textContent = template.templateId;
+        element.content.querySelector(".s-template-id").textContent = template.templateId + ":" + template.version;
+        element.content.querySelector(".s-template-status").innerHTML = template.status;
         element.content.querySelector(".s-template-name").textContent = template.name;
         element.content.querySelector(".s-template-comment").textContent = template.comment;
+
+        if (template.published) {
+            element.content.querySelector(".button-revision-template").classList.remove("d-none");
+            element.content.querySelector(".button-view-template").classList.remove("d-none");
+            element.content.querySelector(".button-edit-template").classList.add("d-none");
+            element.content.querySelector(".button-delete-template").classList.add("d-none");
+        } else {
+            element.content.querySelector(".button-revision-template").classList.add("d-none");
+            element.content.querySelector(".button-view-template").classList.add("d-none");
+            element.content.querySelector(".button-edit-template").classList.remove("d-none");
+            element.content.querySelector(".button-delete-template").classList.remove("d-none");
+        }
+
         return document.importNode(element.content, true);
     }
 

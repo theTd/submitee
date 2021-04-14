@@ -5,7 +5,7 @@ class AttributeMap {
         this.root = root || {};
     }
 
-    get(path) {
+    get(path, def) {
         let paths = path.split(".");
         let node = this.root;
         for (let i = 0; i < paths.length; i++) {
@@ -13,14 +13,14 @@ class AttributeMap {
             if (node.hasOwnProperty(nextPath)) {
                 node = node[nextPath];
             } else {
-                return null;
+                return def;
             }
         }
         return node;
     }
 
     set(path, value) {
-        let paths = path.split(",");
+        let paths = path.split(".");
         let node = this.root;
         for (let i = 0; i < paths.length; i++) {
             let nextPath = paths[i];
@@ -144,6 +144,14 @@ class STemplate {
         this.attributeMap.set("desc", val);
     }
 
+    get status() {
+        return this.published ? "<span class='text-success'>发布</span>" : "<span class='text-info'>编辑</span>"
+    }
+
+    get published() {
+        return this.attributeMap.get("published");
+    }
+
     /**
      *
      * @param {SField} field
@@ -243,11 +251,10 @@ function getQueryValue(name, queryString) {
 async function fetchTemplateInfo(filter, latest) {
     return new Promise((resolve, reject) => {
         $.ajax({
-            url: "../batch-get",
+            url: "../batch-get/template",
             method: "POST",
             contentType: "application/json",
             data: JSON.stringify({
-                scheme: "STemplate",
                 latest: latest,
                 filter: filter
             }),
@@ -372,22 +379,48 @@ function findParentAttributeByElement(element, attribute) {
 }
 
 submitee.loadScript = function (url, distinct, callback) {
+    if (!submitee.distinctLoadedScripts) submitee.distinctLoadedScripts = {};
+    if (!submitee.loadedScripts) submitee.loadedScripts = {}
+
     let element = document.createElement("script");
     element.src = url;
     element.addEventListener("load", callback);
 
-    if (!submitee.loadedScripts) submitee.loadedScripts = {};
     if (distinct) {
-        let loadedId = submitee.loadedScripts[distinct];
+        let loadedId = submitee.distinctLoadedScripts[distinct];
         if (loadedId) {
             let s = document.getElementById(loadedId);
             s.parentNode.removeChild(s);
         }
         element.id = makeid(6);
-        submitee.loadedScripts[distinct] = element.id;
+        submitee.distinctLoadedScripts[distinct] = element.id;
+    } else {
+        if (submitee.loadedScripts[url]) {
+            callback();
+            return;
+        }
+        submitee.loadedScripts[url] = '1';
     }
-
     document.querySelector("body").appendChild(element);
+}
+
+submitee.loadScriptPromise = function (url, distinct) {
+    return new Promise(function (resolve) {
+        submitee.loadScript(url, distinct, resolve);
+    });
+}
+
+/**
+ *
+ * @param {string[]} scripts
+ */
+submitee.loadAllScript = async function (scripts) {
+    return new Promise(async resolve => {
+        for (let url of scripts) {
+            await submitee.loadScriptPromise(url, null);
+        }
+        resolve();
+    })
 }
 
 function beforeUnloadCheck() {

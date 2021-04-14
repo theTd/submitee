@@ -15,11 +15,14 @@ public class InternalAccountUser extends AbstractUser {
     private final AttributeSpec<String> password;
     private final AttributeSpec<String> email;
     private final AttributeSpec<String> sms;
+    private final AttributeSpec<Boolean> superuser;
 
     public InternalAccountUser(int uid) {
         super(InternalAccountRealm.TYPE_ID, "uid:" + uid);
+        this.getAttributeMap().read();
         this.uid = uid;
 
+        this.superuser = getAttributeMap().of("superuser", Boolean.class);
         this.sms = getAttributeMap().of("profile.sms", String.class);
 
         JdbcAttributeSource jdbcAttributeSource = new JdbcAttributeSource(SubmiteeServer.getInstance().getDataSource()
@@ -63,5 +66,15 @@ public class InternalAccountUser extends AbstractUser {
 
     public void setSMS(String sms) {
         this.sms.set(sms);
+    }
+
+    @Override
+    public boolean isSuperuser() {
+        return superuser.get();
+    }
+
+    @Override
+    public void setSuperuser(boolean superuser) {
+        this.superuser.set(superuser);
     }
 }

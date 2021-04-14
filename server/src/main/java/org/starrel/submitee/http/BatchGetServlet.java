@@ -1,17 +1,18 @@
 package org.starrel.submitee.http;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
-import org.bson.Document;
-import org.eclipse.jetty.http.HttpStatus;
-import org.starrel.submitee.ExceptionReporting;
-import org.starrel.submitee.SubmiteeServer;
-import org.starrel.submitee.model.STemplateImpl;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.bson.Document;
+import org.eclipse.jetty.http.HttpStatus;
+import org.starrel.submitee.ExceptionReporting;
+import org.starrel.submitee.JsonUtil;
+import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.model.STemplateImpl;
+import org.starrel.submitee.model.User;
+
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
@@ -19,31 +20,29 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 public class BatchGetServlet extends AbstractJsonServlet {
+    {
+        setBaseUri("/batch-get");
+    }
+
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
-        JsonElement t;
-
-        if (!body.has("scheme") || !(t = body.get("scheme")).isJsonPrimitive()) {
-            ExceptionReporting.report(BatchGetServlet.class, "parsing parameters",
-                    "unexpected request body: " + SubmiteeServer.GSON.toJson(body));
+        String[] uriParts = parseUri(req.getRequestURI());
+        if (uriParts.length < 1) {
             responseBadRequest(req, resp);
             return;
         }
-        String scheme = t.getAsString();
-        JsonObject filter = new JsonObject();
 
-        if (body.has("filter")) {
-            if (!(t = body.get("filter")).isJsonObject()) {
-                ExceptionReporting.report(BatchGetServlet.class, "parsing parameters",
-                        "unexpected request body: " + SubmiteeServer.GSON.toJson(body));
-                responseBadRequest(req, resp);
-                return;
-            }
-            filter = t.getAsJsonObject();
-        }
+        JsonObject filter = JsonUtil.parseObject(body, "filter");
+        if (filter == null) filter = new JsonObject();
 
-        switch (scheme) {
-            case "STemplate": {
+        switch (uriParts[0]) {
+            case "template": {
+                User user = getSession(req).getUser();
+                if (!user.isSuperuser()) {
+                    responseAccessDenied(req, resp);
+                    return;
+                }
+
                 boolean latest = body.has("latest") && body.get("latest").getAsBoolean();
 
                 try {
@@ -75,13 +74,14 @@ public class BatchGetServlet extends AbstractJsonServlet {
                     ExceptionReporting.report(BatchGetServlet.class, "fetching templates", e);
                     responseInternalError(req, resp);
                 }
-                return;
+                break;
             }
-            case "Submission": {
-                resp.setStatus(HttpStatus.OK_200);
-                resp.setContentType("application/json");
-                // TODO: 2021-04-05-0005
-                return;
+            case "submission": {
+
+                break;
+            }
+            default: {
+                responseBadRequest(req, resp);
             }
         }
     }

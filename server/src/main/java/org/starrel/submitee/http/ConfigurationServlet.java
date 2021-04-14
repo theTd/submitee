@@ -10,6 +10,8 @@ import org.starrel.submitee.blob.BlobStorageProvider;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.starrel.submitee.model.User;
+import org.starrel.submitee.model.UserRealm;
 
 import java.io.IOException;
 import java.util.*;
@@ -24,6 +26,12 @@ public class ConfigurationServlet extends AbstractJsonServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        User user = getSession(req).getUser();
+        if (!user.isSuperuser()) {
+            responseAccessDenied(req, resp);
+            return;
+        }
+
         Map<String, Object> configurationMap = new LinkedHashMap<>();
 
         // region providers
@@ -86,6 +94,14 @@ public class ConfigurationServlet extends AbstractJsonServlet {
         configurationMap.put("grecaptcha-sitekey", SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class));
         configurationMap.put("grecaptcha-secretkey", SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class));
 
+        // region user realms
+        Map<String, String> userRealms = new LinkedHashMap<>();
+        for (UserRealm realm : SubmiteeServer.getInstance().getUserRealms()) {
+            userRealms.put(realm.getTypeId(), I18N.fromKey(String.format("user_realm.%s.title", realm.getTypeId())).format(req));
+        }
+        // endregion
+        configurationMap.put("user-realms", userRealms);
+
         resp.setStatus(HttpStatus.OK_200);
         resp.setContentType("application/json");
         resp.getWriter().println(SubmiteeServer.GSON.toJson(configurationMap));
@@ -94,6 +110,12 @@ public class ConfigurationServlet extends AbstractJsonServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp, JsonObject body) throws ServletException, IOException {
+        User user = getSession(req).getUser();
+        if (!user.isSuperuser()) {
+            responseAccessDenied(req, resp);
+            return;
+        }
+
         String[] uriParts = parseUri(req.getRequestURI());
         if (uriParts.length < 1) {
             ExceptionReporting.report(ConfigurationServlet.class, "parsing configuration method",
@@ -157,6 +179,7 @@ public class ConfigurationServlet extends AbstractJsonServlet {
             }
             case "smtp-settings": {
                 SubmiteeServer.getInstance().getAttributeMap().setAll("smtp", body);
+                SubmiteeServer.getInstance().getAttributeMap().save();
                 resp.setStatus(HttpStatus.OK_200);
                 break;
             }

@@ -182,7 +182,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         if (spec != this) {
             return spec.getKeys(path.substring(spec.getPath().length()));
         } else {
-            return getSource().listKeys(path);
+            return getSource().listKeys(fullPath(path));
         }
     }
 

@@ -65,8 +65,8 @@ public class SessionKeeper {
 
         sess.setLastUA(request.getHeader("User-Agent"));
         sess.pushLastActive(request);
-        sess.getAttributeMap().setAutoSaveAttribute(true);
 
+        sess.getAttributeMap().setAutoSaveAttribute(!sess.getUser().isAnonymous());
         return sess;
     }
 

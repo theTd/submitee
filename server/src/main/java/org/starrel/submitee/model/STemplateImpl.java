@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class STemplateImpl implements STemplate {
+public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
     private final TemplateKeeper keeper;
     private final UUID uniqueId;
     private final String grouping;
@@ -20,9 +20,11 @@ public class STemplateImpl implements STemplate {
     AtomicInteger latestVersion;
     private final AttributeMap<STemplateImpl> attributeMap;
 
-    private final AttributeSpec<UserDescriptor> committedBy;
     private final AttributeSpec<String> comment;
     private final AttributeSpec<JsonArray> fields;
+    private final AttributeSpec<Boolean> published;
+    private final AttributeSpec<UserDescriptor> publishedBy;
+    private final AttributeSpec<Date> publishTime;
 
     public STemplateImpl(TemplateKeeper keeper, UUID uniqueId, String grouping, String templateId, int version, int latestVersion, boolean createAttributeMap) {
         this.keeper = keeper;
@@ -35,9 +37,11 @@ public class STemplateImpl implements STemplate {
         this.attributeMap = createAttributeMap ? SubmiteeServer.getInstance().readAttributeMap(this, "templates") :
                 SubmiteeServer.getInstance().readAttributeMap(this, "templates");
 
-        this.committedBy = attributeMap.of("committed-by", UserDescriptor.class);
         this.comment = attributeMap.of("comment", String.class);
         this.fields = attributeMap.of("fields", JsonArray.class);
+        this.published = attributeMap.of("published", Boolean.class);
+        this.publishedBy = attributeMap.of("published-by", UserDescriptor.class);
+        this.publishTime = attributeMap.of("publish-time", Date.class);
 
         if (createAttributeMap) {
             boolean save = this.attributeMap.getAutoSaveAttribute();
@@ -46,6 +50,7 @@ public class STemplateImpl implements STemplate {
             this.attributeMap.set("grouping", grouping);
             this.attributeMap.set("template-id", templateId);
             this.attributeMap.set("version", version);
+            this.attributeMap.set("published", false);
 
             this.attributeMap.setAutoSaveAttribute(save);
         }
@@ -77,13 +82,34 @@ public class STemplateImpl implements STemplate {
     }
 
     @Override
-    public User getCommittedBy() {
-        return SubmiteeServer.getInstance().getUser(committedBy.get());
+    public boolean isPublished() {
+        Boolean published = this.published.get();
+        return published != null && published;
     }
 
     @Override
-    public void setCommittedBy(User user) {
-        this.committedBy.set(user.getDescriptor());
+    public void setPublished(boolean published) {
+        this.published.set(published);
+    }
+
+    @Override
+    public Date getPublishTime() {
+        return this.publishTime.get();
+    }
+
+    @Override
+    public void setPublishTime(Date time) {
+        this.publishTime.set(time);
+    }
+
+    @Override
+    public User getPublishedBy() {
+        return SubmiteeServer.getInstance().getUser(publishedBy.get());
+    }
+
+    @Override
+    public void setPublishedBy(UserDescriptor user) {
+        this.publishedBy.set(user);
     }
 
     @Override
@@ -117,5 +143,17 @@ public class STemplateImpl implements STemplate {
     @Override
     public void attributeUpdated(String path) {
         // TODO: 2021-03-25-0025
+    }
+
+    @Override
+    public int compareTo(STemplateImpl o) {
+        int id = getTemplateId().compareTo(o.getTemplateId());
+        if (id != 0) return id;
+        return getVersion() - o.getVersion();
+    }
+
+    @Override
+    public boolean isPublicAccessible() {
+        return isPublished();
     }
 }

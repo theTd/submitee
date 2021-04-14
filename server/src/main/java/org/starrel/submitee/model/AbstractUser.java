@@ -62,6 +62,16 @@ public abstract class AbstractUser implements User {
     }
 
     @Override
+    public boolean isSuperuser() {
+        return false;
+    }
+
+    @Override
+    public void setSuperuser(boolean superuser) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void attributeUpdated(String path) {
     }
 }
