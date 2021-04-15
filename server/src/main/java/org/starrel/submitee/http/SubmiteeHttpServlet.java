@@ -97,9 +97,11 @@ public class SubmiteeHttpServlet extends HttpServlet {
 
         FileLoadingCache.Result result = SubmiteeServer.getInstance().getFileLoadingCache()
                 .getFileContent(errorPageFilePath, "UTF-8", DEFAULT_ERROR_PAGE);
-
         if (result.getException() != null) {
             ExceptionReporting.report(SubmiteeHttpServlet.class, "reading error page", result.getException());
+        }
+        if (result.getContent() == null) {
+            throw new RuntimeException("error page content got null");
         }
 
         if (!result.isCached()) {

@@ -65,3 +65,11 @@ function createSessionHeader(containerId) {
 function setAuthTarget(authTarget) {
     submitee.authTarget = authTarget;
 }
+
+function sendToAuthPage() {
+    if (submitee.authTarget) {
+        let url = new URL(window.location.href);
+        let redirect = url.pathname + url.search;
+        window.location.href = `auth.html?d=${btoa(redirect)}&t=${submitee.authTarget}`;
+    }
+}

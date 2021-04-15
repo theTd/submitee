@@ -14,6 +14,7 @@ import lombok.SneakyThrows;
 import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.*;
 import org.starrel.submitee.http.AbstractJsonServlet;
+import org.starrel.submitee.model.Session;
 import org.starrel.submitee.model.User;
 
 import java.io.IOException;
@@ -212,7 +213,11 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         created.setAttribute("last-seen", System.currentTimeMillis());
                         created.setAttribute("preferred-language", Util.getPreferredLanguage(req));
 
-                        getSession(req).setUser(created);
+                        Session session = getSession(req);
+                        session.setUser(created);
+                        session.setAttribute("logged-in-user", created.getDescriptor());
+                        session.setAttribute("last-verify-password", System.currentTimeMillis());
+                        session.getAttributeMap().save();
                         resp.setStatus(HttpStatus.OK_200);
                     } catch (Exception e) {
                         ExceptionReporting.report(InternalAccountServlet.class, "creating user", e);

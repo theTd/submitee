@@ -305,7 +305,7 @@
 
         field.required = container.querySelector(".field-config-require-checkbox").checked;
 
-        let controller = fieldControllers[field.type];
+        let controller = submitee.fieldControllers[field.type];
         if (controller) {
             controller.applyConfiguration(field);
         }
@@ -336,7 +336,7 @@
         }
         // endregion
 
-        let error = fieldControllers[field.type].validateConfiguration(field);
+        let error = submitee.fieldControllers[field.type].validateConfiguration(field);
         if (error) {
             template.content.querySelector(".field-error").appendChild(createErrorTooltip(error));
         }
@@ -434,7 +434,7 @@
         }
         // endregion
 
-        let controller = fieldControllers[field.type];
+        let controller = submitee.fieldControllers[field.type];
         let confHtml;
         if (controller && (confHtml = controller.generateConfigurationHtml(field))) {
             template.content.querySelector(".field-configuration").innerHTML = `<div class="container-fluid">${confHtml}</div>`;
@@ -487,8 +487,8 @@
     function buildFieldTypeSelect() {
         let element = $("#field-type-container")[0];
         element.appendChild(createFieldTypeOption("", "--------"));
-        Object.keys(fieldControllers).forEach(value => {
-            let c = fieldControllers[value];
+        Object.keys(submitee.fieldControllers).forEach(value => {
+            let c = submitee.fieldControllers[value];
             element.appendChild(createFieldTypeOption(c.fieldType, getFieldTypeDisplayName(c.fieldType)));
         })
     }

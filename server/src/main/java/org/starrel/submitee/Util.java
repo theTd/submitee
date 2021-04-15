@@ -126,6 +126,14 @@ public abstract class Util {
                                                Map<String, String> replaces, String plainTextFallback) {
         AttributeSpec<Void> smtp = SubmiteeServer.getInstance().getAttributeMap().of("smtp");
         return EMAIL_SENDING_EXECUTOR.submit((Callable<Void>) () -> {
+            String smtpHostname = smtp.get("server", String.class);
+            String smtpUser = smtp.get("user", String.class);
+            String smtpPassword = smtp.get("password", String.class);
+
+            if (smtpHostname == null || smtpHostname.isEmpty()) {
+                throw new RuntimeException("empty smtp hostname");
+            }
+
             FileLoadingCache.Result result = SubmiteeServer.getInstance().getFileLoadingCache()
                     .getFileContent(path, "utf-8");
             if (result.exception != null) {
@@ -138,8 +146,8 @@ public abstract class Util {
 
             // Create the email message
             HtmlEmail email = new HtmlEmail();
-            email.setHostName(smtp.get("server", String.class));
-            email.setAuthentication(smtp.get("user", String.class), smtp.get("password", String.class));
+            email.setHostName(smtpHostname);
+            email.setAuthentication(smtpUser, smtpPassword);
             if (smtp.get("ssl", Boolean.class, true)) {
                 email.setSSLOnConnect(true);
                 email.setSslSmtpPort(smtp.get("port", Integer.class) + "");

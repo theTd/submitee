@@ -55,15 +55,19 @@ function create_toast(title, content, delay) {
 
 /**
  *
- * @param {jqXHR} error
+ * @param {jqXHR} xhr
  */
-function getMessageFromAjaxError(error) {
-    let title = decodeURIComponent(error.getResponseHeader("SUBMITEE-ERROR-TITLE"));
+function getMessageFromAjaxError(xhr) {
+    let title = decodeURIComponent(xhr.getResponseHeader("SUBMITEE-ERROR-TITLE"));
     if (title) {
         return title;
     } else {
-        return error.status === 0 ? "无法连接到服务器" : error.statusText;
+        return xhr.status === 0 ? "无法连接到服务器" : xhr.statusText;
     }
+}
+
+function getErrorClassifyFromAjaxError(xhr) {
+    return xhr.getResponseHeader("SUBMITEE-ERROR-CLASSIFY");
 }
 
 /**
@@ -71,7 +75,11 @@ function getMessageFromAjaxError(error) {
  * @param {jqXHR} xhr
  */
 function toast_ajax_error(xhr) {
-    create_toast("重要提示", getMessageFromAjaxError(xhr), 10000)
+    if (getErrorClassifyFromAjaxError(xhr) === "ACCESS_DENIED") {
+        create_toast("重要提示", `<p>${getMessageFromAjaxError(xhr)}</p><p><a href="javascript:sendToAuthPage()">前往认证页</a></p>`, 10000)
+    } else {
+        create_toast("重要提示", `<p>${getMessageFromAjaxError(xhr)}</p>`, 10000)
+    }
 }
 
 function _init_icon_tooltip() {

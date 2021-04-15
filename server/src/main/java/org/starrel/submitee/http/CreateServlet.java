@@ -177,6 +177,10 @@ public class CreateServlet extends AbstractJsonServlet {
                     return;
                 }
 
+                // region check distinguish
+
+                // endregion
+
                 JsonObject submissionBody = JsonUtil.parseObject(body, "body");
                 String debugInfo = JsonUtil.parseString(body, "debug");
 

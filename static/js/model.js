@@ -101,9 +101,12 @@ class Submission {
     }
 
     get submitTime() {
-        console.log(this.attributeMap.get("submit-time"));
         let date = new Date(this.attributeMap.get("submit-time"));
         return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+    }
+
+    get submitTimeRaw() {
+        return this.attributeMap.get("submit-time");
     }
 
     get debug() {
@@ -353,7 +356,7 @@ function setCurrentTemplate(uuid, callback, errorCallback) {
     }, errorCallback);
 }
 
-fieldControllers = {};
+submitee.fieldControllers = {};
 
 class FieldController {
     constructor(fieldType) {
@@ -390,10 +393,14 @@ class FieldController {
     getContainerId(field) {
         return "field-container-for-" + field.name;
     }
+
+    generateReportHtml(field, value) {
+        return new Promise(resolve => resolve(""));
+    }
 }
 
 function getFieldTypeDisplayName(type) {
-    let c = fieldControllers[type];
+    let c = submitee.fieldControllers[type];
     return c ? c.displayName : type;
 }
 
@@ -469,6 +476,29 @@ class ScheduleBroker {
             setTimeout(task);
         }
     }
+}
+
+submitee.getFileMeta = async function (key) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: "../get-file/" + key + "/metadata",
+            method: "GET",
+            success: function (response) {
+                resolve(response);
+            },
+            error: reject
+        })
+    })
+}
+
+submitee.getPage = function (url) {
+    return new Promise(resolve => {
+        $.ajax({
+            url: url,
+            method: "GET",
+            success: resolve
+        });
+    });
 }
 
 submitee.mailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;

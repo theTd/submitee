@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link href="https://releases.transloadit.com/uppy/v1.27.0/uppy.min.css" rel="stylesheet">
+    <link href="css/global.css" rel="stylesheet">
 
     <title>正在载入</title>
 
@@ -93,22 +94,9 @@
         <input type="submit" class="d-none"/>
     </form>
 </div>
-<!-- Optional JavaScript -->
-<!-- jQuery first, then Popper.js, then Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js"></script>
-<script src="https://releases.transloadit.com/uppy/v1.18.0/uppy.min.js"></script>
-<script src="https://releases.transloadit.com/uppy/locales/v1.18.0/zh_CN.min.js"></script>
 
-<script src="js/model.js"></script>
-<script src="js/toast.js"></script>
-<script src="js/field-controllers.js"></script>
-<script src="js/session.js"></script>
-
+<script src="js/safe.js"></script>
 <script>
-
     function createSubmission() {
         let button = $("#button-submit");
         if (button.hasClass("disabled")) return;
@@ -121,7 +109,7 @@
         let missingRequired = false;
         submitee.currentTemplate.fields.forEach(field => {
             if (missingRequired) return;
-            let controller = fieldControllers[field.type];
+            let controller = submitee.fieldControllers[field.type];
             if (!controller) {
                 debug += `[!]${field.name}: no controller`
             } else {
@@ -231,7 +219,7 @@
         submitee.currentTemplate.fields.forEach(field => {
             if (!initializedControllers.includes(field.type)) {
                 initializedControllers.push(field.type);
-                let controller = fieldControllers[field.type];
+                let controller = submitee.fieldControllers[field.type];
                 promises.push(controller.submissionInit());
             }
         })
@@ -241,37 +229,53 @@
     function buildFields() {
         let relative = $("#insert-fields-before")[0];
 
-        submitee.currentTemplate.fields.forEach((value, index) => {
-            let typeController = fieldControllers[value.type];
+        for (let field of submitee.currentTemplate.fields) {
+            let typeController = submitee.fieldControllers[field.type];
             if (!typeController) {
-                relative.parentNode.insertBefore(createErrorLine(value), relative);
+                relative.parentNode.insertBefore(createErrorLine(field), relative);
             } else {
-                relative.parentNode.insertBefore(createFieldLine(typeController, value,
-                    typeController.generateSubmissionHtml(value)), relative);
+                relative.parentNode.insertBefore(createFieldLine(typeController, field,
+                    typeController.generateSubmissionHtml(field)), relative);
             }
-        })
+        }
     }
 
-    let target = getQueryValue("target");
+    submitee_safe.loadAllScript([
+        "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js",
+        "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js",
+        "https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js",
+        "https://releases.transloadit.com/uppy/v1.18.0/uppy.min.js",
+        "https://releases.transloadit.com/uppy/locales/v1.18.0/zh_CN.min.js",
+        "js/model.js",
+        "js/toast.js",
+        "js/field-controllers.js",
+        "js/session.js"
+    ]).then(() => {
+        let target = getQueryValue("target");
 
-    if (!target) {
-        alert("出现了一些意料之外的异常，如需帮助请联系管理员");
-        window.history.back();
-    } else {
-        setCurrentTemplate(target, template => {
-            submitee.submission = {};
+        if (!target) {
+            alert("出现了一些意料之外的异常，如需帮助请联系管理员");
+            window.history.back();
+        } else {
+            setCurrentTemplate(target, template => {
+                if (!template.published) {
+                    create_toast("注意", "<p>该模板尚未发布</p><p>你因为拥有管理权限可以访问</p>")
+                }
+                submitee.submission = {};
 
-            loadMetadata();
-            initControllers(buildFields, (error) => {
-                create_toast("重要提示", error, 10000);
+                loadMetadata();
+                initControllers(buildFields, (error) => {
+                    create_toast("重要提示", error, 10000);
+                })
+            }, error => {
+                toast_ajax_error(error);
             })
-        }, error => {
-            toast_ajax_error(error);
-        })
-    }
+        }
 
-    setAuthTarget("template/" + target);
-    createSessionHeader("session-container");
+        setAuthTarget("template/" + target);
+        createSessionHeader("session-container");
+    })
 </script>
 </body>
 </html>

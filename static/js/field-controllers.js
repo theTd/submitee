@@ -35,7 +35,7 @@ class TextFieldController extends FieldController {
     }
 }
 
-fieldControllers['text'] = new TextFieldController();
+submitee.fieldControllers['text'] = new TextFieldController();
 
 class RadioFieldController extends FieldController {
     constructor() {
@@ -103,7 +103,7 @@ class RadioFieldController extends FieldController {
     }
 }
 
-fieldControllers['radio'] = new RadioFieldController();
+submitee.fieldControllers['radio'] = new RadioFieldController();
 
 class CheckboxFieldController extends FieldController {
     constructor() {
@@ -168,7 +168,7 @@ class CheckboxFieldController extends FieldController {
     }
 }
 
-fieldControllers['checkbox'] = new CheckboxFieldController();
+submitee.fieldControllers['checkbox'] = new CheckboxFieldController();
 
 class RichTextFieldController extends FieldController {
     constructor() {
@@ -211,7 +211,7 @@ class RichTextFieldController extends FieldController {
     }
 }
 
-fieldControllers["rich-text"] = new RichTextFieldController();
+submitee.fieldControllers["rich-text"] = new RichTextFieldController();
 
 class FileFieldController extends FieldController {
     constructor() {
@@ -346,6 +346,34 @@ ${options}
             }
         }
     }
+
+    async generateReportHtml(field, value) {
+        return new Promise(async (resolve) => {
+            let html = "";
+            for (let key of value) {
+                let meta = await submitee.getFileMeta(key);
+                html += `<p><a href="../get-file/${key}"><i class="material-icons">link</i>${meta["filename"]} (${this.formatFilesize(meta["size"])})</a></p>`;
+            }
+            resolve(html);
+        });
+    }
+
+    formatFilesize(size) {
+        let unit = "B";
+        if (size > 1024) {
+            size /= 1024
+            unit = "KiB";
+        }
+        if (size > 1024) {
+            size /= 1024;
+            unit = "MiB";
+        }
+        if (size > 1024) {
+            size /= 1024;
+            unit = "GiB";
+        }
+        return new Intl.NumberFormat().format(size) + unit;
+    }
 }
 
-fieldControllers["file"] = new FileFieldController();
+submitee.fieldControllers["file"] = new FileFieldController();

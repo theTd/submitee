@@ -7,25 +7,30 @@
     <title></title>
 </head>
 <body>
-<div class="container-fluid">
-    <template id="template-submission-page-item">
-        <li class="page-item"><a class="page-link" href="#">3</a></li>
-    </template>
-    <template id="template-submission-row">
-        <div class="row submission-row">
-            <div class="col-1 submission-template-id">模板</div>
-            <div class="col-1 submission-user">提交者</div>
-            <div class="col-2 submission-time">时间</div>
-            <div class="col-6 submission-debug">摘要</div>
-            <div class="col-2"></div>
+<template id="template-submission-page-item">
+    <li class="page-item"><a class="page-link" href="#">3</a></li>
+</template>
+<template id="template-submission-row">
+    <div class="row submission-row">
+        <div class="col-1 submission-template-id">模板</div>
+        <div class="col-2 submission-user">提交者</div>
+        <div class="col-2 submission-time">时间</div>
+        <div class="col-6">
+            <pre class="submission-debug">摘要</pre>
         </div>
-    </template>
+        <div class="col-1">
+            <!--            <div class="submission-detail"></div>-->
+            <button class="btn btn-outline-info btn-sm" onclick="showDetail(this)">详情</button>
+        </div>
+    </div>
+</template>
+<div class="container-fluid">
     <div class="row">
-        <div class="col-1">模板名</div>
-        <div class="col-1">提交者</div>
+        <div class="col-1">模板</div>
+        <div class="col-2">提交者</div>
         <div class="col-2">时间</div>
         <div class="col-6">摘要</div>
-        <div class="col-2"></div>
+        <div class="col-1"></div>
     </div>
 
     <hr id="insert-submission-before"/>
@@ -35,6 +40,27 @@
     </nav>
 </div>
 <script>
+    function showDetail(element) {
+        submitee.currentSubmissionTarget =
+            findParentAttributeByElement(element, "data-submitee-submission-uuid");
+        let pagePromise = submitee.getPage("submission-detail.html");
+
+        $(element).popover('dispose');
+        $(element).on("shown.bs.popover", async function (evt) {
+            let id = $(evt.target).attr("aria-describedby");
+            document.addEventListener("submission-detail-loaded", () => {
+                $(element).popover('update');
+            });
+            let page = await pagePromise;
+            $("#" + id).css("max-width", "40rem").css("padding-bottom", "1rem").html(page);
+        }).popover({
+            placement: 'left',
+            html: true,
+            content: "<span class='spinner-border'></span>",
+            trigger: 'focus'
+        }).popover('show');
+    }
+
     /**
      *
      * @param {Submission} submission
@@ -58,8 +84,7 @@
     async function updateTemplateInfo(submission) {
         let t = await fetchSingleTemplateInfo(submission.attributeMap.get("template-uuid"));
         let container = $(`.submission-row[data-submitee-submission-uuid=${submission.attributeMap.get("unique-id")}]`);
-        container.find(".submission-template-id").text(t.name + ":" + t.version);
-        // resolve();
+        container.find(".submission-template-id").text(t.templateId + ":" + t.version);
     }
 
     function buildSubmissionList(submissionList) {
@@ -110,8 +135,6 @@
     let page = parseInt(getQueryValue("page")) || 1;
 
     fetchSubmissionInfo({}).then(array => {
-        console.log(array)
-
         if (array.length === 0) {
             $(".empty-mark").removeClass("d-none");
             return;

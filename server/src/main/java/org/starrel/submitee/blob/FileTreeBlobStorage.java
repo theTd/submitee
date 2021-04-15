@@ -108,7 +108,7 @@ public class FileTreeBlobStorage implements BlobStorage {
     public void attributeUpdated(String path) {
         if (AttributeMap.includePath(path, "config.path")) {
             try {
-                setupDirectory(path);
+                setupDirectory(this.path.get());
             } catch (Exception e) {
                 ExceptionReporting.report(FileTreeBlobStorage.class, "initializing directory", e);
             }

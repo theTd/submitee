@@ -64,10 +64,9 @@ public class AuthServlet extends AbstractJsonServlet {
                     responseNotFound(req, resp);
                     return;
                 }
-                List<JsonObject> list = template.getAttributeMap().getList("protected.user-distinguish", JsonObject.class);
-                for (JsonObject distinguish : list) {
-                    String realm = distinguish.get("realm").getAsString();
-                    realms.add(SubmiteeServer.getInstance().getUserRealm(realm));
+                JsonObject distinguishMap = template.getAttributeMap().get("protected.user-distinguish", JsonObject.class);
+                for (String realmName : distinguishMap.keySet()) {
+                    realms.add(SubmiteeServer.getInstance().getUserRealm(realmName));
                 }
                 if (template.getAttribute("allow-anonymous", Boolean.class, true)) {
                     realms.add(SubmiteeServer.getInstance().getAnonymousUserRealm());

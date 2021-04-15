@@ -257,7 +257,7 @@ public class InternalAccountRealm implements UserRealm {
             }
 
             try (Connection conn = server.getDataSource().getConnection()) {
-                PreparedStatement stmt = conn.prepareStatement("SELECT password FROM internal_users WHERE uid=?");
+                PreparedStatement stmt = conn.prepareStatement("SELECT `password` FROM internal_users WHERE uid=?");
                 stmt.setInt(1, uid);
                 ResultSet r = stmt.executeQuery();
                 r.next();

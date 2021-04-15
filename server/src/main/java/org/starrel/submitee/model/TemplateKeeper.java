@@ -123,8 +123,20 @@ public class TemplateKeeper {
     }
 
     private AtomicInteger getGroupingId(String grouping) throws ExecutionException {
+        boolean exists = groupingCache.getIfPresent(grouping) != null;
+
         return groupingCache.get(grouping, () -> {
             try (Connection conn = dataSource.getConnection()) {
+                if (!exists) {
+                    PreparedStatement p = conn.prepareStatement("SELECT 1 FROM `templates` WHERE `grouping`=? LIMIT 1");
+                    p.setString(1, grouping);
+                    ResultSet r = p.executeQuery();
+                    if (!r.next()) {
+                        // create new
+                        return new AtomicInteger(0);
+                    }
+                }
+
                 PreparedStatement stmt = conn.prepareStatement("SELECT count(*) OVER () FROM `templates` WHERE `grouping`=? GROUP BY `template_id` LIMIT 1");
                 stmt.setString(1, grouping);
                 ResultSet r = stmt.executeQuery();

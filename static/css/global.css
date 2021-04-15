@@ -1,6 +1,10 @@
 .material-icons {
-    display: inline-flex;
     vertical-align: middle;
+    box-sizing: unset;
+}
+
+a .material-icons{
+    text-decoration: unset !important;
 }
 
 .small-text {
