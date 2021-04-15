@@ -1,5 +1,6 @@
 package org.starrel.submitee.model;
 
+import jakarta.servlet.http.HttpSession;
 import org.starrel.submitee.attribute.AttributeHolder;
 
 import java.util.Date;
@@ -25,7 +26,7 @@ public interface Session extends AttributeHolder<Session> {
 
     String getSessionToken();
 
-    void close();
+    void close(HttpSession httpSession);
 
     boolean isClosed();
 

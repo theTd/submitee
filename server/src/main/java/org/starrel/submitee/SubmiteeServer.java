@@ -276,7 +276,9 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         jettyServer.start();
         // endregion
 
-        addUserRealm(internalAccountRealm = new InternalAccountRealm());
+        internalAccountRealm = new InternalAccountRealm();
+        internalAccountRealm.init();
+        addUserRealm(internalAccountRealm);
 
         addNotificationScheme(new EmailNotificationScheme());
         // TODO: 2021-04-13-0013 other initializations

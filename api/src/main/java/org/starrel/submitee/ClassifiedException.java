@@ -3,9 +3,11 @@ package org.starrel.submitee;
 import org.eclipse.jetty.http.HttpStatus;
 
 import java.util.Locale;
+import java.util.Objects;
 
 public class ClassifiedException extends Exception {
     private final ClassifiedError classifiedError;
+    private Object[] messageParts = null;
 
     public ClassifiedException(ClassifiedError classifiedError) {
         super(classifiedError.getMessageKey().format());
@@ -15,6 +17,7 @@ public class ClassifiedException extends Exception {
     public ClassifiedException(ClassifiedError classifiedError, Object... messageParts) {
         super(classifiedError.getMessageKey().format(((String) null), messageParts));
         this.classifiedError = classifiedError;
+        this.messageParts = messageParts;
     }
 
     public ClassifiedException(String classify, int httpStatus) {
@@ -31,6 +34,10 @@ public class ClassifiedException extends Exception {
 
     public ClassifiedError getClassifiedError() {
         return classifiedError;
+    }
+
+    public Object[] getMessageParts() {
+        return messageParts;
     }
 
     public String getDistinguishName() {

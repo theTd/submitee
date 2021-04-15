@@ -48,7 +48,7 @@ public class InternalAccountUser extends AbstractUser {
         this.password.set(InternalAccountRealm.hashPassword(password));
         Session session = SubmiteeServer.getInstance().getUserSession(getDescriptor());
         if (session != null) {
-            session.close();
+            session.close(null);
         }
     }
 
@@ -70,7 +70,8 @@ public class InternalAccountUser extends AbstractUser {
 
     @Override
     public boolean isSuperuser() {
-        return superuser.get();
+        Boolean s = superuser.get();
+        return s != null && s;
     }
 
     @Override

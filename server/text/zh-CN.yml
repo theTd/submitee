@@ -30,4 +30,4 @@ http.unknown_error: '我们未能处理你的请求，如需帮助请联系管�
 email.subject.verify_code: '验证码: %s'
 email.subject.notification: email.subject.notification
 email.subject.security_alert: email.subject.security_alert
-errors.grecpatcha_error_codes: 'GRECAPTCHA返回错误代码: %s'
+errors.grecaptcha_error_codes: 'GRECAPTCHA返回错误代码: %s'

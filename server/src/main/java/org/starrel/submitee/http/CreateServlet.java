@@ -9,6 +9,7 @@ import org.starrel.submitee.*;
 import org.starrel.submitee.model.STemplate;
 import org.starrel.submitee.model.STemplateImpl;
 import org.starrel.submitee.model.Submission;
+import org.starrel.submitee.model.User;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -31,6 +32,12 @@ public class CreateServlet extends AbstractJsonServlet {
         }
         switch (uriParts[0]) {
             case "publish-template": {
+                User user = getSession(req).getUser();
+                if (!user.isSuperuser()) {
+                    responseAccessDenied(req, resp);
+                    return;
+                }
+
                 if (uriParts.length != 2) {
                     responseBadRequest(req, resp);
                     return;
@@ -79,6 +86,12 @@ public class CreateServlet extends AbstractJsonServlet {
                 break;
             }
             case "template": {
+                User user = getSession(req).getUser();
+                if (!user.isSuperuser()) {
+                    responseAccessDenied(req, resp);
+                    return;
+                }
+
                 try {
                     if (uriParts.length == 1) {
                         // create new
@@ -127,6 +140,8 @@ public class CreateServlet extends AbstractJsonServlet {
                 break;
             }
             case "submission": {
+                // TODO: 2021/4/14 check template distinguish config
+
                 if (uriParts.length != 2) {
                     ExceptionReporting.report(CreateServlet.class, "parsing uri",
                             "unrecognized uri: " + req.getRequestURI());

@@ -15,6 +15,7 @@ import org.starrel.submitee.model.SessionKeeper;
 import java.io.File;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -126,6 +127,18 @@ public class SubmiteeHttpServlet extends HttpServlet {
 
     public static void responseClassifiedError(HttpServletRequest req, HttpServletResponse resp, ClassifiedError error, Object... messageParts) {
         responseErrorPage(resp, error.getHttpStatus(), error.getMessageKey().format(req, messageParts), error.getDistinguishName());
+    }
+
+    public static void responseClassifiedException(HttpServletRequest req, HttpServletResponse resp, ClassifiedException exception) {
+        String title = null;
+        try {
+            title = exception.getClassifiedError().getMessageKey().format(req, exception.getMessageParts());
+        } catch (Exception ignored) {
+        }
+        if (title == null) {
+            title = exception.getMessage();
+        }
+        responseErrorPage(resp, exception.getClassifiedError().getHttpStatus(), title, exception.getDistinguishName());
     }
 
     public static void responseErrorPage(HttpServletResponse resp, int statusCode, String errorTitle, String errorClassify) {

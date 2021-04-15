@@ -167,7 +167,15 @@ public class TextContainer {
                 throw new RuntimeException(e);
             }
 
-            return String.format(text, parameters);
+            String message = null;
+            try {
+                message = String.format(text, parameters);
+            } catch (Exception e) {
+                ExceptionReporting.report(TextContainer.class, "failed formatting message",
+                        String.format("text=%s, params=%s", text, Arrays.deepToString(parameters)));
+            }
+            if (message == null) message = key;
+            return message;
         }
 
         @Override

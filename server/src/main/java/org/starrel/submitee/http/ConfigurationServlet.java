@@ -216,7 +216,7 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                         resp.setStatus(HttpStatus.OK_200);
                     } catch (ClassifiedException e) {
                         ExceptionReporting.report(ConfigurationServlet.class, "testing grecaptcha", e);
-                        responseInternalError(req, resp);
+                        responseClassifiedException(req, resp, e);
                     } finally {
                         asyncContext.complete();
                     }

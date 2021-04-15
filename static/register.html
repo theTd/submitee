@@ -148,39 +148,45 @@
         let registerButton = $("#button-register");
         if (registerButton.hasClass("disabled")) return;
 
-        grecaptcha.ready(function () {
-            grecaptcha.execute(submitee.grecaptchaSitekey, {action: 'submit'}).then(function (token) {
-                registerButton.html(`<span class="spinner-border spinner-border-sm" role="status"></span>`);
-                registerButton.addClass("disabled");
+        let run = function (token) {
+            registerButton.html(`<span class="spinner-border spinner-border-sm" role="status"></span>`);
+            registerButton.addClass("disabled");
 
-                $.ajax({
-                    url: "../internal-account/register",
-                    method: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify({
-                        email: email,
-                        password: password,
-                        captcha: token,
-                        'verify-code': verifyCode
-                    }),
-                    success: function (response) {
-                        create_toast("提示", "<p>注册已完成</p><p>正在重定向...</p>", 2000)
-                        setInterval(function () {
-                            if (submitee.redirect) {
-                                window.location.href = submitee.redirect
-                            } else {
-                                window.location.href = "auth.html";
-                            }
-                        }, 2000);
-                    },
-                    error: function (xhr) {
-                        toast_ajax_error(xhr);
-                        registerButton.text("注册");
-                        registerButton.removeClass("disabled");
-                    }
-                })
+            $.ajax({
+                url: "../internal-account/register",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    email: email,
+                    password: password,
+                    captcha: token,
+                    'verify-code': verifyCode
+                }),
+                success: function (response) {
+                    create_toast("提示", "<p>注册已完成</p><p>正在重定向...</p>", 2000)
+                    setInterval(function () {
+                        if (submitee.redirect) {
+                            window.location.href = submitee.redirect
+                        } else {
+                            window.location.href = "auth.html";
+                        }
+                    }, 2000);
+                },
+                error: function (xhr) {
+                    toast_ajax_error(xhr);
+                    registerButton.text("注册");
+                    registerButton.removeClass("disabled");
+                }
+            })
+        }
+
+        if (submitee.grecaptchaSitekey) {
+            grecaptcha.ready(function () {
+                grecaptcha.execute(submitee.grecaptchaSitekey, {action: 'submit'}).then(run);
             });
-        });
+        } else {
+            run();
+        }
     }
 
     function sendVerifyCode() {
@@ -260,7 +266,7 @@
         "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js",
         "js/model.js",
         "js/toast.js",
-        "js/safe.js",
+        "js/safe.js"
     ]).then(() => {
         let redirect = getQueryValue("d");
         if (redirect) {
@@ -279,8 +285,9 @@
                 } else {
                     $("#register-form").collapse({toggle: true});
                 }
-                submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
-                if (submitee.grecaptchaSitekey) {
+                console.log(response);
+                if (response["grecaptcha-sitekey"]) {
+                    submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
                     submitee_safe.loadScript("https://www.recaptcha.net/recaptcha/api.js?render=" + submitee.grecaptchaSitekey, "grecaptcha");
                 }
                 submitee.verifyCodeTimeout = response["verify-code-timeout"];

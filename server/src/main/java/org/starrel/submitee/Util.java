@@ -62,7 +62,6 @@ public abstract class Util {
                 !grecaptchaSitekey.isEmpty() && !grecaptchaSecretKey.isEmpty();
     }
 
-    @SneakyThrows
     public static boolean grecaptchaVerify(String responseToken, String remoteIp, String siteKey) throws ClassifiedException {
         // TODO: 2021-04-12-0012 add remote ip into request
         byte[] body = String.format("secret=%s&response=%s", siteKey, responseToken).getBytes(StandardCharsets.UTF_8);

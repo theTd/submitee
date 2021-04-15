@@ -1,7 +1,7 @@
 CREATE TABLE internal_users (
   `uid` INT NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(128) NULL,
-  `email` VARCHAR(128) NOT NULL,
+  `email` VARCHAR(128) NULL,
   `password` CHAR(128) NOT NULL,
   PRIMARY KEY (uid),
   UNIQUE KEY (`username`),

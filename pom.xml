@@ -16,9 +16,10 @@
   <name>submitee</name>
 
   <properties>
+    <java.version>1.9</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.11</maven.compiler.source>
-    <maven.compiler.target>1.11</maven.compiler.target>
+    <maven.compiler.source>1.9</maven.compiler.source>
+    <maven.compiler.target>1.9</maven.compiler.target>
 
     <submitee.version.api>1.0-SNAPSHOT</submitee.version.api>
     <submitee.version.server>1.0-SNAPSHOT</submitee.version.server>

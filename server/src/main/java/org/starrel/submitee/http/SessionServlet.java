@@ -48,7 +48,7 @@ public class SessionServlet extends AbstractJsonServlet {
         switch (uriParts[0]) {
             case "close": {
                 Session session = getSession(req);
-                if (session != null) session.close();
+                if (session != null) session.close(req.getSession());
                 resp.setStatus(HttpStatus.OK_200);
                 break;
             }

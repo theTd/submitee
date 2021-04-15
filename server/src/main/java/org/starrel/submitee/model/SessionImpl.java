@@ -22,7 +22,6 @@ public class SessionImpl implements Session {
     private final AttributeSpec<String> lastActiveAddress;
     private final AttributeSpec<HistoryAddressEntry> historyAddress;
 
-    private HttpSession httpSession;
     private User user;
     private boolean closed = false;
 
@@ -37,10 +36,6 @@ public class SessionImpl implements Session {
         this.lastActiveAddress = attributeMap.of("last-active-address", String.class);
 
         this.historyAddress = attributeMap.ofList("history-address", HistoryAddressEntry.class);
-    }
-
-    void setHttpSession(HttpSession httpSession) {
-        this.httpSession = httpSession;
     }
 
     void pushLastActive(HttpServletRequest request) {
@@ -94,10 +89,6 @@ public class SessionImpl implements Session {
         return sessionToken;
     }
 
-    public String getJSessionId() {
-        return httpSession.getId();
-    }
-
     @Override
     public String getAttributePersistKey() {
         return sessionToken;
@@ -116,9 +107,9 @@ public class SessionImpl implements Session {
     }
 
     @Override
-    public void close() {
-        if (httpSession != null) {
-            httpSession.removeAttribute(SessionKeeper.HTTP_ATTRIBUTE_SESSION);
+    public void close(HttpSession httpSessionIfExists) {
+        if (httpSessionIfExists != null) {
+            httpSessionIfExists.removeAttribute(SessionKeeper.HTTP_ATTRIBUTE_SESSION);
         }
         this.attributeMap.delete();
         SubmiteeServer.getInstance().removeAttributeMap(Session.COLLECTION_NAME, getAttributePersistKey());

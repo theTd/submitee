@@ -46,9 +46,15 @@ public class InternalAccountRealm implements UserRealm {
             .expireAfterAccess(30, TimeUnit.MINUTES)
             .build();
 
-    public InternalAccountRealm() throws SQLException, IOException {
+    public InternalAccountRealm() throws SQLException, IOException, ExecutionException {
         this.server = SubmiteeServer.getInstance();
+        PasswordAuthScheme passwordAuthScheme = server.createPasswordAuthScheme();
+        passwordAuthScheme.setHandler(new AuthHandler());
+        authSchemeList = Collections.singletonList(passwordAuthScheme);
+        authSchemeMap.put(passwordAuthScheme.getName(), passwordAuthScheme);
+    }
 
+    public void init() throws SQLException, IOException, ExecutionException {
         try (Connection conn = server.getDataSource().getConnection()) {
             ResultSet resultSet = conn.getMetaData().getTables(null, null, "internal_users", null);
             if (!resultSet.next()) {
@@ -59,12 +65,21 @@ public class InternalAccountRealm implements UserRealm {
             }
         }
 
-        PasswordAuthScheme passwordAuthScheme = server.createPasswordAuthScheme();
-        passwordAuthScheme.setHandler(new AuthHandler());
-        authSchemeList = Collections.singletonList(passwordAuthScheme);
-        authSchemeMap.put(passwordAuthScheme.getName(), passwordAuthScheme);
-
         server.getServletHandler().addServlet(InternalAccountServlet.class, "/internal-account/*");
+
+        if (System.getenv().containsKey("RESET-ADMIN-PASSWORD")) {
+            String password = UUID.randomUUID().toString().substring(0, 8);
+            InternalAccountUser admin = getUserFromUsernameOrEmail("admin");
+            server.getLogger().warn("ADMIN PASSWORD is " + password);
+            if (admin == null) {
+                admin = createUserUsername("admin", password);
+                server.getLogger().warn("created admin user");
+            } else {
+                admin.setPassword(password);
+                server.getLogger().warn("reset admin password");
+            }
+            admin.setSuperuser(true);
+        }
     }
 
     public static boolean verifyPassword(String verify, String stored) {
@@ -135,12 +150,26 @@ public class InternalAccountRealm implements UserRealm {
         return authSchemeMap.get(scheme);
     }
 
-    public User createUser(String email, String password) throws SQLException, ExecutionException {
+    public InternalAccountUser createUser(String email, String password) throws SQLException, ExecutionException {
         email = email.toLowerCase(Locale.ROOT);
         password = hashPassword(password);
         try (Connection conn = server.getDataSource().getConnection()) {
             PreparedStatement stmt = conn.prepareStatement("INSERT INTO internal_users(email,password) VALUES (?,?)");
             stmt.setString(1, email);
+            stmt.setString(2, password);
+            stmt.executeUpdate();
+            ResultSet r = stmt.executeQuery("SELECT LAST_INSERT_ID()");
+            r.next();
+            int uid = r.getInt(1);
+            return getUser(uid);
+        }
+    }
+
+    public InternalAccountUser createUserUsername(String username, String password) throws SQLException, ExecutionException {
+        password = hashPassword(password);
+        try (Connection conn = server.getDataSource().getConnection()) {
+            PreparedStatement stmt = conn.prepareStatement("INSERT INTO internal_users(username,password) VALUES (?,?)");
+            stmt.setString(1, username);
             stmt.setString(2, password);
             stmt.executeUpdate();
             ResultSet r = stmt.executeQuery("SELECT LAST_INSERT_ID()");

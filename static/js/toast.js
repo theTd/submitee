@@ -58,7 +58,7 @@ function create_toast(title, content, delay) {
  * @param {jqXHR} error
  */
 function getMessageFromAjaxError(error) {
-    let title = decodeURI(error.getResponseHeader("SUBMITEE-ERROR-TITLE"));
+    let title = decodeURIComponent(error.getResponseHeader("SUBMITEE-ERROR-TITLE"));
     if (title) {
         return title;
     } else {

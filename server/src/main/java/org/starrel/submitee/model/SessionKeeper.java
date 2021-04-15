@@ -43,12 +43,9 @@ public class SessionKeeper {
         Cookie[] cookies = request.getCookies();
         String token = getSessionTokenFromCookies(cookies);
         SessionImpl sess = token == null ? null : getByToken(token);
-        if (sess != null) {
-            sess.setHttpSession(request.getSession());
-        } else {
+        if (sess == null) {
             token = generateNewSessionToken();
             sess = new SessionImpl(this, token);
-            sess.setHttpSession(request.getSession());
             cache.put(token, sess);
         }
         sess.getAttributeMap().setAutoSaveAttribute(false);
