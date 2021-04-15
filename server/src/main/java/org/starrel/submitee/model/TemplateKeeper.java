@@ -72,8 +72,10 @@ public class TemplateKeeper {
             while (r.next()) {
                 String templateId = r.getString(1);
                 int version = r.getInt(2);
-                ResultSet _r = conn.createStatement().executeQuery(
-                        "SELECT uuid FROM templates WHERE template_id=\"" + templateId + "\" AND version=" + version);
+                PreparedStatement stmt = conn.prepareStatement("SELECT uuid FROM templates WHERE template_id=? AND version=?");
+                stmt.setString(1, templateId);
+                stmt.setInt(2, version);
+                ResultSet _r = stmt.executeQuery();
                 _r.next();
                 latestVersionCache.put(templateId, UUID.fromString(_r.getString(1)));
             }

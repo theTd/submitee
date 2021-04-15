@@ -127,7 +127,7 @@ public class FileTreeBlobStorage implements BlobStorage {
                     throw new ClassifiedException("DIRECTORY_NOT_WRITEABLE");
                 }
             } else {
-                throw new ClassifiedException("NOT_DIRECTORY");
+                throw new ClassifiedException("TARGET_NOT_DIRECTORY");
             }
         } else {
             if (dir.mkdirs()) {
