@@ -8,11 +8,19 @@
     <title></title>
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>
 
     <link rel="stylesheet" href="css/global.css">
+    <style>
+        .template-name {
+            width: 100%;
+            margin-left: 1rem;
+            background-color: #8d8d8d;
+            font-size: 2rem;
+            color: white;
+        }
+    </style>
 </head>
 <body>
 <template id="template-field-container">
@@ -24,14 +32,9 @@
         </div>
     </div>
 </template>
-<div class="container mt-3" style="width: 30rem">
-    <div class="row">
-        <h4 id="template-name"></h4>
-    </div>
-    <div class="row">
-        <div id="template-desc"></div>
-    </div>
-    <div id="insert-fields-before"></div>
+<p class="template-name" style="margin: 0 0 1rem 0; padding-left: 1rem;"></p>
+<div class="container md-1" style="width: 30rem; ">
+    <div class="insert-fields-before"></div>
     <button class="btn btn-sm btn-outline-info">导出</button>
 </div>
 
@@ -55,29 +58,8 @@
         return document.importNode(template.content, true);
     }
 
-    // function loadMetadata() {
-    //     setTitle(submitee.currentTemplate.name);
-    //     $("#template-name").text(submitee.currentTemplate.name);
-    //     $("#template-desc").html(submitee.currentTemplate.desc);
-    // }
-
-    if (!submitee.initializedControllers)
-        submitee.initializedControllers = Array();
-
-    async function initAllControllers(callback) {
-        let promises = Array();
-        for (let fieldType of Object.keys(submitee.fieldControllers)) {
-            if (!initializedControllers.includes(fieldType)) {
-                initializedControllers.push(fieldType);
-                let controller = submitee.fieldControllers[fieldType];
-                promises.push(controller.submissionInit());
-            }
-        }
-        Promise.all(promises).then(callback);
-    }
-
     async function buildFields(submission) {
-        let relative = $("#insert-fields-before")[0];
+        let relative = $(".insert-fields-before")[0];
 
         for (let field of submitee.currentTemplate.fields) {
             let typeController = submitee.fieldControllers[field.type];
@@ -96,6 +78,8 @@
      */
     function loadSubmission(submission) {
         setCurrentTemplate(submission.attributeMap.get("template-uuid"), () => {
+            $(".template-name").html(`${submitee.currentTemplate.name}<span class="ml-1" style="font-size: 1rem; color: #e3e3e3">
+ 由 ${submission.submitUser} 于 ${submission.submitTime} 提交</span>`);
             let title = submission.submitUser + "于" + new Date(submission.submitTimeRaw).toLocaleTimeString() + "上传至" +
                 submitee.currentTemplate.templateId + ":" + submitee.currentTemplate.version;
             setTitle(title);
@@ -120,7 +104,6 @@
             create_toast("unknown submission target")
             return;
         }
-        initAllControllers();
         fetchSubmissionInfo({'unique-id': target}).then(array => {
             if (!array || array.length === 0) {
                 create_toast("提示", "未找到");

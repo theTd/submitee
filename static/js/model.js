@@ -173,11 +173,20 @@ class STemplate {
     }
 
     get status() {
-        return this.published ? "<span class='text-success'>发布</span>" : "<span class='text-info'>编辑</span>"
+        if (this.archived) {
+            return `<span class="template-status-archived">归档</span>`;
+        }
+        return this.published ?
+            "<span class='template-status-published'>发布</span>" :
+            "<span class='template-status-editing'>编辑</span>"
     }
 
     get published() {
         return this.attributeMap.get("published");
+    }
+
+    get archived() {
+        return this.attributeMap.get("archived");
     }
 
     /**
@@ -276,15 +285,37 @@ function getQueryValue(name, queryString) {
     return null;
 }
 
-async function fetchTemplateInfo(filter, latest) {
+async function fetchTemplateSize(filter, latest) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: "../batch-get/template/size",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                latest: latest,
+                filter: filter
+            }),
+            success: function (response) {
+                resolve(parseInt(response));
+            },
+            error: function (xhr) {
+                reject(xhr);
+            }
+        });
+    });
+}
+
+async function fetchTemplateInfo(filter, latest, start, length) {
     return new Promise((resolve, reject) => {
         $.ajax({
             url: "../batch-get/template",
             method: "POST",
             contentType: "application/json",
             data: JSON.stringify({
-                latest: false,
-                filter: filter
+                latest: latest,
+                filter: filter,
+                start: start,
+                length: length
             }),
             success: function (data) {
                 let all = Array();
@@ -395,9 +426,33 @@ class FieldController {
     }
 
     generateReportHtml(field, value) {
-        return new Promise(resolve => resolve(""));
+        return new Promise(resolve => {
+            if (!value) {
+                resolve(`<span style="color: gray">&lt;空&gt;</span>`);
+            }
+            resolve(value)
+        });
     }
 }
+
+submitee.initializedControllers = Array();
+
+/**
+ *
+ * @param {Set} set
+ */
+function requireControllers(set) {
+    let promises = Array();
+    for (let type of set) {
+        if (!submitee.initializedControllers.includes(type)) {
+            submitee.initializedControllers.push(type);
+            let controller = submitee.fieldControllers[type];
+            promises.push(controller.submissionInit());
+        }
+    }
+    return Promise.all(promises);
+}
+
 
 function getFieldTypeDisplayName(type) {
     let c = submitee.fieldControllers[type];

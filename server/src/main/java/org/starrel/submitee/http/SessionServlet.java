@@ -29,6 +29,7 @@ public class SessionServlet extends AbstractJsonServlet {
         if (user != null) {
             info.put("realm", user.getTypeId());
             info.put("id", user.getId());
+            info.put("superuser", user.isSuperuser());
             info.put("profile", user.getAttributeMap().of("profile").toJsonTree());
             info.put("grecaptcha-sitekey", SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class));
         }

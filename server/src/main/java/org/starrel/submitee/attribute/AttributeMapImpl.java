@@ -82,7 +82,7 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
         Document found = collection.find(Filters.eq("id", holder.getAttributePersistKey())).first();
         if (found != null) {
             Document body = (Document) found.get("body");
-            setAll("", JsonParser.parseString(body.toJson()).getAsJsonObject());
+            setAll("", JsonParser.parseString(body.toJson(SubmiteeServer.JSON_WRITER_SETTINGS)).getAsJsonObject());
         } else {
             setAll("", new JsonObject());
         }

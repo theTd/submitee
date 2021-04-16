@@ -35,6 +35,7 @@ public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
     private final AttributeSpec<Boolean> published;
     private final AttributeSpec<UserDescriptor> publishedBy;
     private final AttributeSpec<Date> publishTime;
+    private final AttributeSpec<Boolean> archived;
 
     STemplateImpl(TemplateKeeper keeper, UUID uniqueId, String grouping, String templateId, int version,
                   int latestVersion, boolean createAttributeMap, JsonObject content) {
@@ -54,6 +55,7 @@ public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
         this.published = attributeMap.of("published", Boolean.class);
         this.publishedBy = attributeMap.of("published-by", UserDescriptor.class);
         this.publishTime = attributeMap.of("publish-time", Date.class);
+        this.archived = attributeMap.of("archived", Boolean.class);
 
         if (createAttributeMap) {
             boolean save = this.attributeMap.getAutoSaveAttribute();
@@ -65,6 +67,7 @@ public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
             this.attributeMap.set("published", false);
             this.attributeMap.set("published-by", null);
             this.attributeMap.set("publish-time", null);
+            this.attributeMap.set("archived", false);
 
             this.attributeMap.setAutoSaveAttribute(save);
         }
@@ -114,6 +117,16 @@ public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
     @Override
     public void setPublishTime(Date time) {
         this.publishTime.set(time);
+    }
+
+    @Override
+    public boolean isArchived() {
+        return this.archived.get();
+    }
+
+    @Override
+    public void setArchived(boolean archived) {
+        this.archived.set(archived);
     }
 
     @Override

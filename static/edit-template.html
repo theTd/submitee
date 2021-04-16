@@ -8,8 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <title></title>
 
     <style>
@@ -607,8 +606,7 @@
         let allowAnonymous = attributeMap.get("allow-anonymous", true);
         // $("#checkbox-allow-anonymous")[0].checked = (allowAnonymous);
         console.log(attributeMap)
-        $("#checkbox-allow-anonymous").prop('checked', allowAnonymous)
-            .bootstrapToggle(allowAnonymous ? 'on' : 'off').on('change', dirty);
+        $("#checkbox-allow-anonymous").prop('checked', allowAnonymous).bootstrapToggle().on('change', dirty);
 
         let distinguishConfig = attributeMap.get("protected") ? attributeMap.get("protected.user-distinguish") : undefined;
         if (!distinguishConfig) distinguishConfig = {};
@@ -628,7 +626,7 @@
             setTimeout(() => {
                 let container = $(`.distinguish-config[data-realm-name=${realm}]`);
                 console.log(enabled);
-                container.find(".realm-enabled").bootstrapToggle(enabled ? 'on' : 'off').on('change', dirty);
+                container.find(".realm-enabled").prop("checked", enabled).bootstrapToggle().on('change', dirty);
                 container.find(".realm-whitelist").on('change keyup', dirty);
             });
         })
@@ -638,9 +636,8 @@
         if (submitee.currentTemplate.published) {
             $("#btn-cancel-template").removeClass("d-none").on("click", () => {
                 $.ajax({
-                    url: "../create/cancel-template/" + submitee.currentTemplate.uniqueId,
-                    method: "POST",
-                    contentType: "application/json",
+                    url: `../template-control/${submitee.currentTemplate.uniqueId}/cancel/`,
+                    method: "GET",
                     success: function (response) {
                         create_toast("提示", "已完成");
                         setTimeout(() => {
@@ -657,8 +654,7 @@
                 submitee.currentTemplate.latest = true;
                 $.ajax({
                     url: "../create/template/" + submitee.currentTemplate.attributeMap.get("template-id"),
-                    method: "POST",
-                    contentType: "application/json",
+                    method: "GET",
                     data: JSON.stringify({
                         content: submitee.currentTemplate.attributeMap.root
                     }),
@@ -676,9 +672,8 @@
         } else {
             $("#btn-publish-template").removeClass("d-none").on('click', () => {
                 $.ajax({
-                    url: "../create/publish-template/" + submitee.currentTemplate.uniqueId,
-                    method: "POST",
-                    contentType: "application/json",
+                    url: `../template-control/${submitee.currentTemplate.uniqueId}/publish/`,
+                    method: "GET",
                     success: function (response) {
                         create_toast("提示", "已完成");
                         setTimeout(() => {

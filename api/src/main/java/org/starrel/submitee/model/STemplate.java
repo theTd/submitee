@@ -33,6 +33,10 @@ public interface STemplate extends AttributeHolder<STemplate> {
 
     void setPublishTime(Date time);
 
+    boolean isArchived();
+
+    void setArchived(boolean archived);
+
     Map<String, ? extends SField> getFields();
 
     @Override

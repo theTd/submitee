@@ -7,8 +7,7 @@
     <title></title>
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>
 
     <style>
@@ -250,6 +249,7 @@
     </div>
 </div>
 
+<script src="js/safe.js"></script>
 <script>
     function createBlobStorage() {
         $.ajax({
@@ -433,11 +433,7 @@
         }
         let toggle = $("#checkbox-register-enabled");
 
-        if (configuration["register-enabled"]) {
-            toggle.bootstrapToggle('on');
-        } else {
-            toggle.bootstrapToggle('off');
-        }
+        toggle.prop("checked", configuration["register-enabled"]).bootstrapToggle();
 
         toggle.change(changeHook);
         $("#input-disable-register-message").html(configuration["register-disable-message"] || "");
@@ -496,11 +492,7 @@
 
         server.val(section["server"]);
         port.val("" + section["port"]);
-        if (section["ssl"]) {
-            ssl.bootstrapToggle("on")
-        } else {
-            ssl.bootstrapToggle("off")
-        }
+        ssl.prop("checked", section["ssl"]).bootstrapToggle();
         user.val(section["user"]);
         password.val(section["password"]);
         senderAddress.val(section["sender-address"]);

@@ -13,6 +13,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.json.Converter;
+import org.bson.json.JsonWriterSettings;
+import org.bson.json.StrictJsonWriter;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -48,6 +51,10 @@ import java.util.concurrent.ExecutionException;
 public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> {
     public final static String ATTRIBUTE_KEY = "system";
     public final static Gson GSON = new Gson();
+
+    public final static JsonWriterSettings JSON_WRITER_SETTINGS = JsonWriterSettings.builder()
+            .int64Converter((value, writer) -> writer.writeNumber(value + ""))
+            .build();
 
     private static SubmiteeServer instance;
 
@@ -138,6 +145,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         servletHandler.addServlet(GetFileServlet.class, "/get-file/*");
         servletHandler.addServlet(ConfigurationServlet.class, "/configuration/*");
         servletHandler.addServlet(SessionServlet.class, "/session/*");
+        servletHandler.addServlet(TemplateControlServlet.class, "/template-control/*");
         return servletHandler;
     }
 

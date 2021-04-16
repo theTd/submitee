@@ -27,11 +27,20 @@ function fetchSessionInfo(callback, errorCallback) {
             submitee.session.id = response["id"];
             submitee.session.profile = response["profile"];
             submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
-            callback();
+            callback(response);
         },
         error: function (xhr) {
             errorCallback(xhr);
         }
+    });
+}
+
+function promiseSessionInfo() {
+    if (submitee.pendingSession) {
+        return submitee.pendingSession;
+    }
+    return submitee.pendingSession = new Promise((resolve, reject) => {
+        fetchSessionInfo(resolve, reject);
     });
 }
 
@@ -56,7 +65,7 @@ function createSessionHeader(containerId) {
     }
 
     if (!submitee.session.realm) {
-        fetchSessionInfo(run);
+        promiseSessionInfo().then(run);
     } else {
         run();
     }

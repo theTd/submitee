@@ -57,13 +57,7 @@ public class SubmissionKeeper {
                 Document document = mongoDatabase.getCollection(Submission.ATTRIBUTE_COLLECTION_NAME)
                         .find(Filters.eq("id", uuid.toString())).first();
                 if (document == null) throw NotExistsSignal.INSTANCE;
-                String json = document.toJson(JsonWriterSettings.builder().int64Converter(new Converter<Long>() {
-                    @Override
-                    public void convert(Long value, StrictJsonWriter writer) {
-                        writer.writeNumber(value+"");
-                    }
-                }).build());
-                JsonElement jsonElement = JsonParser.parseString(json);
+                JsonElement jsonElement = JsonParser.parseString(document.toJson(SubmiteeServer.JSON_WRITER_SETTINGS));
                 JsonObject body = JsonUtil.parseObject(jsonElement, "body");
                 SubmissionImpl access = new SubmissionImpl(uuid);
                 access.getAttributeMap().set("", body);

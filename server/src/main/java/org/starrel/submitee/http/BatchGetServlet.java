@@ -2,6 +2,7 @@ package org.starrel.submitee.http;
 
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
+import jakarta.servlet.AsyncContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,8 +18,7 @@ import org.starrel.submitee.model.User;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
+import java.util.ListIterator;
 
 public class BatchGetServlet extends AbstractJsonServlet {
     {
@@ -33,99 +33,138 @@ public class BatchGetServlet extends AbstractJsonServlet {
             return;
         }
 
-        JsonObject filter = JsonUtil.parseObject(body, "filter");
-        if (filter == null) filter = new JsonObject();
-
-        switch (uriParts[0]) {
-            case "template": {
-                User user = getSession(req).getUser();
-                if (!user.isSuperuser()) {
-                    responseAccessDenied(req, resp);
-                    return;
-                }
-
-                boolean latest = body.has("latest") && body.get("latest").getAsBoolean();
-
-                try {
-                    Document query = Document.parse(SubmiteeServer.GSON.toJson(filter));
-                    alterPath(query);
-                    List<STemplateImpl> list = SubmiteeServer.getInstance().getTemplateKeeper().getByQuery(query);
-                    if (latest) {
-                        Iterator<STemplateImpl> ite = list.iterator();
-                        while (ite.hasNext()) {
-                            STemplateImpl c = ite.next();
-                            if (c.getLatestVersion() != c.getVersion()) ite.remove();
+        AsyncContext asyncContext = req.startAsync();
+        asyncContext.start(() -> {
+            JsonObject filter = JsonUtil.parseObject(body, "filter");
+            if (filter == null) filter = new JsonObject();
+            try {
+                switch (uriParts[0]) {
+                    case "template": {
+                        User user = getSession(req).getUser();
+                        if (!user.isSuperuser()) {
+                            responseAccessDenied(req, resp);
+                            return;
                         }
+
+                        boolean latest = body.has("latest") && body.get("latest").getAsBoolean();
+                        boolean getSize = uriParts.length == 2 && uriParts[1].equalsIgnoreCase("size");
+
+                        try {
+                            Document query = Document.parse(SubmiteeServer.GSON.toJson(filter));
+                            applyPath(query);
+                            List<STemplateImpl> list = SubmiteeServer.getInstance().getTemplateKeeper().getByQuery(query);
+                            if (latest) {
+                                Iterator<STemplateImpl> ite = list.iterator();
+                                while (ite.hasNext()) {
+                                    STemplateImpl c = ite.next();
+                                    if (c.getLatestVersion() != c.getVersion()) ite.remove();
+                                }
+                            }
+
+                            resp.setStatus(HttpStatus.OK_200);
+                            resp.setContentType("application/json");
+
+                            if (getSize) {
+                                resp.getWriter().println(SubmiteeServer.GSON.toJson(list.size()));
+                                return;
+                            }
+                            Integer start = JsonUtil.parseInt(body, "start");
+                            Integer length = start == null ?
+                                    ((Integer) list.size()) :
+                                    JsonUtil.parseInt(body, "length");
+                            if (length == null) length = list.size();
+
+                            JsonWriter jsonWriter = new JsonWriter(resp.getWriter());
+                            jsonWriter.beginArray();
+
+                            Iterator<STemplateImpl> ite;
+                            if (start != null) {
+                                ite = list.listIterator(start);
+                            } else {
+                                ite = list.listIterator();
+                            }
+
+                            int pass = 0;
+                            while (ite.hasNext() && pass++ < length) {
+                                STemplateImpl template = ite.next();
+                                jsonWriter.beginObject();
+                                jsonWriter.name("scheme").value(template.getAttributeScheme());
+                                jsonWriter.name("body").jsonValue(SubmiteeServer.GSON.toJson(template.getAttributeMap().toJsonTree()));
+                                jsonWriter.endObject();
+                            }
+
+                            jsonWriter.endArray();
+                            jsonWriter.close();
+                        } catch (Exception e) {
+                            ExceptionReporting.report(BatchGetServlet.class, "fetching templates", e);
+                            responseInternalError(req, resp);
+                        }
+                        break;
                     }
+                    case "submission": {
+                        User user = getSession(req).getUser();
+                        if (!user.isSuperuser()) {
+                            // TODO: 2021-04-14-0014 allows per use control
+                            responseAccessDenied(req, resp);
+                            return;
+                        }
 
-                    resp.setStatus(HttpStatus.OK_200);
-                    resp.setContentType("application/json");
+                        try {
+                            Document query = Document.parse(SubmiteeServer.GSON.toJson(filter));
+                            applyPath(query);
+                            // TODO: 2021-04-14-0014 pagination
+                            List<SubmissionImpl> list = SubmiteeServer.getInstance().getSubmissions(query);
 
-                    JsonWriter jsonWriter = new JsonWriter(resp.getWriter());
-                    jsonWriter.beginArray();
-                    for (STemplateImpl template : list) {
-                        jsonWriter.beginObject();
-                        jsonWriter.name("scheme").value(template.getAttributeScheme());
-                        jsonWriter.name("body").jsonValue(SubmiteeServer.GSON.toJson(template.getAttributeMap().toJsonTree()));
-                        jsonWriter.endObject();
+                            resp.setStatus(HttpStatus.OK_200);
+                            resp.setContentType("application/json");
+
+                            JsonWriter jsonWriter = new JsonWriter(resp.getWriter());
+                            jsonWriter.beginArray();
+                            for (SubmissionImpl submission : list) {
+                                jsonWriter.beginObject();
+                                jsonWriter.name("scheme").value(submission.getAttributeScheme());
+                                jsonWriter.name("body").jsonValue(SubmiteeServer.GSON.toJson(submission.getAttributeMap().toJsonTree()));
+                                jsonWriter.endObject();
+                            }
+                            jsonWriter.endArray();
+                            jsonWriter.close();
+                        } catch (Exception e) {
+                            ExceptionReporting.report(BatchGetServlet.class, "fetching templates", e);
+                            responseInternalError(req, resp);
+                        }
+                        break;
                     }
-                    jsonWriter.endArray();
-                    jsonWriter.close();
-                } catch (ExecutionException e) {
-                    ExceptionReporting.report(BatchGetServlet.class, "fetching templates", e);
-                    responseInternalError(req, resp);
-                }
-                break;
-            }
-            case "submission": {
-                User user = getSession(req).getUser();
-                if (!user.isSuperuser()) {
-                    // TODO: 2021-04-14-0014 allows per use control
-                    responseAccessDenied(req, resp);
-                    return;
-                }
-
-                try {
-                    Document query = Document.parse(SubmiteeServer.GSON.toJson(filter));
-                    alterPath(query);
-                    // TODO: 2021-04-14-0014 pagination
-                    List<SubmissionImpl> list = SubmiteeServer.getInstance().getSubmissions(query);
-
-                    resp.setStatus(HttpStatus.OK_200);
-                    resp.setContentType("application/json");
-
-                    JsonWriter jsonWriter = new JsonWriter(resp.getWriter());
-                    jsonWriter.beginArray();
-                    for (SubmissionImpl submission : list) {
-                        jsonWriter.beginObject();
-                        jsonWriter.name("scheme").value(submission.getAttributeScheme());
-                        jsonWriter.name("body").jsonValue(SubmiteeServer.GSON.toJson(submission.getAttributeMap().toJsonTree()));
-                        jsonWriter.endObject();
+                    default: {
+                        responseBadRequest(req, resp);
                     }
-                    jsonWriter.endArray();
-                    jsonWriter.close();
-                } catch (ExecutionException e) {
-                    ExceptionReporting.report(BatchGetServlet.class, "fetching templates", e);
-                    responseInternalError(req, resp);
                 }
-
-                break;
+            } finally {
+                asyncContext.complete();
             }
-            default: {
-                responseBadRequest(req, resp);
-            }
-        }
+        });
     }
 
-    private static void alterPath(Document query) {
-        for (Map.Entry<String, Object> entry : query.entrySet()) {
-            if (!entry.getKey().startsWith("$")) {
-                if (entry.getValue() instanceof Document) {
-                    alterPath(((Document) entry.getValue()));
+    private static Object applyPath(Object documentOrArray) {
+        if (documentOrArray instanceof Document) {
+            Document document = ((Document) documentOrArray);
+            for (String key : document.keySet()) {
+                if (key.startsWith("$")) {
+                    document.put(key, applyPath(document.get(key)));
+                } else {
+                    document.put("body." + key, applyPath(document.remove(key)));
                 }
-                query.put("body." + entry.getKey(), entry.getValue());
-                query.remove(entry.getKey());
             }
+            return document;
+        } else if (documentOrArray instanceof List) {
+            //noinspection unchecked
+            List<Document> array = (List<Document>) documentOrArray;
+            ListIterator<Document> iterator = array.listIterator();
+            while (iterator.hasNext()) {
+                iterator.set((Document) applyPath(iterator.next()));
+            }
+            return array;
+        } else {
+            return documentOrArray;
         }
     }
 }
