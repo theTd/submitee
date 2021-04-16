@@ -18,8 +18,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11L:q:q:wq
-    dd::</maven.compiler.target>
+    <maven.compiler.target>11</maven.compiler.target>
 
     <submitee.version.api>1.0-SNAPSHOT</submitee.version.api>
     <submitee.version.server>1.0-SNAPSHOT</submitee.version.server>
