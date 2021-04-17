@@ -20,6 +20,7 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 
 public class TemplateKeeper {
     public final static String DEFAULT_GROUPING = "DEF";
@@ -99,6 +100,8 @@ public class TemplateKeeper {
             STemplateImpl t = new STemplateImpl(this, uniqueId, grouping, templateId, 0, 0, true, null);
             latestVersionCache.put(templateId, uniqueId);
             templateCache.put(uniqueId, t);
+
+            SubmiteeServer.getInstance().pushEvent(Level.INFO, TemplateKeeper.class, "create template", "created=" + t);
             return t;
         }
     }
@@ -120,6 +123,8 @@ public class TemplateKeeper {
             STemplateImpl t = new STemplateImpl(this, uniqueId, revision.getGrouping(), templateId, version, version, true, inherit);
             latestVersionCache.put(templateId, uniqueId);
             templateCache.put(uniqueId, t);
+
+            SubmiteeServer.getInstance().pushEvent(Level.INFO, TemplateKeeper.class, "create revision template", "created=" + t);
             return t;
         }
     }

@@ -16,6 +16,7 @@ import org.starrel.submitee.model.UserRealm;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class ConfigurationServlet extends AbstractJsonServlet {
@@ -160,6 +161,9 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                     return;
                 }
                 setup.getAttributeMap().set("config", body.get("config"));
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, ConfigurationServlet.class,
+                        "setup blob storage", String.format("target=%s, config=%s", setup.getTypeId() + ":" + setup.getName(),
+                                SubmiteeServer.GSON.toJson(body.get("config"))));
 
                 resp.setStatus(HttpStatus.OK_200);
                 try {
@@ -174,12 +178,18 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                 String disableMessage = body.get("register-disable-message").getAsString();
                 SubmiteeServer.getInstance().setAttribute("register-enabled", enabled);
                 SubmiteeServer.getInstance().setAttribute("register-disable-message", disableMessage);
+
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, ConfigurationServlet.class,
+                        "register toggle settings updated", String.format("enabled=%b, message=%s", enabled, disableMessage));
                 resp.setStatus(HttpStatus.OK_200);
                 break;
             }
             case "smtp-settings": {
                 SubmiteeServer.getInstance().getAttributeMap().setAll("smtp", body);
                 SubmiteeServer.getInstance().getAttributeMap().save();
+
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, ConfigurationServlet.class,
+                        "smtp settings updated", "settings=" + SubmiteeServer.GSON.toJson(body));
                 resp.setStatus(HttpStatus.OK_200);
                 break;
             }
@@ -189,6 +199,9 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                     try {
                         Util.sendNotificationEmail(body.get("addr").getAsString(),
                                 "SUBMITEE测试邮件", "这是一封测试邮件，如果能够收到此邮件，则邮件发送配置有效", null).get();
+
+                        SubmiteeServer.getInstance().pushEvent(Level.INFO, ConfigurationServlet.class,
+                                "send test email", "target=" + body.get("addr"));
                         resp.setStatus(HttpStatus.OK_200);
                     } catch (InterruptedException ignored) {
                     } catch (ExecutionException e) {
@@ -203,6 +216,11 @@ public class ConfigurationServlet extends AbstractJsonServlet {
             case "grecaptcha": {
                 SubmiteeServer.getInstance().setAttribute("grecaptcha-sitekey", body.get("sitekey").getAsString());
                 SubmiteeServer.getInstance().setAttribute("grecaptcha-secretkey", body.get("secretkey").getAsString());
+
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, ConfigurationServlet.class,
+                        "grecaptcha settings updated", String.format("sitekey=%s, secretkey=%s",
+                                body.get("sitekey").getAsString(),
+                                body.get("secretkey").getAsString()));
                 resp.setStatus(HttpStatus.OK_200);
                 break;
             }

@@ -72,7 +72,7 @@ public class EventLogService {
         String sql = "SELECT `eid`,`time` FROM event_occurs";
 
         if (start != -1) {
-            sql += " WHERE `time`>?";
+            sql += " WHERE `time`<?";
         }
 
         sql += " ORDER BY `time` DESC LIMIT " + limit;
@@ -132,14 +132,13 @@ public class EventLogService {
 
                     String sql = "SELECT `crc32`,`level`,`entity`,`activity`,`detail` FROM `events` WHERE `id`=?";
                     if (level != null) {
-                        sql += "`level=?`";
+                        sql += " AND `level`=?";
                     }
                     if (finalEntity != null) {
-                        if (level != null) sql += " AND ";
-                        sql += "`entity`=?";
-                        if (finalActivity != null) {
-                            sql += " AND `activity`=?";
-                        }
+                        sql += " AND `entity`=?";
+                    }
+                    if (finalActivity != null) {
+                        sql += " AND `activity`=?";
                     }
                     PreparedStatement stmt = conn.prepareStatement(sql);
                     int idx = 1;
@@ -149,22 +148,25 @@ public class EventLogService {
                     }
                     if (finalEntity != null) {
                         stmt.setString(idx++, finalEntity);
-                        if (finalActivity != null) {
-                            stmt.setString(idx, finalActivity);
-                        }
+                    }
+                    if (finalActivity != null) {
+                        stmt.setString(idx, finalActivity);
                     }
                     ResultSet r = stmt.executeQuery();
-                    r.next();
-                    long crc32 = r.getLong(1);
-                    String cLevel = r.getString(2);
-                    String cEntity = r.getString(3);
-                    String cActivity = r.getString(4);
-                    String cDetail = r.getString(5);
-                    context = new EventCollapseContext(-1, crc32, cLevel, cEntity, cActivity, cDetail);
-                    context.occurs.add(time);
+                    if (r.next()) {
+                        long crc32 = r.getLong(1);
+                        String cLevel = r.getString(2);
+                        String cEntity = r.getString(3);
+                        String cActivity = r.getString(4);
+                        String cDetail = r.getString(5);
+                        context = new EventCollapseContext(-1, crc32, cLevel, cEntity, cActivity, cDetail);
+                        context.occurs.add(time);
+                    }
 
                     resultMap.put(eid, context);
                 }
+
+                resultMap.entrySet().removeIf(e -> e.getValue() == null);
                 future.complete(new ArrayList<>(resultMap.values()));
             } catch (Exception e) {
                 future.completeExceptionally(e);

@@ -33,8 +33,8 @@ public class EventsServlet extends SubmiteeHttpServlet {
         String startStr = req.getParameter("start");
         String limitStr = req.getParameter("limit");
 
-        long start = startStr.isEmpty() ? -1 : Long.parseLong(startStr);
-        int limit = limitStr.isEmpty() ? -1 : Integer.parseInt(limitStr);
+        long start = startStr == null || startStr.isEmpty() ? -1 : Long.parseLong(startStr);
+        int limit = limitStr == null || limitStr.isEmpty() ? -1 : Integer.parseInt(limitStr);
 
         CompletableFuture<List<EventLogService.EventCollapseContext>> query =
                 SubmiteeServer.getInstance().getEventLogService().query(start, limit, level, entity, activity);

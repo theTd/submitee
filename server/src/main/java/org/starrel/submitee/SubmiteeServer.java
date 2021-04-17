@@ -240,6 +240,13 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public void start() throws Exception {
+        // region event log
+        try {
+            eventLogService.init();
+        } catch (Exception e) {
+            throw new Exception("failed initializing event log service", e);
+        }
+        // endregion
 
         // region setup language
         if (this.defaultLanguage.get() == null) {
@@ -282,14 +289,6 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         }
         // endregion
 
-        // region event log
-        try {
-            eventLogService.init();
-        } catch (Exception e) {
-            throw new Exception("failed initializing event log service", e);
-        }
-        // endregion
-
         // region setup jetty connectors and start jetty server
         setupJettyHandlers();
         setupJettyConnectors(listenAddresses);
@@ -302,6 +301,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
         addNotificationScheme(new EmailNotificationScheme());
         // TODO: 2021-04-13-0013 other initializations
+
+        pushEvent(Level.INFO, SubmiteeServer.class, "server startup", "");
     }
 
     @Override
@@ -465,6 +466,21 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         eventLogService.pushEvent(level, entity, activity, detail + System.lineSeparator() + stringifyThrowable(stacktrace));
     }
 
+    @Override
+    public void pushEvent(Level level, Class<?> entity, String activity, String detail) {
+        pushEvent(level, entity.getName(), activity, detail);
+    }
+
+    @Override
+    public void pushEvent(Level level, Class<?> entity, String activity, Throwable stacktrace) {
+        pushEvent(level, entity.getName(), activity, stacktrace);
+    }
+
+    @Override
+    public void pushEvent(Level level, Class<?> entity, String activity, String detail, Throwable stacktrace) {
+        pushEvent(level, entity.getName(), activity, detail, stacktrace);
+    }
+
     private String stringifyThrowable(Throwable throwable) {
         StringWriter stringWriter = new StringWriter();
         throwable.printStackTrace(new PrintWriter(stringWriter));
@@ -483,6 +499,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     @Override
     public void shutdown() throws Exception {
+        pushEvent(Level.INFO, SubmiteeServer.class, "server shutdown", "");
+
         jettyServer.stop();
         eventLogService.shutdown();
     }

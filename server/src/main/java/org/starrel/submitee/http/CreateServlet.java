@@ -17,6 +17,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 
 public class CreateServlet extends AbstractJsonServlet {
     {
@@ -125,7 +126,7 @@ public class CreateServlet extends AbstractJsonServlet {
                 }
 
                 // region check distinguish
-
+                // TODO: 2021/4/17
                 // endregion
 
                 JsonObject submissionBody = JsonUtil.parseObject(body, "body");
@@ -138,6 +139,11 @@ public class CreateServlet extends AbstractJsonServlet {
                     submission.setAttribute("debug", debugInfo);
                 }
                 submission.getAttributeMap().setAutoSaveAttribute(true);
+
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, CreateServlet.class,
+                        "create submission", String.format("user=%s, template=%s, debug=%s",
+                                getSession(req).getUser(), template, debugInfo));
+
                 resp.setStatus(HttpStatus.OK_200);
                 resp.setContentType("application/json");
                 resp.getWriter().println(SubmiteeServer.GSON.toJson(submission.getUniqueId().toString()));

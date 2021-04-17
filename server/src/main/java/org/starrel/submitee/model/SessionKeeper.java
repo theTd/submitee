@@ -59,7 +59,7 @@ public class SessionKeeper {
         } else {
             sess.setUser(resumedUser);
             SubmiteeServer.getInstance().pushEvent(Level.INFO, SessionKeeper.class.getName(), "session resumed",
-                    String.format("user: %s, session: %s, addr: %s", resumedUser.getDescriptor().toString(),
+                    String.format("user=%s, session=%s, addr=%s", resumedUser.getDescriptor().toString(),
                             sess.getSessionToken(), Util.getRemoteAddr(request)));
         }
 

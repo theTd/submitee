@@ -121,4 +121,12 @@ public class SessionImpl implements Session {
     public boolean isClosed() {
         return closed;
     }
+
+    @Override
+    public String toString() {
+        return "SessionImpl{" +
+                "sessionToken='" + sessionToken + '\'' +
+                ", user=" + user +
+                '}';
+    }
 }

@@ -7,6 +7,7 @@ import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.ExceptionReporting;
 import org.starrel.submitee.I18N;
 import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.Util;
 import org.starrel.submitee.auth.AuthResult;
 import org.starrel.submitee.auth.AuthScheme;
 import org.starrel.submitee.model.STemplateImpl;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 
 public class AuthServlet extends AbstractJsonServlet {
 
@@ -139,6 +141,10 @@ public class AuthServlet extends AbstractJsonServlet {
                 AuthResult result;
                 try {
                     result = authScheme.auth(getSession(req), body.get("body"));
+                    SubmiteeServer.getInstance().pushEvent(Level.INFO, AuthServlet.class,
+                            "auth attempt", String.format("user=%s, scheme=%s, addr=%s, result=%s",
+                                    result.getAcceptedUser().getDescriptor().toString(), authScheme.getName(),
+                                    Util.getRemoteAddr(req), result.toString()));
                 } catch (Exception exception) {
                     ExceptionReporting.report(AuthServlet.class, "authenticating user", exception);
                     responseInternalError(req, resp);

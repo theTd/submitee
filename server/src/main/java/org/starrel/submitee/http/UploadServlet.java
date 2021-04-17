@@ -17,6 +17,7 @@ import java.io.*;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class UploadServlet extends SubmiteeHttpServlet {
@@ -97,6 +98,9 @@ public class UploadServlet extends SubmiteeHttpServlet {
             List<FileItem> fileItems = fileUpload.parseRequest(new JakartaServletRequestContext(req));
             Blob uploaded = fileItems.stream().filter(i -> i instanceof SubmiteeFileItem)
                     .map(i -> ((SubmiteeFileItem) i).getBlob()).collect(Collectors.toList()).get(0);
+
+            SubmiteeServer.getInstance().pushEvent(Level.INFO, UploadServlet.class,
+                    "blob created", String.format("blob=%s", uploaded));
 
             resp.setStatus(200);
             resp.setContentType("application/json");

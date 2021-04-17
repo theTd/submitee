@@ -234,5 +234,17 @@ public class FileTreeBlobStorage implements BlobStorage {
                 SubmiteeServer.getInstance().getLogger().warn("failed to delete blob storage file: " + file);
             }
         }
+
+        @Override
+        public String toString() {
+            return "FileTreeBlob{" +
+                    "blobId=" + blobId +
+                    ", fileName='" + fileName + '\'' +
+                    ", key='" + key + '\'' +
+                    ", contentType='" + contentType + '\'' +
+                    ", uploader=" + uploader +
+                    ", file=" + file +
+                    '}';
+        }
     }
 }

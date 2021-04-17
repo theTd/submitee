@@ -86,6 +86,12 @@ public interface SServer {
 
     void pushEvent(Level level, String entity, String activity, String detail, Throwable stacktrace);
 
+    void pushEvent(Level level, Class<?> entity, String activity, String detail);
+
+    void pushEvent(Level level, Class<?> entity, String activity, Throwable stacktrace);
+
+    void pushEvent(Level level, Class<?> entity, String activity, String detail, Throwable stacktrace);
+
     Logger getLogger();
 
     List<UserRealm> getUserRealms();

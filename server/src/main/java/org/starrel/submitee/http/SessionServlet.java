@@ -13,6 +13,7 @@ import org.starrel.submitee.model.User;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Level;
 
 public class SessionServlet extends AbstractJsonServlet {
 
@@ -49,6 +50,9 @@ public class SessionServlet extends AbstractJsonServlet {
         switch (uriParts[0]) {
             case "close": {
                 Session session = getSession(req);
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, SessionServlet.class,
+                        "session closed", "session=" + session);
+
                 if (session != null) session.close(req.getSession());
                 resp.setStatus(HttpStatus.OK_200);
                 break;

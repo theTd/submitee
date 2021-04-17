@@ -74,4 +74,9 @@ public abstract class AbstractUser implements User {
     @Override
     public void attributeUpdated(String path) {
     }
+
+    @Override
+    public String toString() {
+        return descriptor.toString();
+    }
 }

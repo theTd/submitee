@@ -183,4 +183,9 @@ public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
     public boolean isPublicAccessible() {
         return isPublished();
     }
+
+    @Override
+    public String toString() {
+        return uniqueId + "(" + templateId + ":" + version + ")";
+    }
 }

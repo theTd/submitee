@@ -16,6 +16,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 
 public class TemplateControlServlet extends SubmiteeHttpServlet {
 
@@ -64,6 +65,11 @@ public class TemplateControlServlet extends SubmiteeHttpServlet {
                     return;
                 }
                 template.getAttributeMap().set("archived", true);
+
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, TemplateControlServlet.class,
+                        "template archived", String.format("user=%s, template=%s",
+                                user, template));
+
                 resp.setStatus(HttpStatus.OK_200);
                 break;
             }
@@ -73,6 +79,10 @@ public class TemplateControlServlet extends SubmiteeHttpServlet {
                     return;
                 }
                 template.getAttributeMap().set("published", false);
+
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, TemplateControlServlet.class,
+                        "template cancelled", String.format("user=%s, template=%s", user, template));
+
                 resp.setStatus(HttpStatus.OK_200);
                 break;
             }
@@ -108,6 +118,10 @@ public class TemplateControlServlet extends SubmiteeHttpServlet {
                 template.setPublishedBy(getSession(req).getUser().getDescriptor());
                 template.setPublishTime(new Date());
                 template.getAttributeMap().setAutoSaveAttribute(true);
+
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, TemplateControlServlet.class, "template published",
+                        String.format("user=%s, template=%s", user, template));
+
                 resp.setStatus(HttpStatus.OK_200);
                 break;
             }

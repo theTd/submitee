@@ -22,7 +22,12 @@
         }
 
         .modal-dialog {
-            max-width: unset;
+            max-width: 95vw;
+        }
+
+        .event-log-row a {
+            text-decoration: none;
+            color: unset;
         }
     </style>
 </head>
@@ -48,6 +53,16 @@
 </template>
 
 <div class="container-fluid">
+    <!--    <div class="row filter-container">-->
+    <!--        <div class="filter-element">-->
+    <!--            <span class="filter-element-title">ACTIVITY</span>-->
+    <!--            <div class="filter-element-value">server startup</div>-->
+    <!--            <button class="filter-element-button">-->
+    <!--                <i class="material-icons">close</i>-->
+    <!--            </button>-->
+    <!--        </div>-->
+    <!--    </div>-->
+    <div class="row filter-container"></div>
     <div class="row">
         <div class="col-1">时间</div>
         <div class="col-1">分级</div>
@@ -79,18 +94,49 @@
 <script src="js/safe.js"></script>
 <script>
 
-    function fetchLogs() {
+    function addLevelFilter(element) {
+        console.log(element)
+        submitee.filterbar.add("分级", element.querySelector("span").textContent);
+        reloadWithFilters()
+    }
+
+    function addEntityFilter(element) {
+        submitee.filterbar.add("实体", element.textContent);
+        reloadWithFilters()
+    }
+
+    function addActivityFilter(element) {
+        submitee.filterbar.add("行为", element.textContent);
+        reloadWithFilters()
+    }
+
+    function reloadWithFilters() {
+        window.location.href = fullUri();
+    }
+
+    function fullUri() {
+        let uri = "?method=event-log";
+        let levelFilter = submitee.filterbar.get("分级");
+        if (levelFilter) uri += "&lv=" + encodeURIComponent(levelFilter);
+        let entityFilter = submitee.filterbar.get("实体");
+        if (entityFilter) uri += "&et=" + encodeURIComponent(entityFilter);
+        let activityFilter = submitee.filterbar.get("行为");
+        if (activityFilter) uri += "&ac=" + encodeURIComponent(activityFilter);
+        return uri;
+    }
+
+    function fetchEventLogs(callback, start) {
         $.ajax({
             url: "../events",
             method: "GET",
             data: {
-                level: null,
-                entity: null,
-                activity: null,
-                start: null,
+                level: submitee.filterbar.get("分级"),
+                entity: submitee.filterbar.get("实体"),
+                activity: submitee.filterbar.get("行为"),
+                start: start,
                 limit: 20
             },
-            success: loadErrors,
+            success: callback,
             error: toast_ajax_error
         })
     }
@@ -104,6 +150,7 @@
         let relative = $("#insert-event-log-before")[0];
         let template = $("#template-event-log-row")[0];
         template.content.querySelector(".event-row-time").textContent = formatDate(time);
+        template.content.querySelector(".event-row-time").setAttribute("title", new Date(parseInt(time)).toLocaleString());
         let levelHtml;
         switch (collapse["levelText"]) {
             case "INFO":
@@ -119,15 +166,15 @@
                 levelHtml = `<span class="text-secondary">OTHER</span>`;
                 break;
         }
-        template.content.querySelector(".event-row-level").innerHTML = levelHtml;
-        template.content.querySelector(".event-row-entity").textContent = collapse["entity"];
-        template.content.querySelector(".event-row-activity").textContent = collapse["activity"];
+        template.content.querySelector(".event-row-level").innerHTML = `<a onclick="addLevelFilter(this)">${levelHtml}</a>`;
+        template.content.querySelector(".event-row-entity").innerHTML = `<a onclick="addEntityFilter(this)">${collapse["entity"]}</a>`;
+        template.content.querySelector(".event-row-activity").innerHTML = `<a onclick="addActivityFilter(this)">${collapse["activity"]}</a>`;
         template.content.querySelector(".event-row-detail").textContent = collapse["detail"];
         relative.parentNode.insertBefore(document.importNode(template.content, true), relative);
     }
 
-    async function loadErrors(errors) {
-        console.log(errors)
+    async function renderEventLogs(errors) {
+        submitee.eventPageEarlyTime = null;
         let collapseMap = {};
         for (let collapse of errors) {
             let id = makeid(6);
@@ -139,12 +186,31 @@
             let id = collapse["temp_id"];
             collapse["occurs"].forEach((t) => sort[t] = id);
         }
+        let early;
         Object.keys(sort).sort(function (o1, o2) {
             return o2 - o1;
         }).forEach(t => {
             let id = sort[t];
             appendEventRow(t, collapseMap[id]);
+            early = t;
         })
+        submitee.eventPageEarlyTime = early;
+
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight
+            && submitee.eventPageEarlyTime) {
+            fetchEventLogs(renderEventLogs, submitee.eventPageEarlyTime);
+            submitee.eventPageEarlyTime = null;
+        }
+    }
+
+    function addFilterbarElements() {
+        // let start = getQueryValue("st");
+        let level = getQueryValue("lv");
+        if (level) submitee.filterbar.add("分级", level, reloadWithFilters);
+        let entity = getQueryValue("et");
+        if (entity) submitee.filterbar.add("实体", entity, reloadWithFilters);
+        let activity = getQueryValue("ac");
+        if (activity) submitee.filterbar.add("行为", activity, reloadWithFilters);
     }
 
     submitee_safe.loadAllScript([
@@ -156,13 +222,25 @@
         "js/field-controllers.js",
         "js/toast.js",
         "js/session.js",
+        "js/filterbar.js"
     ]).then(() => {
-        fetchLogs();
+        submitee.filterbar = createFilterBar(".filter-container");
+        addFilterbarElements();
+
+        fetchEventLogs(renderEventLogs);
         $(".container-fluid").on("click", "[data-expand]", function (evt) {
             $(".modal .modal-title").text("detail");
             $(".modal .modal-body").html(`<pre>${evt.target.textContent}</pre>`);
             $(".modal").modal();
         })
+
+        window.onscroll = function (ev) {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
+                if (!submitee.eventPageEarlyTime) return;
+                fetchEventLogs(renderEventLogs, submitee.eventPageEarlyTime);
+                submitee.eventPageEarlyTime = null;
+            }
+        };
     });
 </script>
 </body>

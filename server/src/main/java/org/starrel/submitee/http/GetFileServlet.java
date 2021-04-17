@@ -13,6 +13,7 @@ import org.starrel.submitee.model.User;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Level;
 
 public class GetFileServlet extends SubmiteeHttpServlet {
     {
@@ -71,6 +72,9 @@ public class GetFileServlet extends SubmiteeHttpServlet {
                 // endregion
             } else {
                 // region start file stream
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, GetFileServlet.class,
+                        "download file", String.format("user=%s, blob=%s", user, blob));
+
                 resp.setStatus(HttpStatus.OK_200);
                 resp.setContentType(blob.getContentType());
                 resp.addHeader("Content-Disposition", "attachment; filename=\"" + blob.getFilename() + "\"");

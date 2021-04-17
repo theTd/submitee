@@ -46,4 +46,14 @@ public class AbstractAuthResult implements AuthResult {
     public String getRedirect() {
         return redirect;
     }
+
+    @Override
+    public String toString() {
+        return "AbstractAuthResult{" +
+                "acceptedUser=" + acceptedUser +
+                ", denyClassify='" + denyClassify + '\'' +
+                ", denyMessage='" + denyMessage + '\'' +
+                ", redirect='" + redirect + '\'' +
+                '}';
+    }
 }

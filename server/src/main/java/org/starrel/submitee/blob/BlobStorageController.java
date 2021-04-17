@@ -17,6 +17,7 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 public class BlobStorageController {
     private final SubmiteeServer server;
@@ -103,6 +104,8 @@ public class BlobStorageController {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+        SubmiteeServer.getInstance().pushEvent(Level.INFO, BlobStorageController.class, "blob storage created",
+                String.format("provider=%s, name=%s", providerName, name));
         return created;
     }
 

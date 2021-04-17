@@ -3,7 +3,7 @@
     box-sizing: unset;
 }
 
-a .material-icons{
+a .material-icons {
     text-decoration: unset !important;
 }
 
@@ -31,4 +31,61 @@ a .material-icons{
 
 .toast p {
     margin: 0.2rem;
+}
+
+.filter-container {
+    background-color: #5a5a5a;
+    border-radius: 5px;
+    min-height: 3rem;
+    padding: 0.3rem 0;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+.filter-element {
+    background-color: #ffffff;
+    height: 2.5rem;
+    display: flex;
+    flex-flow: row;
+    align-items: center;
+    border-radius: 10px;
+    margin: 0 0 0 0.5rem;
+}
+
+.filter-element-button > i {
+    font-size: 0.6rem;
+    color: white;
+}
+
+.filter-element-button {
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+    height: 1rem;
+    width: 1rem;
+    display: inline-flex;
+    border-radius: 100px;
+    overflow: hidden;
+    border: 0;
+    padding: 0;
+    background-color: gray;
+    margin: 0 0.5rem 0 0;
+}
+
+.filter-element-button:hover {
+    background-color: #acacac;
+}
+
+.filter-element-value {
+    margin: 0 0.2rem;
+}
+
+.filter-element-title {
+    background-color: #85ff69;
+    display: inline-flex;
+    border-radius: 10px 0 0 10px;
+    padding: 0 0.5rem;
+    font-weight: bold;
+    height: 100%;
+    align-items: center;
 }
