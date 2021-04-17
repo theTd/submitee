@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 
 public interface SServer {
 
@@ -79,11 +80,11 @@ public interface SServer {
 
     I18N.I18NKey getI18nKey(String key);
 
-    void reportException(String entity, String activity, String detail);
+    void pushEvent(Level level, String entity, String activity, String detail);
 
-    void reportException(String entity, String activity, Throwable stacktrace);
+    void pushEvent(Level level, String entity, String activity, Throwable stacktrace);
 
-    void reportException(String entity, String activity, String detail, Throwable stacktrace);
+    void pushEvent(Level level, String entity, String activity, String detail, Throwable stacktrace);
 
     Logger getLogger();
 

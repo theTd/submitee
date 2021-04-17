@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 public class SessionKeeper {
     public final static String HTTP_ATTRIBUTE_SESSION = "submitee_session";
@@ -52,12 +53,14 @@ public class SessionKeeper {
 
         User resumedUser = SubmiteeServer.getInstance().resumeSession(sess);
         if (resumedUser == null) {
-
             sess.setUser(SubmiteeServer.getInstance().getAnonymousUserRealm().createAnonymousUser(sess));
             sess.getUser().setPreferredLanguage(Util.getPreferredLanguage(request));
             sess.setAttribute("logged-in-user", sess.getUser().getDescriptor());
         } else {
             sess.setUser(resumedUser);
+            SubmiteeServer.getInstance().pushEvent(Level.INFO, SessionKeeper.class.getName(), "session resumed",
+                    String.format("user: %s, session: %s, addr: %s", resumedUser.getDescriptor().toString(),
+                            sess.getSessionToken(), Util.getRemoteAddr(request)));
         }
 
         sess.setLastUA(request.getHeader("User-Agent"));

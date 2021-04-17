@@ -11,6 +11,14 @@
         .event-log-row {
             font-size: 0.8rem;
             word-break: break-word;
+            transition: 0.2s ease;
+            align-items: center;
+        }
+
+        .event-log-row:hover {
+            margin: 1rem -15px;
+            box-shadow: inset 5px 0 0 0 gray;
+            background-color: lightgray;
         }
 
         .modal-dialog {
@@ -33,8 +41,8 @@
         <div class="col-3">
             <p class="event-row-activity"></p>
         </div>
-        <div class="col-4" style="max-height: 10rem; overflow: scroll" data-expand>
-            <pre class="event-row-detail" style="word-break: keep-all"></pre>
+        <div class="col-5" style="max-height: 10rem; overflow: scroll" data-expand>
+            <pre class="event-row-detail" style="word-break: keep-all;overflow: visible"></pre>
         </div>
     </div>
 </template>
@@ -47,6 +55,7 @@
         <div class="col-3">行为</div>
         <div class="col-4">信息</div>
     </div>
+    <hr/>
     <hr id="insert-event-log-before"/>
 </div>
 <div class="modal" tabindex="-1" role="dialog">
@@ -61,8 +70,7 @@
             <div class="modal-body" style="word-break: break-all">
             </div>
             <div class="modal-footer">
-                <!--                <button type="button" class="btn btn-primary">Save changes</button>-->
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
             </div>
         </div>
     </div>
@@ -96,7 +104,22 @@
         let relative = $("#insert-event-log-before")[0];
         let template = $("#template-event-log-row")[0];
         template.content.querySelector(".event-row-time").textContent = formatDate(time);
-        template.content.querySelector(".event-row-level").textContent = collapse["levelText"];
+        let levelHtml;
+        switch (collapse["levelText"]) {
+            case "INFO":
+                levelHtml = `<span class='text-info'>INFO</span>`;
+                break;
+            case "WARN":
+                levelHtml = `<span class="text-warning">WARN</span>`;
+                break;
+            case "ERROR":
+                levelHtml = `<span class="text-danger">ERROR</span>`;
+                break;
+            default:
+                levelHtml = `<span class="text-secondary">OTHER</span>`;
+                break;
+        }
+        template.content.querySelector(".event-row-level").innerHTML = levelHtml;
         template.content.querySelector(".event-row-entity").textContent = collapse["entity"];
         template.content.querySelector(".event-row-activity").textContent = collapse["activity"];
         template.content.querySelector(".event-row-detail").textContent = collapse["detail"];
@@ -104,6 +127,7 @@
     }
 
     async function loadErrors(errors) {
+        console.log(errors)
         let collapseMap = {};
         for (let collapse of errors) {
             let id = makeid(6);

@@ -3,7 +3,6 @@ package org.starrel.submitee;
 import org.slf4j.LoggerFactory;
 
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public interface ExceptionReporting {
 
@@ -24,7 +23,7 @@ public interface ExceptionReporting {
 
     static void report(String entity, String activity, String detail) {
         try {
-            SServer.getInstance().reportException(entity, activity, detail);
+            SServer.getInstance().pushEvent(Level.SEVERE, entity, activity, detail);
         } catch (Throwable e) {
             shrinkStackTrace(e);
             LoggerFactory.getLogger(ExceptionReporting.class).error("failed reporting exception", e);
@@ -34,7 +33,7 @@ public interface ExceptionReporting {
 
     static void report(String entity, String activity, Throwable stacktrace) {
         try {
-            SServer.getInstance().reportException(entity, activity, stacktrace);
+            SServer.getInstance().pushEvent(Level.SEVERE, entity, activity, stacktrace);
         } catch (Throwable e) {
             shrinkStackTrace(e);
             LoggerFactory.getLogger(ExceptionReporting.class).error("failed reporting exception", e);
@@ -44,7 +43,7 @@ public interface ExceptionReporting {
 
     static void report(String entity, String activity, String detail, Throwable stacktrace) {
         try {
-            SServer.getInstance().reportException(entity, activity, detail, stacktrace);
+            SServer.getInstance().pushEvent(Level.SEVERE, entity, activity, detail, stacktrace);
         } catch (Throwable e) {
             shrinkStackTrace(e);
             LoggerFactory.getLogger(ExceptionReporting.class).error("failed reporting exception", e);

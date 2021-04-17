@@ -59,6 +59,11 @@ public class EventLogService {
     }
 
     public void pushEvent(Level level, String entity, String activity, String detail) {
+        if (level == Level.SEVERE) {
+            SubmiteeServer.getInstance().getLogger().error(
+                    String.format("sever event reported, entity=%s, activity=%s, detail=%s",
+                            entity, activity, detail));
+        }
         executorService.execute(new WriteTask(level, entity, activity, detail));
     }
 
@@ -70,7 +75,7 @@ public class EventLogService {
             sql += " WHERE `time`>?";
         }
 
-        sql += " LIMIT " + limit;
+        sql += " ORDER BY `time` DESC LIMIT " + limit;
         try (Connection conn = dataSource.getConnection()) {
             PreparedStatement stmt = conn.prepareStatement(sql);
             if (start != -1) {

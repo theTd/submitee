@@ -451,20 +451,18 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public void reportException(String entity, String activity, String detail) {
-        eventLogService.pushEvent(Level.SEVERE, entity, activity, detail);
+    public void pushEvent(Level level, String entity, String activity, String detail) {
+        eventLogService.pushEvent(level, entity, activity, detail);
     }
 
     @Override
-    public void reportException(String entity, String activity, Throwable stacktrace) {
-        getLogger().error(String.format("exception reported, entity=%s, activity=%s", entity, activity), stacktrace);
-        eventLogService.pushEvent(Level.SEVERE, entity, activity, stringifyThrowable(stacktrace));
+    public void pushEvent(Level level, String entity, String activity, Throwable stacktrace) {
+        eventLogService.pushEvent(level, entity, activity, stringifyThrowable(stacktrace));
     }
 
     @Override
-    public void reportException(String entity, String activity, String detail, Throwable stacktrace) {
-        getLogger().error(String.format("exception reported, entity=%s, activity=%s, detail=%s", entity, activity, detail), stacktrace);
-        eventLogService.pushEvent(Level.SEVERE, entity, activity, detail + System.lineSeparator() + stringifyThrowable(stacktrace));
+    public void pushEvent(Level level, String entity, String activity, String detail, Throwable stacktrace) {
+        eventLogService.pushEvent(level, entity, activity, detail + System.lineSeparator() + stringifyThrowable(stacktrace));
     }
 
     private String stringifyThrowable(Throwable throwable) {
