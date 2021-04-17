@@ -90,9 +90,17 @@ public class Bootstrap {
         });
         try {
             server.start();
-            server.join();
         } catch (Exception exception) {
             exception.printStackTrace();
+            try {
+                server.shutdown();
+            } catch (Exception ignored) {
+            }
+        }
+        try {
+            server.join();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

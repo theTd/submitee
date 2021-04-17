@@ -13,9 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.bson.json.Converter;
 import org.bson.json.JsonWriterSettings;
-import org.bson.json.StrictJsonWriter;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -42,11 +40,15 @@ import org.starrel.submitee.language.TextContainer;
 import org.starrel.submitee.model.*;
 
 import javax.sql.DataSource;
+import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.InetSocketAddress;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 
 public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> {
     public final static String ATTRIBUTE_KEY = "system";
@@ -79,6 +81,8 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
 
     private final SessionKeeper sessionKeeper = new SessionKeeper();
     private final SubmissionKeeper submissionKeeper = new SubmissionKeeper();
+
+    private final EventLogService eventLogService = new EventLogService();
 
     // endregion
     private final Logger logger;
@@ -115,13 +119,12 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(false);
         resourceHandler.setWelcomeFiles(new String[]{"index.html"});
-        String staticDirectory = System.getenv("STATIC_DIRECTORY");
-        if (staticDirectory == null || staticDirectory.isEmpty()) staticDirectory = "static";
-        resourceHandler.setResourceBase(staticDirectory);
+        resourceHandler.setResourceBase(getStaticDirectory());
         ContextHandler contextHandler = new ContextHandler();
-        contextHandler.setContextPath("/static");
+        contextHandler.setContextPath("/static/");
         contextHandler.setProtectedTargets(new String[]{"/protected"});
         contextHandler.setHandler(resourceHandler);
+        contextHandler.addAliasCheck((path, resource) -> true);
         return contextHandler;
     }
 
@@ -146,6 +149,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         servletHandler.addServlet(ConfigurationServlet.class, "/configuration/*");
         servletHandler.addServlet(SessionServlet.class, "/session/*");
         servletHandler.addServlet(TemplateControlServlet.class, "/template-control/*");
+        servletHandler.addServlet(EventsServlet.class, "/events/*");
         return servletHandler;
     }
 
@@ -250,7 +254,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         try {
             blobStorageController.init();
         } catch (SQLException e) {
-            throw new IOException("failed initializing blob storage controller", e);
+            throw new Exception("failed initializing blob storage controller", e);
         }
         // endregion
 
@@ -258,7 +262,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         try {
             templateKeeper.init();
         } catch (Exception e) {
-            throw new IOException("failed initializing template keeper", e);
+            throw new Exception("failed initializing template keeper", e);
         }
         // endregion
 
@@ -266,7 +270,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         try {
             submissionKeeper.init();
         } catch (Exception e) {
-            throw new IOException("failed initializing submission keeper", e);
+            throw new Exception("failed initializing submission keeper", e);
         }
         // endregion
 
@@ -274,7 +278,15 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         try {
             objectMapController.init();
         } catch (SQLException e) {
-            throw new IOException("failed initializing object map controller", e);
+            throw new Exception("failed initializing object map controller", e);
+        }
+        // endregion
+
+        // region event log
+        try {
+            eventLogService.init();
+        } catch (Exception e) {
+            throw new Exception("failed initializing event log service", e);
         }
         // endregion
 
@@ -439,15 +451,26 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public void reportException(String entity, String activity, String event) {
-        // TODO: 2021/4/4
-        throw new UnsupportedOperationException();
+    public void reportException(String entity, String activity, String detail) {
+        eventLogService.pushEvent(Level.SEVERE, entity, activity, detail);
     }
 
     @Override
     public void reportException(String entity, String activity, Throwable stacktrace) {
-        // TODO: 2021/4/4
-        throw new UnsupportedOperationException();
+        getLogger().error(String.format("exception reported, entity=%s, activity=%s", entity, activity), stacktrace);
+        eventLogService.pushEvent(Level.SEVERE, entity, activity, stringifyThrowable(stacktrace));
+    }
+
+    @Override
+    public void reportException(String entity, String activity, String detail, Throwable stacktrace) {
+        getLogger().error(String.format("exception reported, entity=%s, activity=%s, detail=%s", entity, activity, detail), stacktrace);
+        eventLogService.pushEvent(Level.SEVERE, entity, activity, detail + System.lineSeparator() + stringifyThrowable(stacktrace));
+    }
+
+    private String stringifyThrowable(Throwable throwable) {
+        StringWriter stringWriter = new StringWriter();
+        throwable.printStackTrace(new PrintWriter(stringWriter));
+        return stringWriter.toString();
     }
 
     @Override
@@ -463,6 +486,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     @Override
     public void shutdown() throws Exception {
         jettyServer.stop();
+        eventLogService.shutdown();
     }
 
     public void join() throws Exception {
@@ -537,12 +561,18 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         return fileLoadingCache;
     }
 
-    public String getStaticDirectory() {
+    public static String getStaticDirectory() {
         String staticDirectory = System.getenv("STATIC_DIRECTORY");
-        return staticDirectory == null || staticDirectory.isEmpty() ? "static" : staticDirectory;
+        if (staticDirectory == null) staticDirectory = "static" + File.separator;
+        if (!staticDirectory.endsWith(File.separator)) staticDirectory += File.separator;
+        return staticDirectory;
     }
 
     public SessionKeeper getSessionKeeper() {
         return sessionKeeper;
+    }
+
+    public EventLogService getEventLogService() {
+        return eventLogService;
     }
 }

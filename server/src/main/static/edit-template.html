@@ -426,11 +426,7 @@
         requireLabel.setAttribute("for", requireId);
         let requireCheckbox = template.content.querySelector(".field-config-require-checkbox");
         requireCheckbox.id = requireId;
-        if (field.required) {
-            requireCheckbox.checked = true;
-        } else {
-            requireCheckbox.checked = false;
-        }
+        requireCheckbox.checked = !!field.required;
         // endregion
 
         let controller = submitee.fieldControllers[field.type];

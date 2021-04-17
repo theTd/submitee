@@ -103,7 +103,7 @@ public abstract class Util {
         Preconditions.checkNotNull(subject);
         Preconditions.checkNotNull(message);
 
-        String path = SubmiteeServer.getInstance().getStaticDirectory() + File.separator
+        String path = SubmiteeServer.getStaticDirectory()
                 + "protected" + File.separator + "email-notification.html";
 
         Map<String, String> map = new LinkedHashMap<>();
@@ -114,7 +114,7 @@ public abstract class Util {
     }
 
     public static Future<?> sendVerifyCodeEmail(String recipient, String verifyCode, String preferredLanguage) {
-        String path = SubmiteeServer.getInstance().getStaticDirectory() + File.separator
+        String path = SubmiteeServer.getStaticDirectory()
                 + "protected" + File.separator + "email-verify-code.html";
 
         String subject = I18N.Email.EMAIL_SUBJECT_VERIFY_CODE.format(preferredLanguage, verifyCode);

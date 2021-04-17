@@ -53,14 +53,23 @@ function create_toast(title, content, delay) {
     }, delay + 200);
 }
 
+// function fromBinary(encoded) {
+//     let binary = atob(encoded)
+//     const bytes = new Uint8Array(binary.length);
+//     for (let i = 0; i < bytes.length; i++) {
+//         bytes[i] = binary.charCodeAt(i);
+//     }
+//     return String.fromCharCode(...new Uint16Array(bytes.buffer));
+// }
+
 /**
  *
  * @param {jqXHR} xhr
  */
 function getMessageFromAjaxError(xhr) {
-    let title = decodeURIComponent(xhr.getResponseHeader("SUBMITEE-ERROR-TITLE"));
-    if (title) {
-        return title;
+    let raw = xhr.getResponseHeader("SUBMITEE-ERROR-TITLE");
+    if (raw) {
+        return decodeURIComponent(escape(atob(raw)));
     } else {
         return xhr.status === 0 ? "无法连接到服务器" : xhr.statusText;
     }

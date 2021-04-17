@@ -83,6 +83,8 @@ public interface SServer {
 
     void reportException(String entity, String activity, Throwable stacktrace);
 
+    void reportException(String entity, String activity, String detail, Throwable stacktrace);
+
     Logger getLogger();
 
     List<UserRealm> getUserRealms();

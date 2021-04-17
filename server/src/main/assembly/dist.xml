@@ -13,7 +13,7 @@
             <outputDirectory>/text</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>${project.basedir}/static</directory>
+            <directory>${project.basedir}/src/main/static</directory>
             <outputDirectory>/static</outputDirectory>
         </fileSet>
     </fileSets>

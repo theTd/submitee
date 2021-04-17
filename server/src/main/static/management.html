@@ -25,9 +25,8 @@
             <div class="list-group" id="management-methods">
                 <a href="?method=template-list" data-submitee-management-method-alt="edit-template"
                    class="list-group-item list-group-item-action">模板列表</a>
-                <a href="?method=published-templates" class="list-group-item list-group-item-action disabled">已发布的模板</a>
-                <a href="?method=unread-submissions" class="list-group-item list-group-item-action disabled">未读提交</a>
                 <a href="?method=submission-list" class="list-group-item list-group-item-action">提交列表</a>
+                <a href="?method=event-log" class="list-group-item list-group-item-action">事件日志</a>
                 <a href="?method=settings" class="list-group-item list-group-item-action">系统选项</a>
             </div>
         </div>
@@ -97,16 +96,15 @@
                 setTitle("编辑模板");
                 break;
             }
-            case "published-templates": {
-                break;
-            }
-            case "unread-submissions": {
-                break;
-            }
             case "submission-list": {
                 loadPage("submission-list.html");
                 setTitle("提交列表");
                 break
+            }
+            case "event-log": {
+                loadPage("event-log.html");
+                setTitle("事件日志");
+                break;
             }
             case "settings": {
                 loadPage("settings.html");

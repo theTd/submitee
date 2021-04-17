@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title></title>
+
+    <style>
+        .event-log-row {
+            font-size: 0.8rem;
+            word-break: break-word;
+        }
+
+        .modal-dialog {
+            max-width: unset;
+        }
+    </style>
+</head>
+<body>
+<template id="template-event-log-row">
+    <div class="row event-log-row">
+        <div class="col-1">
+            <p class="event-row-time w-100 "></p>
+        </div>
+        <div class="col-1">
+            <p class="event-row-level w-100 "></p>
+        </div>
+        <div class="col-2">
+            <p class="event-row-entity w-100 "></p>
+        </div>
+        <div class="col-3">
+            <p class="event-row-activity"></p>
+        </div>
+        <div class="col-4" style="max-height: 10rem; overflow: scroll" data-expand>
+            <pre class="event-row-detail" style="word-break: keep-all"></pre>
+        </div>
+    </div>
+</template>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-1">时间</div>
+        <div class="col-1">分级</div>
+        <div class="col-2">实体</div>
+        <div class="col-3">行为</div>
+        <div class="col-4">信息</div>
+    </div>
+    <hr id="insert-event-log-before"/>
+</div>
+<div class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="word-break: break-all">
+            </div>
+            <div class="modal-footer">
+                <!--                <button type="button" class="btn btn-primary">Save changes</button>-->
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/safe.js"></script>
+<script>
+
+    function fetchLogs() {
+        $.ajax({
+            url: "../events",
+            method: "GET",
+            data: {
+                level: null,
+                entity: null,
+                activity: null,
+                start: null,
+                limit: 20
+            },
+            success: loadErrors,
+            error: toast_ajax_error
+        })
+    }
+
+    function formatDate(time) {
+        let date = new Date(parseInt(time));
+        return date.toLocaleTimeString();
+    }
+
+    function appendEventRow(time, collapse) {
+        let relative = $("#insert-event-log-before")[0];
+        let template = $("#template-event-log-row")[0];
+        template.content.querySelector(".event-row-time").textContent = formatDate(time);
+        template.content.querySelector(".event-row-level").textContent = collapse["levelText"];
+        template.content.querySelector(".event-row-entity").textContent = collapse["entity"];
+        template.content.querySelector(".event-row-activity").textContent = collapse["activity"];
+        template.content.querySelector(".event-row-detail").textContent = collapse["detail"];
+        relative.parentNode.insertBefore(document.importNode(template.content, true), relative);
+    }
+
+    async function loadErrors(errors) {
+        let collapseMap = {};
+        for (let collapse of errors) {
+            let id = makeid(6);
+            collapse['temp_id'] = id;
+            collapseMap[id] = collapse;
+        }
+        let sort = {};
+        for (let collapse of errors) {
+            let id = collapse["temp_id"];
+            collapse["occurs"].forEach((t) => sort[t] = id);
+        }
+        Object.keys(sort).sort(function (o1, o2) {
+            return o2 - o1;
+        }).forEach(t => {
+            let id = sort[t];
+            appendEventRow(t, collapseMap[id]);
+        })
+    }
+
+    submitee_safe.loadAllScript([
+        "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
+        "https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js",
+        "https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js",
+        "https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js",
+        "js/model.js",
+        "js/field-controllers.js",
+        "js/toast.js",
+        "js/session.js",
+    ]).then(() => {
+        fetchLogs();
+        $(".container-fluid").on("click", "[data-expand]", function (evt) {
+            $(".modal .modal-title").text("detail");
+            $(".modal .modal-body").html(`<pre>${evt.target.textContent}</pre>`);
+            $(".modal").modal();
+        })
+    });
+</script>
+</body>
+</html>

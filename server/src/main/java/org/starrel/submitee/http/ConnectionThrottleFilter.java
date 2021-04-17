@@ -8,9 +8,7 @@ import jakarta.servlet.http.HttpFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.http.HttpStatus;
-import org.starrel.submitee.I18N;
-import org.starrel.submitee.TimeThrottleList;
-import org.starrel.submitee.Util;
+import org.starrel.submitee.*;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -35,9 +33,9 @@ public class ConnectionThrottleFilter extends HttpFilter {
             return;
         }
         if (!timeList.checkViolation()) {
-            res.setStatus(HttpStatus.TOO_MANY_REQUESTS_429);
-            res.getWriter().println(I18N.Http.TOO_MANY_REQUEST.format(req));
-            res.getWriter().close();
+            ExceptionReporting.report(ConnectionThrottleFilter.class, "rejecting connection throttle violation",
+                    "addr=" + addr + ", uri=" + req.getRequestURI());
+            SubmiteeHttpServlet.responseClassifiedError(req, res, ClassifiedErrors.TOO_MANY_REQUEST);
             return;
         }
         chain.doFilter(req, res);

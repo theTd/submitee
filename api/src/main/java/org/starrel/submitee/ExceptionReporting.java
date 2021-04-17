@@ -44,7 +44,7 @@ public interface ExceptionReporting {
 
     static void report(String entity, String activity, String detail, Throwable stacktrace) {
         try {
-            SServer.getInstance().reportException(entity, activity, stacktrace);
+            SServer.getInstance().reportException(entity, activity, detail, stacktrace);
         } catch (Throwable e) {
             shrinkStackTrace(e);
             LoggerFactory.getLogger(ExceptionReporting.class).error("failed reporting exception", e);

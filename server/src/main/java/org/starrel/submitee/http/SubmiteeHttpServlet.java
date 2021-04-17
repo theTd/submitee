@@ -91,8 +91,8 @@ public class SubmiteeHttpServlet extends HttpServlet {
     public static String createErrorPage(String title) {
         if (errorPageFilePath == null) {
 
-            errorPageFilePath = SubmiteeServer.getInstance().getStaticDirectory()
-                    + File.separator + "protected" + File.separator + "error-page.html";
+            errorPageFilePath = SubmiteeServer.getStaticDirectory()
+                    + "protected" + File.separator + "error-page.html";
         }
 
         FileLoadingCache.Result result = SubmiteeServer.getInstance().getFileLoadingCache()
@@ -145,7 +145,7 @@ public class SubmiteeHttpServlet extends HttpServlet {
 
     public static void responseErrorPage(HttpServletResponse resp, int statusCode, String errorTitle, String errorClassify) {
         try {
-            resp.setHeader("SUBMITEE-ERROR-TITLE", URLEncoder.encode(errorTitle, StandardCharsets.UTF_8));
+            resp.setHeader("SUBMITEE-ERROR-TITLE", Base64.getEncoder().encodeToString(errorTitle.getBytes(StandardCharsets.UTF_8)));
             if (errorClassify != null) {
                 resp.setHeader("SUBMITEE-ERROR-CLASSIFY", URLEncoder.encode(errorClassify, StandardCharsets.UTF_8));
             }
