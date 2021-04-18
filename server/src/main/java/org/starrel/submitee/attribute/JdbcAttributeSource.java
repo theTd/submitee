@@ -31,15 +31,17 @@ public class JdbcAttributeSource implements AttributeSource {
     @Override
     public <TValue> TValue getAttribute(String path, Class<TValue> type) {
         try {
-            return (TValue) cache.get(path, () -> {
+            Object v = cache.get(path, () -> {
                 try (Connection conn = dataSource.getConnection()) {
                     ResultSet r = conn.createStatement().executeQuery(String.format("SELECT %s FROM %s %s", getColumnName(path), table, whereClause));
-                    if (!r.next()) throw NotExistsSignal.INSTANCE;
+                    if (!r.next()) return NullPlaceholder.INSTANCE;
                     Object obj = r.getObject(1);
-                    if (obj == null) throw NotExistsSignal.INSTANCE;
+                    if (obj == null) return NullPlaceholder.INSTANCE;
                     return obj;
                 }
             });
+            if (v instanceof NullPlaceholder) return null;
+            return (TValue) v;
         } catch (ExecutionException e) {
             if (e.getCause() instanceof NotExistsSignal) return null;
             throw new RuntimeException(e.getCause());
@@ -97,5 +99,10 @@ public class JdbcAttributeSource implements AttributeSource {
         int idx = path.lastIndexOf(".");
         if (idx == -1) return path;
         return path.substring(idx + 1);
+    }
+
+    private static class NullPlaceholder {
+        @SuppressWarnings("InstantiationOfUtilityClass")
+        final static NullPlaceholder INSTANCE = new NullPlaceholder();
     }
 }

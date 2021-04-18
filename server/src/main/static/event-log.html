@@ -9,14 +9,18 @@
 
     <style>
         .event-log-row {
+            padding: 1rem 0;
             font-size: 0.8rem;
             word-break: break-word;
             transition: 0.2s ease;
             align-items: center;
         }
 
+        .event-row-time {
+            text-align: center;
+        }
+
         .event-log-row:hover {
-            margin: 1rem -15px;
             box-shadow: inset 5px 0 0 0 gray;
             background-color: lightgray;
         }
@@ -29,39 +33,36 @@
             text-decoration: none;
             color: unset;
         }
+
+        .event-log-row button {
+            background-color: transparent;
+            border: 1px transparent solid;
+        }
+
+        .event-log-row button:hover {
+            border: 1px black solid;
+        }
+
     </style>
 </head>
 <body>
 <template id="template-event-log-row">
     <div class="row event-log-row">
-        <div class="col-1">
-            <p class="event-row-time w-100 "></p>
+        <div class="col-1 event-row-time" style="padding: 0 8px">
         </div>
-        <div class="col-1">
-            <p class="event-row-level w-100 "></p>
+        <div class="col-1 event-row-level">
         </div>
-        <div class="col-2">
-            <p class="event-row-entity w-100 "></p>
+        <div class="col-2 event-row-entity">
         </div>
-        <div class="col-3">
-            <p class="event-row-activity"></p>
+        <div class="col-3 event-row-activity">
         </div>
         <div class="col-5" style="max-height: 10rem; overflow: scroll" data-expand>
-            <pre class="event-row-detail" style="word-break: keep-all;overflow: visible"></pre>
+            <pre class="event-row-detail" style="margin: 0; word-break: keep-all;overflow: visible"></pre>
         </div>
     </div>
 </template>
 
 <div class="container-fluid">
-    <!--    <div class="row filter-container">-->
-    <!--        <div class="filter-element">-->
-    <!--            <span class="filter-element-title">ACTIVITY</span>-->
-    <!--            <div class="filter-element-value">server startup</div>-->
-    <!--            <button class="filter-element-button">-->
-    <!--                <i class="material-icons">close</i>-->
-    <!--            </button>-->
-    <!--        </div>-->
-    <!--    </div>-->
     <div class="row filter-container"></div>
     <div class="row">
         <div class="col-1">时间</div>
@@ -111,10 +112,10 @@
     }
 
     function reloadWithFilters() {
-        window.location.href = fullUri();
+        window.location.href = fullUriWithFilters();
     }
 
-    function fullUri() {
+    function fullUriWithFilters() {
         let uri = "?method=event-log";
         let levelFilter = submitee.filterbar.get("分级");
         if (levelFilter) uri += "&lv=" + encodeURIComponent(levelFilter);
@@ -141,9 +142,30 @@
         })
     }
 
+    /**
+     *
+     * @param {Date} date
+     */
+    function truncateDate(date) {
+        date.setHours(0);
+        date.setMinutes(0)
+        date.setSeconds(0);
+        date.setMilliseconds(0);
+    }
+
     function formatDate(time) {
-        let date = new Date(parseInt(time));
-        return date.toLocaleTimeString();
+        time = parseInt(time);
+        let target = new Date(time);
+        let now = new Date();
+        truncateDate(target);
+        truncateDate(now);
+        let offset = (target.getTime() - now.getTime()) / (3600 * 1000 * 24);
+
+        let literal = new Date(time).toLocaleTimeString();
+        if (offset !== 0) {
+            literal += ` (${offset > 0 ? '+' + offset : offset})`;
+        }
+        return literal;
     }
 
     function appendEventRow(time, collapse) {
@@ -166,9 +188,9 @@
                 levelHtml = `<span class="text-secondary">OTHER</span>`;
                 break;
         }
-        template.content.querySelector(".event-row-level").innerHTML = `<a onclick="addLevelFilter(this)">${levelHtml}</a>`;
-        template.content.querySelector(".event-row-entity").innerHTML = `<a onclick="addEntityFilter(this)">${collapse["entity"]}</a>`;
-        template.content.querySelector(".event-row-activity").innerHTML = `<a onclick="addActivityFilter(this)">${collapse["activity"]}</a>`;
+        template.content.querySelector(".event-row-level").innerHTML = `<button onclick="addLevelFilter(this)">${levelHtml}</button>`;
+        template.content.querySelector(".event-row-entity").innerHTML = `<button onclick="addEntityFilter(this)">${collapse["entity"]}</button>`;
+        template.content.querySelector(".event-row-activity").innerHTML = `<button onclick="addActivityFilter(this)">${collapse["activity"]}</button>`;
         template.content.querySelector(".event-row-detail").textContent = collapse["detail"];
         relative.parentNode.insertBefore(document.importNode(template.content, true), relative);
     }
@@ -228,6 +250,7 @@
         addFilterbarElements();
 
         fetchEventLogs(renderEventLogs);
+
         $(".container-fluid").on("click", "[data-expand]", function (evt) {
             $(".modal .modal-title").text("detail");
             $(".modal .modal-body").html(`<pre>${evt.target.textContent}</pre>`);

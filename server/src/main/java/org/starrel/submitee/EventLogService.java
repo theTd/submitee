@@ -67,20 +67,28 @@ public class EventLogService {
         executorService.execute(new WriteTask(level, entity, activity, detail));
     }
 
-    private List<Map.Entry<Integer, Long>> getOccursByTime(long start, int limit) throws SQLException {
+    private List<Map.Entry<Integer, Long>> getOccurs(long start, String level, String entity, String activity, int limit) throws SQLException {
         if (limit < 0) limit = 100;
-        String sql = "SELECT `eid`,`time` FROM event_occurs";
+        String sql = "select `event_occurs`.eid AS eid, `event_occurs`.time AS time, `e`.level AS level, " +
+                "`e`.entity AS entity, `e`.activity AS activity from event_occurs left join events e on e.id = event_occurs.eid WHERE TRUE";
 
-        if (start != -1) {
-            sql += " WHERE `time`<?";
-        }
+        if (start != -1) sql += " AND `time`<?";
+        if (level != null) sql += " AND `level`=?";
+        if (entity != null) sql += " AND `entity`=?";
+        if (activity != null) sql += " AND `activity`=?";
 
-        sql += " ORDER BY `time` DESC LIMIT " + limit;
+        sql += " ORDER BY `time` DESC LIMIT ?";
         try (Connection conn = dataSource.getConnection()) {
             PreparedStatement stmt = conn.prepareStatement(sql);
-            if (start != -1) {
-                stmt.setTimestamp(1, new Timestamp(start));
-            }
+
+            int idx = 1;
+            if (start != -1) stmt.setTimestamp(idx++, new Timestamp(start));
+            if (level != null) stmt.setString(idx++, level);
+            if (entity != null) stmt.setString(idx++, entity);
+            if (activity != null) stmt.setString(idx++, activity);
+
+            stmt.setInt(idx, limit);
+
             ResultSet r = stmt.executeQuery();
             List<Map.Entry<Integer, Long>> list = new LinkedList<>();
             while (r.next()) {
@@ -118,7 +126,7 @@ public class EventLogService {
         executorService.submit(() -> {
             try (Connection conn = dataSource.getConnection()) {
 
-                List<Map.Entry<Integer, Long>> occursByTime = getOccursByTime(start, limit);
+                List<Map.Entry<Integer, Long>> occursByTime = getOccurs(start, level, finalEntity, finalActivity, limit);
                 Map<Integer, EventCollapseContext> resultMap = new LinkedHashMap<>();
                 for (Map.Entry<Integer, Long> entry : occursByTime) {
                     int eid = entry.getKey();
