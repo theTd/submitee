@@ -72,10 +72,10 @@ public class EventLogService {
         String sql = "select `event_occurs`.eid AS eid, `event_occurs`.time AS time, `e`.level AS level, " +
                 "`e`.entity AS entity, `e`.activity AS activity from event_occurs left join events e on e.id = event_occurs.eid WHERE TRUE";
 
-        if (start != -1) sql += " AND `time`<?";
+        if (start != -1) sql += " AND `time`<=?";
         if (level != null) sql += " AND `level`=?";
-        if (entity != null) sql += " AND `entity`=?";
-        if (activity != null) sql += " AND `activity`=?";
+        if (entity != null) sql += entity.contains("%") ? " AND `entity` LIKE ?" : " AND `entity`=?";
+        if (activity != null) sql += activity.contains("%") ? " AND `activity` LIKE ?" : " AND `activity`=?";
 
         sql += " ORDER BY `time` DESC LIMIT ?";
         try (Connection conn = dataSource.getConnection()) {
@@ -139,27 +139,8 @@ public class EventLogService {
                     }
 
                     String sql = "SELECT `crc32`,`level`,`entity`,`activity`,`detail` FROM `events` WHERE `id`=?";
-                    if (level != null) {
-                        sql += " AND `level`=?";
-                    }
-                    if (finalEntity != null) {
-                        sql += " AND `entity`=?";
-                    }
-                    if (finalActivity != null) {
-                        sql += " AND `activity`=?";
-                    }
                     PreparedStatement stmt = conn.prepareStatement(sql);
-                    int idx = 1;
-                    stmt.setInt(idx++, eid);
-                    if (level != null) {
-                        stmt.setString(idx++, level);
-                    }
-                    if (finalEntity != null) {
-                        stmt.setString(idx++, finalEntity);
-                    }
-                    if (finalActivity != null) {
-                        stmt.setString(idx, finalActivity);
-                    }
+                    stmt.setInt(1, eid);
                     ResultSet r = stmt.executeQuery();
                     if (r.next()) {
                         long crc32 = r.getLong(1);

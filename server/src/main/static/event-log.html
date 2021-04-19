@@ -97,6 +97,15 @@
 
 <script src="js/safe.js"></script>
 <script>
+    function addStartFilter(element) {
+        submitee.filterbar.add({
+            key: "start",
+            displayKey: "起始时间",
+            value: parseInt($(element).attr("data-timestamp")),
+            datePicker: true
+        });
+        reloadWithFilters();
+    }
 
     function addLevelFilter(element) {
         submitee.filterbar.add({
@@ -131,6 +140,8 @@
 
     function fullQueryWithFilters() {
         let q = "?method=event-log";
+        let startFilter = submitee.filterbar.get("start");
+        if (startFilter) q += "&st=" + startFilter;
         let levelFilter = submitee.filterbar.get("level");
         if (levelFilter) q += "&lv=" + encodeURIComponent(levelFilter);
         let entityFilter = submitee.filterbar.get("entity");
@@ -185,7 +196,8 @@
     function appendEventRow(time, collapse) {
         let relative = $("#insert-event-log-before")[0];
         let template = $("#template-event-log-row")[0];
-        template.content.querySelector(".event-row-time").textContent = formatDate(time);
+        template.content.querySelector(".event-row-time").innerHTML =
+            `<button data-timestamp="${time}" onclick="addStartFilter(this)">${formatDate(time)}</button>`;
         template.content.querySelector(".event-row-time").setAttribute("title", new Date(parseInt(time)).toLocaleString());
         let levelHtml;
         switch (collapse["levelText"]) {
@@ -244,14 +256,25 @@
     }
 
     function addFilterbarElements() {
-        // let start = getQueryValue("st");
+        let start = getQueryValue("st");
+        if ((start = parseInt(start))) {
+            submitee.filterbar.add({
+                key: "start",
+                displayKey: "起始时间",
+                value: start,
+                removeCallback: reloadWithFilters,
+                setValueCallback: reloadWithFilters,
+                datePicker: true
+            })
+        }
         let level = getQueryValue("lv");
         if (level) {
             submitee.filterbar.add({
                 key: "level",
                 displayKey: "分级",
                 value: level,
-                removeCallback: reloadWithFilters
+                removeCallback: reloadWithFilters,
+                setValueCallback: reloadWithFilters
             })
         }
         let entity = getQueryValue("et");
@@ -260,7 +283,8 @@
                 key: "entity",
                 displayKey: "实体",
                 value: entity,
-                removeCallback: reloadWithFilters
+                removeCallback: reloadWithFilters,
+                setValueCallback: reloadWithFilters
             });
         }
         let activity = getQueryValue("ac");
@@ -269,7 +293,8 @@
                 key: "activity",
                 displayKey: "行为",
                 value: activity,
-                removeCallback: reloadWithFilters
+                removeCallback: reloadWithFilters,
+                setValueCallback: reloadWithFilters
             });
         }
     }
@@ -288,7 +313,10 @@
         submitee.filterbar = createFilterBar(".filter-container");
         addFilterbarElements();
 
-        fetchEventLogs(renderEventLogs);
+        let start = submitee.filterbar.get("start");
+        if (start) start = parseInt(start);
+        if (!start) start = -1;
+        fetchEventLogs(renderEventLogs, start);
 
         $(".container-fluid").on("click", "[data-expand]", function (evt) {
             $(".modal .modal-title").text("detail");

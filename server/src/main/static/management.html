@@ -15,13 +15,25 @@
 
     <link rel="stylesheet" href="css/global.css">
 
+    <style>
+        .management-nav {
+            max-width: 100% !important;
+        }
+
+        @media (min-width: 1200px) {
+            .management-nav {
+                max-width: 250px !important;
+            }
+        }
+    </style>
+
     <title>正在载入</title>
 </head>
 <body onbeforeunload="return beforeUnloadCheck();">
 <div id="session-header"></div>
 <div class="container-fluid mt-1">
     <div class="row">
-        <div class="order-2 col-12 order-xl-0 col-xl-3">
+        <div class="order-1 order-xl-0 col-12 col-xl management-nav">
             <h4 class="row ml-3 text-dark">配置列表</h4>
             <div class="list-group" id="management-methods">
                 <a href="?method=template-list" data-submitee-management-method-alt="edit-template"
@@ -31,7 +43,7 @@
                 <a href="?method=settings" class="list-group-item list-group-item-action">系统选项</a>
             </div>
         </div>
-        <div class="col-12 col-xl-9 mt-4" id="management-container">
+        <div class="order-0 order-xl-1 col-12 col-xl mt-4" id="management-container">
         </div>
     </div>
 </div>

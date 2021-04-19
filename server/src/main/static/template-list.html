@@ -60,17 +60,38 @@
         .filter-button:hover {
             border: 1px black solid;
         }
+
+        .s-template-id, .s-template-actions {
+            max-width: 100px;
+        }
+
+        .s-template-status {
+            max-width: 80px;
+        }
+
+        .s-template-actions {
+            max-width: 150px;
+        }
+
+        .s-template-name {
+            max-width: 200px;
+        }
+
+        .header {
+            /*font-weight: bold;*/
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 <body>
 
 <template id="template-s-template-row">
     <div class="row s-template-row">
-        <div class="col col-1 s-template-id"></div>
-        <div class="col col-1 s-template-status"></div>
-        <div class="col col-2 s-template-name"></div>
-        <div class="col col-6 s-template-comment"></div>
-        <div class="col col-2">
+        <div class="col s-template-id"></div>
+        <div class="col s-template-status"></div>
+        <div class="col s-template-name"></div>
+        <div class="col s-template-comment"></div>
+        <div class="col s-template-actions">
             <div class="template-link-container position-relative d-none" style="right: 2.5rem"></div>
             <button class="btn btn-sm btn-secondary button-edit-template d-none" onclick="editTemplate(this)">
                 编辑
@@ -100,11 +121,11 @@
 <div class="container-fluid">
     <div class="row filter-container"></div>
     <div class="row">
-        <div class="col col-1">编号</div>
-        <div class="col col-1">状态</div>
-        <div class="col col-2">标题</div>
-        <div class="col col-6">注释</div>
-        <div class="col col-2"></div>
+        <div class="col s-template-id header">编号</div>
+        <div class="col s-template-status header">状态</div>
+        <div class="col s-template-name header">标题</div>
+        <div class="col s-template-comment header">注释</div>
+        <div class="col s-template-actions header"></div>
     </div>
     <hr/>
     <div class="row empty-mark d-none col-12 justify-content-center" style="color: gray; font-style: italic">(空)</div>
@@ -115,12 +136,12 @@
     </nav>
     <hr/>
     <div class="row justify-content-end mb-3">
-        <div class="col col-10 template-filters">
+        <div class="col template-filters">
             <label for="checkbox-show-archived">显示归档</label>
             <input type="checkbox" id="checkbox-show-archived" data-toggle="toggle" data-size="sm" data-on="开"
                    data-off="关"/>
         </div>
-        <div class="col">
+        <div class="col s-template-actions">
             <a class="btn btn-outline-success" href="#" onclick="createTemplate()">创建<br/>模板</a>
         </div>
 
@@ -365,7 +386,8 @@
                 key: "tid",
                 displayKey: "模板ID",
                 value: tid,
-                removeCallback: reloadWithFilters
+                removeCallback: reloadWithFilters,
+                setValueCallback: reloadWithFilters
             });
         }
         let state = getQueryValue("st");
@@ -375,7 +397,13 @@
                 displayKey: "状态",
                 value: state,
                 displayValue: getLocaleState(state),
-                removeCallback: reloadWithFilters
+                removeCallback: reloadWithFilters,
+                setValueCallback: reloadWithFilters,
+                selectionFeeder: {
+                    "editing": "编辑",
+                    "published": "发布",
+                    "archived": "归档"
+                }
             });
         }
     }

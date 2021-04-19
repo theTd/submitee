@@ -66,7 +66,7 @@ a .material-icons {
     align-items: center;
 }
 
-.close-button {
+.filter-close-button {
     border-radius: 50%;
     padding: 0.5em;
     width: 18px;
@@ -79,12 +79,12 @@ a .material-icons {
     font-weight: bold;
 }
 
-.close-button:hover {
+.filter-close-button:hover {
     background-color: #acacac;
     color: #ffffff;
 }
 
-.close-button:before {
+.filter-close-button:before {
     content: "×";
     position: absolute;
     left: 4px;
