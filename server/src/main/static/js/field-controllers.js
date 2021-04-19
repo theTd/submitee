@@ -258,9 +258,10 @@ class FileFieldController extends FieldController {
                         }
                         arr.push(key);
                     })
+                } else {
+                    // todo
+                    console.log(result);
                 }
-                console.log(result);
-                // todo
             })
         }, 1);
         return `<div id="${uploadFieldId}"></div>`;

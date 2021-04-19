@@ -45,39 +45,35 @@
         </ul>
     </nav>
 </div>
+<div class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="word-break: break-all">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     function showDetail(element) {
         submitee.currentSubmissionTarget =
             findParentAttributeByElement(element, "data-submitee-submission-uuid");
         let pagePromise = submitee.getPage("submission-detail.html");
 
-        let over = false;
-
-        if (submitee.shownPopover) {
-            submitee.shownPopover.popover('dispose');
-        }
-
-        submitee.shownPopover = $(element);
-        submitee.shownPopover.popover('dispose');
-        $(element).on("shown.bs.popover", async function (evt) {
-            let popoverTarget = getPopoverTarget(evt.target);
-            document.addEventListener("submission-detail-loaded", () => {
-                $(element).popover('update');
-            });
-            let page = await pagePromise;
-            $(popoverTarget).css("max-width", "40rem").css("padding", "0").css("margin", "0").html(page)
-                .on("mouseenter mouseleave", (evt) => {
-                    if (evt.type === "mouseenter") {
-                        setTimeout(() => over = true, 500);
-                    } else if (over) {
-                        $(element).popover("hide");
-                    }
-                });
-        }).popover({
-            placement: 'left',
-            html: true,
-            content: "<span class='spinner-border'></span>"
-        }).popover('show');
+        pagePromise.then(page => {
+            $(".modal .modal-title").text("提交详情");
+            $(".modal .modal-body").html(page);
+            $(".modal").modal();
+        })
     }
 
     function getPopoverTarget(element) {

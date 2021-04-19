@@ -56,7 +56,7 @@
         </div>
         <div class="col-3 event-row-activity">
         </div>
-        <div class="col-5" style="max-height: 10rem; overflow: scroll" data-expand>
+        <div class="col-5" style="max-height: 10rem; overflow: auto;" data-expand>
             <pre class="event-row-detail" style="margin: 0; word-break: keep-all;overflow: visible"></pre>
         </div>
     </div>
@@ -73,6 +73,9 @@
     </div>
     <hr/>
     <hr id="insert-event-log-before"/>
+    <div class="row d-none event-eof-mark mb-3" style="text-align:center; color: gray; display: block">
+        &lt;&lt;&lt;EOF&gt;&gt;&gt;
+    </div>
 </div>
 <div class="modal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
@@ -96,7 +99,6 @@
 <script>
 
     function addLevelFilter(element) {
-        console.log(element)
         submitee.filterbar.add("分级", element.querySelector("span").textContent);
         reloadWithFilters()
     }
@@ -217,6 +219,10 @@
             early = t;
         })
         submitee.eventPageEarlyTime = early;
+
+        if (Object.keys(sort).length) {
+            $(".event-eof-mark").removeClass("d-none");
+        }
 
         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight
             && submitee.eventPageEarlyTime) {

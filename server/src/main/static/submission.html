@@ -132,13 +132,12 @@
                             setTimeout(() => {
                                 container.classList.remove("slow-fade");
                             }, 6000)
-                            create_toast("重要提示", field.name + "是必填项目");
+                            create_toast("重要提示", field.name + "是必填项目", "input-validate");
                         }
                         return;
                     }
                     debug += resolve ? `[o]${field.name}: ${resolve}` : `[x]${field.name}`;
                 } catch (e) {
-                    console.log(e);
                     debug += `[!]${field.name}: internal error: ${JSON.stringify(e)}`
                 }
             }

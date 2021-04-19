@@ -13,6 +13,7 @@ import org.starrel.submitee.*;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 public class ConnectionThrottleFilter extends HttpFilter {
     private final static int THRESHOLD = 50;
@@ -33,7 +34,8 @@ public class ConnectionThrottleFilter extends HttpFilter {
             return;
         }
         if (!timeList.checkViolation()) {
-            ExceptionReporting.report(ConnectionThrottleFilter.class, "rejecting connection throttle violation",
+            SubmiteeServer.getInstance().pushEvent(Level.WARNING,
+                    ConnectionThrottleFilter.class, "rejecting connection throttle violation",
                     "addr=" + addr + ", uri=" + req.getRequestURI());
             SubmiteeHttpServlet.responseClassifiedError(req, res, ClassifiedErrors.TOO_MANY_REQUEST);
             return;

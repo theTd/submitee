@@ -126,17 +126,17 @@
     function register() {
         let email = $("#input-email").val();
         if (!submitee.mailPattern.test(email)) {
-            create_toast("重要提示", "邮箱格式有误");
+            create_toast("重要提示", "邮箱格式有误", "input-validate");
             return;
         }
         let verifyCode = $("#input-verify-code").val();
         if (!verifyCode) {
-            create_toast("重要提示", "验证码是必填项目");
+            create_toast("重要提示", "验证码是必填项目", "input-validate");
             return
         }
         let password = $("#input-password").val();
         if (!password) {
-            create_toast("重要提示", "密码是必填项目");
+            create_toast("重要提示", "密码是必填项目", "input-validate");
             return;
         }
 
@@ -283,7 +283,6 @@
                 } else {
                     $("#register-form").collapse({toggle: true});
                 }
-                console.log(response);
                 if (response["grecaptcha-sitekey"]) {
                     submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
                     submitee_safe.loadScript("https://www.recaptcha.net/recaptcha/api.js?render=" + submitee.grecaptchaSitekey, "grecaptcha");

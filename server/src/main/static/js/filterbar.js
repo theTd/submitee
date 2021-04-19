@@ -19,9 +19,8 @@ class FilterBarHandle {
         node.innerHTML = `
 <span class="filter-element-title">${title}</span>
 <div class="filter-element-value">${value}</div>
-<button class="filter-element-button">&times;</button>
+<button class="close-button"></button>
 `;
-        // <i className="material-icons">close</i>
         node.querySelector("button").addEventListener("click", () => {
             delete this.map[title];
             node.parentNode.removeChild(node);

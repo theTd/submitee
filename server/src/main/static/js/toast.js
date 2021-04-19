@@ -1,10 +1,12 @@
 function _init_toast() {
     if ($("#template-toast")[0]) return;
 
+    submitee.toastDistinct = {};
+
     let template = document.createElement("template");
     template.id = "template-toast";
     template.innerHTML = `
-<div class="toast" style="position: absolute; top: 0; right: 0; z-index: 11000">
+<div class="toast" style="direction: ltr">
     <div class="toast-header">
         <strong class="mr-auto"></strong>
         <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
@@ -18,19 +20,33 @@ function _init_toast() {
     document.body.appendChild(template);
 
     let container = document.createElement("div");
-    container.id = "toast-container";
+    // container.id = "toast-container";
     container.classList.add("position-fixed");
-    container.classList.add("w-100");
+
+    // container.classList.add("w-100");
     container.style.minHeight = '0';
-    container.style.top = '0';
-    container.style.right = '0';
+    container.style.top = '5px';
+    container.style.right = '5px';
+    container.style.direction = "rtl";
     container.style.zIndex = '20000';
+
+    let innerContainer = document.createElement("div");
+    innerContainer.id = "toast-container";
+    innerContainer.classList.add("position-absolute");
+    innerContainer.style.width = "max-content";
+
+    container.appendChild(innerContainer);
     document.body.appendChild(container);
 }
 
-function create_toast(title, content, delay) {
+function create_toast(title, content, delay, distinct) {
     _init_toast();
     if (!delay) delay = 2000;
+    else if (!parseInt(delay)) {
+        distinct = delay;
+        delay = 2000;
+    }
+
 
     let template = $("#template-toast")[0];
     let id = makeid(6);
@@ -41,7 +57,19 @@ function create_toast(title, content, delay) {
 
     let node = document.importNode(template.content, true);
     let container = $("#toast-container")[0];
+
+    if (distinct) {
+        let exists = submitee.toastDistinct[distinct];
+        if (exists) {
+            container.removeChild(container.querySelector("#" + exists));
+        }
+    }
+
     container.appendChild(node);
+
+    if (distinct) {
+        submitee.toastDistinct[distinct] = id;
+    }
 
     setTimeout(() => {
         $("#" + id).toast({
@@ -49,18 +77,10 @@ function create_toast(title, content, delay) {
         }).toast('show');
     }, 1);
     setTimeout(() => {
-        container.removeChild(container.querySelector("#" + id));
-    }, delay + 200);
+        let rm = container.querySelector("#" + id)
+        if (rm) container.removeChild(rm);
+    }, delay + 1000);
 }
-
-// function fromBinary(encoded) {
-//     let binary = atob(encoded)
-//     const bytes = new Uint8Array(binary.length);
-//     for (let i = 0; i < bytes.length; i++) {
-//         bytes[i] = binary.charCodeAt(i);
-//     }
-//     return String.fromCharCode(...new Uint16Array(bytes.buffer));
-// }
 
 /**
  *
@@ -69,7 +89,7 @@ function create_toast(title, content, delay) {
 function getMessageFromAjaxError(xhr) {
     let raw = xhr.getResponseHeader("SUBMITEE-ERROR-TITLE");
     if (raw) {
-        return decodeURIComponent(escape(atob(raw)));
+        return decodeURIComponent(escape(atob(raw))); // tricky skill decoding base64 to utf-8 string
     } else {
         return xhr.status === 0 ? "无法连接到服务器" : xhr.statusText;
     }

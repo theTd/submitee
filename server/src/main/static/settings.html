@@ -534,7 +534,7 @@
     function sendTestMail() {
         let addr = $("#input-test-mail-address").val();
         if (!addr || !submitee.mailPattern.test(addr)) {
-            create_toast("重要提示", "邮箱地址格式不正确", 10000);
+            create_toast("重要提示", "邮箱地址格式不正确", 10000, "input-validate");
             return
         }
         let button = $("#button-send-test-mail");

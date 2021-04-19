@@ -18,21 +18,21 @@ submitee.closeSession = function () {
     });
 }
 
-function fetchSessionInfo(callback, errorCallback) {
-    $.ajax({
-        url: "../session",
-        method: "GET",
-        success: function (response) {
-            submitee.session.realm = response["realm"];
-            submitee.session.id = response["id"];
-            submitee.session.profile = response["profile"];
-            submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
-            callback(response);
-        },
-        error: function (xhr) {
-            errorCallback(xhr);
-        }
-    });
+function fetchSessionInfo() {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: "../session",
+            method: "GET",
+            success: function (response) {
+                submitee.session.realm = response["realm"];
+                submitee.session.id = response["id"];
+                submitee.session.profile = response["profile"];
+                submitee.grecaptchaSitekey = response["grecaptcha-sitekey"];
+                resolve(response);
+            },
+            error: reject
+        });
+    })
 }
 
 function promiseSessionInfo() {
@@ -40,7 +40,9 @@ function promiseSessionInfo() {
         return submitee.pendingSession;
     }
     return submitee.pendingSession = new Promise((resolve, reject) => {
-        fetchSessionInfo(resolve, reject);
+        fetchSessionInfo().then(resolve, reject).finally(() => {
+            delete submitee.pendingSession;
+        })
     });
 }
 
@@ -58,9 +60,7 @@ function createSessionHeader(containerId) {
             success: function (response) {
                 container.html(response);
             },
-            error: function (xhr) {
-                console.log(xhr);
-            }
+            error: toast_ajax_error
         });
     }
 

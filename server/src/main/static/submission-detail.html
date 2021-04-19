@@ -99,10 +99,7 @@
         "js/session.js"
     ]).then(() => {
         let target = submitee.currentSubmissionTarget;
-        if (!target) {
-            create_toast("unknown submission target")
-            return;
-        }
+        if (!target) return;
         fetchSubmissionInfo({'unique-id': target}).then(array => {
             if (!array || array.length === 0) {
                 create_toast("提示", "未找到");
