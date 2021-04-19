@@ -59,9 +59,9 @@ function create_toast(title, content, delay, distinct) {
     let container = $("#toast-container")[0];
 
     if (distinct) {
-        let exists = submitee.toastDistinct[distinct];
-        if (exists) {
-            container.removeChild(container.querySelector("#" + exists));
+        try {
+            container.removeChild(container.querySelector("#" + submitee.toastDistinct[distinct]));
+        } catch (e) {
         }
     }
 
@@ -126,23 +126,23 @@ function _init_icon_tooltip() {
     document.body.appendChild(tooltipStyle);
     // endregion
 
+//     let template = document.createElement("template");
+//     template.id = "template-icon-tooltip";
+//     template.innerHTML = `
+// <i data-toggle="popover" data-container="body" data-placement="left"
+// type="button" data-html="true" class="material-icons"
+// style="font-size:2rem;color:red">error</i>
+// `;
+//     document.body.appendChild(template);
+
     let template = document.createElement("template");
     template.id = "template-icon-tooltip";
     template.innerHTML = `
+<button type="button" style="line-height: 0; background-color: transparent;margin: 0;padding: 0;border: 0">
 <i data-toggle="popover" data-container="body" data-placement="left" 
 type="button" data-html="true" class="material-icons" 
 style="font-size:2rem;color:red">error</i>
-`;
-    document.body.appendChild(template);
-
-    template = document.createElement("template");
-    template.id = "template-icon-tooltip-link";
-    template.innerHTML = `
-<a style="line-height: 0">
-<i data-toggle="popover" data-container="body" data-placement="left" 
-type="button" data-html="true" class="material-icons" 
-style="font-size:2rem;color:red">error</i>
-</a>
+</button>
 `;
     document.body.appendChild(template);
 }
@@ -151,41 +151,39 @@ function createErrorTooltip(html) {
     return createOutFlowIconTooltip("error", "2rem", "red", html, "top");
 }
 
-function createIconTooltip(icon, size, color, html, placement, link) {
+function createIconTooltip(icon, size, color, html, placement, callback) {
     _init_icon_tooltip();
 
     let elem = document.createElement("div");
     elem.innerHTML = html;
 
-    let template = link ? $("#template-icon-tooltip-link")[0] : $("#template-icon-tooltip")[0];
+    let template = $("#template-icon-tooltip")[0];
     let i = template.content.querySelector("i");
 
     i.textContent = icon;
     i.style.fontSize = size;
     i.style.color = color;
-    let id = makeid(6);
-    i.id = id;
 
-    if (link) {
-        template.content.querySelector("a").href = link;
-    }
+    let button = template.content.querySelector("button");
+    let id = makeid(6);
+    button.id = id;
 
     let node = document.importNode(template.content, true);
-    setInterval(() => {
-        $("#" + id).tooltip({
-            html: true,
-            title: elem,
-            placement: placement,
-            content: function () {
-                return html;
-            }
-        });
+    $(node).find("#" + id).tooltip({
+        html: true,
+        title: elem,
+        placement: placement,
+        content: function () {
+            return html;
+        }
+    }).on("click", () => {
+        if (callback) callback();
     });
     return node;
 }
 
-function createOutFlowIconTooltip(icon, size, color, message, placement, link) {
-    return createOutFlow(createIconTooltip(icon, size, color, message, placement, link));
+function createOutFlowIconTooltip(icon, size, color, message, placement, callback) {
+    return createOutFlow(createIconTooltip(icon, size, color, message, placement, callback));
 }
 
 function _init_out_flow() {

@@ -143,7 +143,7 @@ public class AuthServlet extends AbstractJsonServlet {
                     result = authScheme.auth(getSession(req), body.get("body"));
                     SubmiteeServer.getInstance().pushEvent(Level.INFO, AuthServlet.class,
                             "auth attempt", String.format("user=%s, scheme=%s, addr=%s, result=%s",
-                                    result.getAcceptedUser().getDescriptor().toString(), authScheme.getName(),
+                                    result.getAcceptedUser() == null ? null : result.getAcceptedUser().getDescriptor().toString(), authScheme.getName(),
                                     Util.getRemoteAddr(req), result.toString()));
                 } catch (Exception exception) {
                     ExceptionReporting.report(AuthServlet.class, "authenticating user", exception);

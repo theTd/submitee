@@ -29,6 +29,8 @@ submitee_safe.loadScript = function (url, distinct, callback) {
 }
 
 submitee_safe.loadScriptPromise = function (url, distinct) {
+    if (!submitee_safe.distinctLoadedScripts) submitee_safe.distinctLoadedScripts = {};
+    if (!submitee_safe.loadedScripts) submitee_safe.loadedScripts = {}
     return new Promise(function (resolve) {
         submitee_safe.loadScript(url, distinct, resolve);
     });
@@ -39,8 +41,11 @@ submitee_safe.loadScriptPromise = function (url, distinct) {
  * @param {string[]} scripts
  */
 submitee_safe.loadAllScript = async function (scripts) {
+    if (!submitee_safe.distinctLoadedScripts) submitee_safe.distinctLoadedScripts = {};
+    if (!submitee_safe.loadedScripts) submitee_safe.loadedScripts = {}
     return new Promise(async resolve => {
         for (let url of scripts) {
+            if (submitee_safe.loadedScripts[url]) continue;
             await submitee_safe.loadScriptPromise(url, null);
         }
         resolve();

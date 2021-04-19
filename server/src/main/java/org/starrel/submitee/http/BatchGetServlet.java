@@ -16,6 +16,7 @@ import org.starrel.submitee.model.SubmissionImpl;
 import org.starrel.submitee.model.User;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -147,7 +148,7 @@ public class BatchGetServlet extends AbstractJsonServlet {
     private static Object applyPath(Object documentOrArray) {
         if (documentOrArray instanceof Document) {
             Document document = ((Document) documentOrArray);
-            for (String key : document.keySet()) {
+            for (String key : new ArrayList<>(document.keySet())) {
                 if (key.startsWith("$")) {
                     document.put(key, applyPath(document.get(key)));
                 } else {

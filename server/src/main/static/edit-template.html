@@ -68,6 +68,11 @@
         .field-sort-drop-area-hover {
             background-color: rgba(0, 255, 0, 0.2);
         }
+
+        #template-status button {
+            margin-right: 0.5rem;
+        }
+
     </style>
 </head>
 <body>
@@ -150,6 +155,34 @@
         <div class="breadcrumb-item">所有模板</div>
         <div class="breadcrumb-item" id="breadcrumb-template-name"></div>
     </nav>
+
+    <div class="row col" id="template-status">
+        <h4 class="w-100">模板状态</h4>
+        <div class="container-fluid">
+            <div class="template-status-text">
+            </div>
+            <hr class="w-100"/>
+
+            <button class="btn btn-primary d-none" id="btn-publish-template">发布模板</button>
+            <button class="btn btn-danger d-none" id="btn-cancel-template">停止发布模板</button>
+            <button class="btn btn-info d-none" id="btn-revision-template">修订模板</button>
+            <button class="btn btn-outline-secondary d-none" id="btn-template-preview">预览</button>
+            <button class="btn btn-outline-secondary d-none" id="btn-template-link"><i class="material-icons">link</i>复制公开链接
+            </button>
+
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown">
+                    其他
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#">导出到CSV</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="#">归档模板</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row col" id="template-fields">
         <h4>字段</h4>
         <div class="container-fluid" id="container-field">
@@ -216,35 +249,25 @@
 </div>
 
 <div class="row col mb-4">
-    <h4 class="w-100">模板状态：</h4>
-    <p>尚未发布，使用发布模板按钮来获取公开链接</p>
-    <hr class="w-100"/>
-    <h4 class="w-100">模板状态：</h4>
-    <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交</p><a class="pl-2" href="#">查看提交列表</a>
-    <hr class="w-100"/>
-    <h4 class="w-100">模板状态：</h4>
-    <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交，其中 2 个尚未阅读</p><a class="pl-2" href="#">查看提交列表</a>
-    <hr class="w-100"/>
-    <h4 class="w-100">模板状态：</h4>
-    <p>模板已经发布<a class="pl-1" href="#">获取公开链接</a>，现已有 23 个提交，其中 2 个尚未阅读</p><a class="pl-2" href="#">查看提交列表</a>
-    <div class="w-100"></div>
-    <p class="alert alert-warning">模板发布后已经被修改，使用修订模板按钮来发布修订后的模板</p>
-    <hr class="w-100"/>
-    <form onsubmit="return false">
-        <button class="btn btn-primary d-none" id="btn-publish-template">发布模板</button>
-        <button class="btn btn-danger d-none" id="btn-cancel-template">停止发布模板</button>
-        <button class="btn btn-info d-none" id="btn-revision-template">修订模板</button>
-        <div class="btn-group">
-            <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown">
-                其他
-            </button>
-            <div class="dropdown-menu">
-                <a class="dropdown-item" href="#">导出到CSV</a>
-                <div class="dropdown-divider"></div>
-                <a class="dropdown-item text-danger" href="#">归档模板</a>
+
+</div>
+
+<div class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="word-break: break-all">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
             </div>
         </div>
-    </form>
+    </div>
 </div>
 
 <script>
@@ -412,7 +435,7 @@
         template.content.querySelector(".s-field-name").innerHTML = `<input type="text" value="${field.name}"/>`;
         // template.content.querySelector(".s-field-comment").innerHTML = `<input type="text" value="${field.comment}"/>`
         let editorId = makeid(6);
-        template.content.querySelector(".s-field-comment").innerHTML = `<div id="${editorId}">${field.comment}</div>`
+        template.content.querySelector(".s-field-comment").innerHTML = `<div id="${editorId}">${field.comment || ""}</div>`
         setTimeout(() => {
             let commentEditor = new window.wangEditor('#' + editorId);
             commentEditor.config.excludeMenus = ['todo'];
@@ -494,7 +517,7 @@
         $("#template-metadata-comment").val(submitee.currentTemplate.comment).on("keyup", dirty);
 
         let descContainer = $("#template-desc")[0];
-        descContainer.innerHTML = submitee.currentTemplate.desc;
+        descContainer.innerHTML = submitee.currentTemplate.desc || "";
         let editor = new window.wangEditor('#template-desc');
         editor.config.excludeMenus = ['todo'];
         editor.config.onchange = dirty;
@@ -533,7 +556,7 @@
             }
             readTemplateConfig();
             currentTemplate.sync().then(() => {
-                create_toast("提示", "对模板的更改已保存", 2000);
+                create_toast("提示", "对模板的更改已保存", 2000, "template-saved");
                 currentTemplate.latest = true;
             }, error => {
                 currentTemplate.latest = false;
@@ -573,10 +596,7 @@
         // find target index
         let targetIndex = parseInt(evt.target.parentNode.getAttribute("data-drop-area-index"));
         let originalIndex = submitee.currentTemplate.findFieldIndex(field);
-        if (originalIndex === targetIndex || originalIndex === targetIndex - 1) {
-            console.log(`nothing changed, originalIndex=${originalIndex}, targetIndex==${targetIndex}`);
-            return;
-        }
+        if (originalIndex === targetIndex || originalIndex === targetIndex - 1) return;
 
         field.owner.moveField(field, targetIndex).then(() => {
             create_toast("提示", "对模板的更改已保存", 2000);
@@ -610,7 +630,6 @@
         Object.keys(userRealms).forEach(function (realm) {
             let title = userRealms[realm];
             let realmConfig = distinguishConfig[realm];
-            console.log(realmConfig);
             if (!realmConfig) realmConfig = {};
             let enabled = realmConfig["enabled"];
             let whitelist = realmConfig["whitelist"];
@@ -627,6 +646,20 @@
 
     function loadActions() {
         if (submitee.currentTemplate.published) {
+            $(".template-status-text").html(`<p class="alert alert-info">已发布，过去一小时内已收到10个提交，一共收到10个提交，其中6个未读</p>`);
+            $("#btn-template-link").removeClass("d-none").on('click', () => {
+                navigator.clipboard.writeText(submitee.currentTemplate.submissionPageLink).then(() => {
+                    $("#btn-template-link").popover({
+                        container: 'body',
+                        content: '已复制到剪切板',
+                        placement: 'top',
+                        trigger: 'focus'
+                    }).popover('show');
+                }, () => {
+                    create_toast("重要提示", "<span style='color: red'>未能与剪切板交互</span>");
+                });
+            });
+
             $("#btn-cancel-template").removeClass("d-none").on("click", () => {
                 $.ajax({
                     url: `../template-control/${submitee.currentTemplate.uniqueId}/cancel/`,
@@ -647,7 +680,8 @@
                 submitee.currentTemplate.latest = true;
                 $.ajax({
                     url: "../create/template/" + submitee.currentTemplate.attributeMap.get("template-id"),
-                    method: "GET",
+                    method: "POST",
+                    contentType: "application/json",
                     data: JSON.stringify({
                         content: submitee.currentTemplate.attributeMap.root
                     }),
@@ -663,6 +697,21 @@
                 });
             });
         } else {
+            $(".template-status-text").html(`<p class="alert alert-warning">尚未发布，使用<bold>发布模板</bold>来公开该模板</p>`);
+            $("#btn-template-preview").removeClass("d-none").on('click', () => {
+                submitee.previewTemplate = submitee.currentTemplate.uniqueId;
+                $.ajax({
+                    url: "submission.html",
+                    method: "GET",
+                    success: function (response) {
+                        $(".modal .modal-title").text("提交页预览");
+                        $(".modal .modal-body").html(response);
+                        $(".modal").modal();
+                    },
+                    error: toast_ajax_error
+                });
+            });
+
             $("#btn-publish-template").removeClass("d-none").on('click', () => {
                 $.ajax({
                     url: `../template-control/${submitee.currentTemplate.uniqueId}/publish/`,

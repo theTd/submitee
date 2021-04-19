@@ -13,7 +13,7 @@
     <title>正在载入</title>
 
     <style>
-        #template-desc {
+        #submission-template-desc {
             margin-top: 2rem;
             padding-left: 1rem;
             box-shadow: inset 4px 0 0 #797979;
@@ -62,7 +62,7 @@
         }
     </style>
 </head>
-<body onbeforeunload="return ''">
+<body>
 <template id="template-field-container">
     <div class="row field-container">
         <div class="position-relative require-mark d-none">
@@ -80,15 +80,15 @@
 <div id="session-container"></div>
 <div class="container mt-3" id="main">
     <div class="row">
-        <h4 id="template-name"></h4>
+        <h4 id="submission-template-name"></h4>
     </div>
     <div class="row">
-        <div id="template-desc"></div>
+        <div id="submission-template-desc"></div>
     </div>
 
     <hr/>
     <form class="mb-3" id="field-container" onsubmit="createSubmission();return false;">
-        <hr id="insert-fields-before"/>
+        <hr id="submission-insert-fields-before"/>
         <button id="button-submit" class="btn btn-lg btn-success">提交</button>
         <input type="submit" class="d-none"/>
     </form>
@@ -97,6 +97,8 @@
 <script src="js/safe.js"></script>
 <script>
     function createSubmission() {
+        if (submitee.previewTemplate) return;
+
         let button = $("#button-submit");
         if (button.hasClass("disabled")) return;
         button.addClass("disabled");
@@ -206,8 +208,8 @@
 
     function loadMetadata() {
         setTitle(submitee.currentTemplate.name);
-        $("#template-name").text(submitee.currentTemplate.name);
-        $("#template-desc").html(submitee.currentTemplate.desc);
+        $("#submission-template-name").text(submitee.currentTemplate.name);
+        $("#submission-template-desc").html(submitee.currentTemplate.desc);
     }
 
     function ensureControllers(callback, error) {
@@ -219,7 +221,7 @@
     }
 
     function buildFields() {
-        let relative = $("#insert-fields-before")[0];
+        let relative = $("#submission-insert-fields-before")[0];
 
         for (let field of submitee.currentTemplate.fields) {
             let typeController = submitee.fieldControllers[field.type];
@@ -243,29 +245,42 @@
         "js/field-controllers.js",
         "js/session.js"
     ]).then(() => {
-        let target = getQueryValue("target");
-
-        if (!target) {
-            alert("出现了一些意料之外的异常，如需帮助请联系管理员");
-            window.history.back();
-        } else {
-            setCurrentTemplate(target, template => {
-                if (!template.published) {
-                    create_toast("注意", "<p>该模板尚未发布</p><p>你因为拥有管理权限可以访问</p>")
-                }
-                submitee.submission = {};
-
-                loadMetadata();
-                ensureControllers(buildFields, (error) => {
-                    create_toast("重要提示", error, 10000);
-                })
-            }, error => {
-                toast_ajax_error(error);
+        if (submitee.previewTemplate) {
+            $("#button-submit").addClass("d-none");
+            loadMetadata();
+            ensureControllers(buildFields, (error) => {
+                create_toast("重要提示", error, 10000);
             })
-        }
+        } else {
+            submitee.beforeUnloadChecker = function () {
+                //todo
+                
+            }
 
-        setAuthTarget("template/" + target);
-        createSessionHeader("session-container");
+            let target = getQueryValue("target");
+
+            if (!target) {
+                alert("出现了一些意料之外的异常，如需帮助请联系管理员");
+                window.history.back();
+            } else {
+                setCurrentTemplate(target, template => {
+                    if (!template.published) {
+                        create_toast("注意", "<p>该模板尚未发布</p><p>你因为拥有管理权限可以访问</p>")
+                    }
+                    submitee.submission = {};
+
+                    loadMetadata();
+                    ensureControllers(buildFields, (error) => {
+                        create_toast("重要提示", error, 10000);
+                    })
+                }, error => {
+                    toast_ajax_error(error);
+                })
+            }
+
+            setAuthTarget("template/" + target);
+            createSessionHeader("session-container");
+        }
     })
 </script>
 </body>

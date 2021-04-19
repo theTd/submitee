@@ -87,7 +87,7 @@ a .material-icons {
 .close-button:before {
     content: "×";
     position: absolute;
-    left: 3px;
+    left: 4px;
     top: -3px;
     line-height: normal;
 }

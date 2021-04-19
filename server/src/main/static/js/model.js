@@ -172,6 +172,15 @@ class STemplate {
         this.attributeMap.set("desc", val);
     }
 
+    get literalState() {
+        if (this.archived) {
+            return "archived";
+        } else if (this.published) {
+            return "published";
+        }
+        return "editing";
+    }
+
     get status() {
         if (this.archived) {
             return `<span class="template-status-archived">归档</span>`;
@@ -187,6 +196,10 @@ class STemplate {
 
     get archived() {
         return this.attributeMap.get("archived");
+    }
+
+    get submissionPageLink() {
+        return submitee.getSubmissionPageLink(this.uniqueId);
     }
 
     /**
@@ -247,11 +260,6 @@ class STemplate {
     async sync() {
         this.updateAttributeMap();
         return new Promise((resolve, reject) => {
-            console.log(JSON.stringify({
-                "target": this.uniqueId,
-                "content": this.attributeMap.root
-            }));
-
             $.ajax({
                 url: "../paste",
                 method: "POST",
@@ -480,6 +488,10 @@ function findParentAttributeByElement(element, attribute) {
     let node = element;
     let name;
     while (node) {
+        if (!node.hasAttribute) {
+            node = node.parentNode;
+            continue;
+        }
         if (node.hasAttribute(attribute)) {
             name = node.getAttribute(attribute);
             break;
@@ -555,6 +567,13 @@ submitee.getPage = function (url) {
             success: resolve
         });
     });
+}
+
+submitee.getSubmissionPageLink = function (templateUniqueId) {
+    let url = new URL(window.location.href);
+    url.pathname = "/static/submission.html";
+    url.search = "?target=" + templateUniqueId;
+    return url.toString();
 }
 
 submitee.mailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;

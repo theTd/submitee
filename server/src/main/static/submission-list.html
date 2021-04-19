@@ -76,11 +76,6 @@
         })
     }
 
-    function getPopoverTarget(element) {
-        let id = $(element).attr("aria-describedby");
-        return $("#" + id)[0];
-    }
-
     /**
      *
      * @param {Submission} submission
@@ -161,16 +156,6 @@
         "js/toast.js",
         "js/session.js",
     ]).then(() => {
-        $(document).on('click', (evt) => {
-            if (submitee.shownPopover) {
-                let popover = submitee.shownPopover[0];
-                let popoverTarget = getPopoverTarget(submitee.shownPopover[0]);
-                if (popover && popover.contains(evt.target)) return;
-                if (popoverTarget && popoverTarget.contains(evt.target)) return;
-                submitee.shownPopover.popover('hide');
-            }
-        });
-
         const pageSize = 10;
         let page = parseInt(getQueryValue("page")) || 1;
 

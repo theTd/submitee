@@ -10,21 +10,28 @@ class FilterBarHandle {
         this.map = {}
     }
 
-    add(title, value, removeCallback) {
-        if (this.map[title]) return;
-        this.map[title] = value;
+    add(props) {
+        let key = props["key"];
+        let displayKey = props["displayKey"] || key;
+        let value = props["value"];
+        let displayValue = props["displayValue"] || value;
+        let removeCallback = props["removeCallback"];
+
+
+        if (this.map[key]) return;
+        this.map[key] = value;
 
         let node = document.createElement("div");
         node.classList.add("filter-element");
         node.innerHTML = `
-<span class="filter-element-title">${title}</span>
-<div class="filter-element-value">${value}</div>
+<span class="filter-element-title">${displayKey}</span>
+<div class="filter-element-value">${displayValue}</div>
 <button class="close-button"></button>
 `;
         node.querySelector("button").addEventListener("click", () => {
-            delete this.map[title];
+            delete this.map[key];
             node.parentNode.removeChild(node);
-            removeCallback();
+            if (removeCallback) removeCallback();
         });
         this.element.appendChild(node);
     }

@@ -99,33 +99,45 @@
 <script>
 
     function addLevelFilter(element) {
-        submitee.filterbar.add("分级", element.querySelector("span").textContent);
-        reloadWithFilters()
+        submitee.filterbar.add({
+            key: "level",
+            displayKey: "分级",
+            value: element.querySelector("span").textContent
+        });
+        reloadWithFilters();
     }
 
     function addEntityFilter(element) {
-        submitee.filterbar.add("实体", element.textContent);
-        reloadWithFilters()
+        submitee.filterbar.add({
+            key: "entity",
+            displayKey: "实体",
+            value: element.textContent
+        });
+        reloadWithFilters();
     }
 
     function addActivityFilter(element) {
-        submitee.filterbar.add("行为", element.textContent);
-        reloadWithFilters()
+        submitee.filterbar.add({
+            key: "activity",
+            displayKey: "行为",
+            value: element.textContent
+        });
+        reloadWithFilters();
     }
 
     function reloadWithFilters() {
-        window.location.href = fullUriWithFilters();
+        window.location.href = fullQueryWithFilters();
     }
 
-    function fullUriWithFilters() {
-        let uri = "?method=event-log";
-        let levelFilter = submitee.filterbar.get("分级");
-        if (levelFilter) uri += "&lv=" + encodeURIComponent(levelFilter);
-        let entityFilter = submitee.filterbar.get("实体");
-        if (entityFilter) uri += "&et=" + encodeURIComponent(entityFilter);
-        let activityFilter = submitee.filterbar.get("行为");
-        if (activityFilter) uri += "&ac=" + encodeURIComponent(activityFilter);
-        return uri;
+    function fullQueryWithFilters() {
+        let q = "?method=event-log";
+        let levelFilter = submitee.filterbar.get("level");
+        if (levelFilter) q += "&lv=" + encodeURIComponent(levelFilter);
+        let entityFilter = submitee.filterbar.get("entity");
+        if (entityFilter) q += "&et=" + encodeURIComponent(entityFilter);
+        let activityFilter = submitee.filterbar.get("activity");
+        if (activityFilter) q += "&ac=" + encodeURIComponent(activityFilter);
+        return q;
     }
 
     function fetchEventLogs(callback, start) {
@@ -133,9 +145,9 @@
             url: "../events",
             method: "GET",
             data: {
-                level: submitee.filterbar.get("分级"),
-                entity: submitee.filterbar.get("实体"),
-                activity: submitee.filterbar.get("行为"),
+                level: submitee.filterbar.get("level"),
+                entity: submitee.filterbar.get("entity"),
+                activity: submitee.filterbar.get("activity"),
                 start: start,
                 limit: 20
             },
@@ -234,11 +246,32 @@
     function addFilterbarElements() {
         // let start = getQueryValue("st");
         let level = getQueryValue("lv");
-        if (level) submitee.filterbar.add("分级", level, reloadWithFilters);
+        if (level) {
+            submitee.filterbar.add({
+                key: "level",
+                displayKey: "分级",
+                value: level,
+                removeCallback: reloadWithFilters
+            })
+        }
         let entity = getQueryValue("et");
-        if (entity) submitee.filterbar.add("实体", entity, reloadWithFilters);
+        if (entity) {
+            submitee.filterbar.add({
+                key: "entity",
+                displayKey: "实体",
+                value: entity,
+                removeCallback: reloadWithFilters
+            });
+        }
         let activity = getQueryValue("ac");
-        if (activity) submitee.filterbar.add("行为", activity, reloadWithFilters);
+        if (activity) {
+            submitee.filterbar.add({
+                key: "activity",
+                displayKey: "行为",
+                value: activity,
+                removeCallback: reloadWithFilters
+            });
+        }
     }
 
     submitee_safe.loadAllScript([

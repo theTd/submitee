@@ -9,12 +9,12 @@
     <title></title>
 
     <style>
-        .template-container {
+        .s-template-row {
             margin-top: 0.5rem;
             margin-bottom: 0.5rem;
         }
 
-        .template-container > .col {
+        .s-template-row > .col {
             align-self: center;
         }
 
@@ -22,7 +22,7 @@
             font-size: 0.8rem;
         }
 
-        .template-container span {
+        .s-template-row span {
             padding: 0.1rem 0.2rem;
             border-radius: 3px;
             display: inline-block;
@@ -51,12 +51,21 @@
         .template-filters > label {
             margin: 0;
         }
+
+        .filter-button {
+            background-color: transparent;
+            border: 1px solid transparent;
+        }
+
+        .filter-button:hover {
+            border: 1px black solid;
+        }
     </style>
 </head>
 <body>
 
 <template id="template-s-template-row">
-    <div class="row template-container" data-submitee-template-id>
+    <div class="row s-template-row">
         <div class="col col-1 s-template-id"></div>
         <div class="col col-1 s-template-status"></div>
         <div class="col col-2 s-template-name"></div>
@@ -83,10 +92,13 @@
     </div>
 </template>
 <template id="template-list-page-item">
-    <li class="page-item"><a class="page-link" href="#">3</a></li>
+    <li class="page-item">
+        <button class="page-link"></button>
+    </li>
 </template>
 
 <div class="container-fluid">
+    <div class="row filter-container"></div>
     <div class="row">
         <div class="col col-1">编号</div>
         <div class="col col-1">状态</div>
@@ -104,16 +116,9 @@
     <hr/>
     <div class="row justify-content-end mb-3">
         <div class="col col-10 template-filters">
-            <label for="checkbox-latest-version">最新版本</label>
-            <input type="checkbox" id="checkbox-latest-version" data-toggle="toggle" data-size="sm" data-on="开"
-                   data-off="关"/>
-            <label for="checkbox-show-archived" class="ml-4">显示归档</label>
+            <label for="checkbox-show-archived">显示归档</label>
             <input type="checkbox" id="checkbox-show-archived" data-toggle="toggle" data-size="sm" data-on="开"
                    data-off="关"/>
-            <label for="checkbox-published-only" class="ml-4">已发布</label>
-            <input type="checkbox" id="checkbox-published-only" data-toggle="toggle" data-size="sm" data-on="开"
-                   data-off="关"/>
-            <button class="ml-4 btn btn-info btn-sm" onclick="applyFilter()">更新</button>
         </div>
         <div class="col">
             <a class="btn btn-outline-success" href="#" onclick="createTemplate()">创建<br/>模板</a>
@@ -160,19 +165,6 @@
         });
     }
 
-    function applyFilter() {
-        let page = parseInt(getQueryValue("page")) || 1;
-        window.location.href = fullUri(page);
-    }
-
-    function fullUri(page) {
-        return `?method=template-list&page=${page}${filterParams()}`;
-    }
-
-    function filterParams() {
-        return `&ac=${$("#checkbox-show-archived").prop("checked")}&lv=${$("#checkbox-latest-version").prop("checked")}&pb=${$("#checkbox-published-only").prop("checked")}`;
-    }
-
     function revisionTemplate(element) {
         let id = findTemplateIdByElement(element);
         $.ajax({
@@ -211,16 +203,7 @@
     }
 
     function findTemplateIdByElement(element) {
-        let node = element;
-        let fieldId;
-        while (node) {
-            if (node.hasAttribute("data-submitee-template-id")) {
-                fieldId = node.getAttribute("data-submitee-template-id");
-                break;
-            }
-            node = node.parentNode;
-        }
-        return fieldId;
+        return findParentAttributeByElement(element, "data-submitee-template-id");
     }
 
     function editTemplate(element) {
@@ -234,41 +217,48 @@
      */
     function createTemplateElement(template) {
         let t = document.querySelector("#template-s-template-row");
-        t.content.querySelector(".template-container").setAttribute("data-submitee-template-id", template.uniqueId);
-        t.content.querySelector(".s-template-id").textContent = template.templateId + ":" + template.version;
-        t.content.querySelector(".s-template-status").innerHTML = template.status;
-        t.content.querySelector(".s-template-name").textContent = template.name;
-        t.content.querySelector(".s-template-comment").textContent = template.comment;
+        let node = document.importNode(t.content, true);
+        $(node).find(".s-template-row").attr("data-submitee-template-id", template.uniqueId);
+        $(node).find(".s-template-id").html(`<button type="button" class="filter-button">${template.templateId}:</button>${template.version}`)
+            .find("button").on("click", () => addTemplateIdFilter(template.templateId));
+
+        $(node).find(".s-template-status").html(`<button type="button" class="filter-button">${template.status}</button>`)
+            .find("button").on("click", () => addStateFilter(template.literalState));
+
+        $(node).find(".s-template-name").text(template.name);
+        $(node).find(".s-template-comment").text(template.comment);
 
         if (template.published) {
-            let link = t.content.querySelector(".template-link-container");
-            link.classList.remove("d-none");
-            link.appendChild(createOutFlowIconTooltip("link", "2rem", "gray", "转到", "top",
-                "submission.html?target=" + template.uniqueId));
-
-            t.content.querySelector(".button-revision-template").classList.remove("d-none");
-            t.content.querySelector(".button-view-template").classList.remove("d-none");
-            t.content.querySelector(".button-edit-template").classList.add("d-none");
-            t.content.querySelector(".button-archive-template").classList.add("d-none");
-            t.content.querySelector(".button-delete-template").classList.add("d-none");
+            $(node).find(".template-link-container").removeClass("d-none").append(
+                createOutFlowIconTooltip("link", "2rem", "gray", "复制链接", "top", () => {
+                    navigator.clipboard.writeText(template.submissionPageLink).then(() => {
+                        create_toast("提示", "已复制到剪切板", 2000, "copy-submission-link");
+                    });
+                })
+            )
+            $(node).find(".button-revision-template").removeClass("d-none");
+            $(node).find(".button-view-template").removeClass("d-none");
+            $(node).find(".button-edit-template").addClass("d-none");
+            $(node).find(".button-archive-template").addClass("d-none");
+            $(node).find(".button-delete-template").addClass("d-none");
         } else {
-            t.content.querySelector(".template-link-container").classList.add("d-none");
-            t.content.querySelector(".button-view-template").classList.add("d-none");
+            $(node).find(".template-link-container").addClass("d-none");
+            $(node).find(".button-view-template").addClass("d-none");
 
             if (template.archived) {
-                t.content.querySelector(".button-revision-template").classList.remove("d-none");
-                t.content.querySelector(".button-edit-template").classList.add("d-none");
-                t.content.querySelector(".button-archive-template").classList.add("d-none");
-                t.content.querySelector(".button-delete-template").classList.remove("d-none");
+                $(node).find(".button-revision-template").removeClass("d-none");
+                $(node).find(".button-edit-template").addClass("d-none");
+                $(node).find(".button-archive-template").addClass("d-none");
+                $(node).find(".button-delete-template").removeClass("d-none");
             } else {
-                t.content.querySelector(".button-revision-template").classList.add("d-none");
-                t.content.querySelector(".button-edit-template").classList.remove("d-none");
-                t.content.querySelector(".button-archive-template").classList.remove("d-none");
-                t.content.querySelector(".button-delete-template").classList.add("d-none");
+                $(node).find(".button-revision-template").addClass("d-none");
+                $(node).find(".button-edit-template").removeClass("d-none");
+                $(node).find(".button-archive-template").removeClass("d-none");
+                $(node).find(".button-delete-template").addClass("d-none");
             }
         }
 
-        return document.importNode(t.content, true);
+        return node;
     }
 
     function buildTemplateList(templateList) {
@@ -286,33 +276,108 @@
         if (nextPage > maxPages) nextPage = null;
 
         let node;
-        node = createPageItem("上一页", prevPage ? fullUri(prevPage) : "");
+        node = createPageItem("上一页", prevPage);
         if (!prevPage) {
             $(node.querySelector(".page-item")).addClass("disabled");
         }
         paginationContainer.appendChild(node);
 
         for (let i = 1; i <= maxPages; i++) {
-            paginationContainer.appendChild(createPageItem(i, fullUri(i), i === currentPage));
+            paginationContainer.appendChild(createPageItem(i, i, i === currentPage));
         }
 
-        node = createPageItem("下一页", nextPage ? fullUri(nextPage) : "");
+        node = createPageItem("下一页", nextPage);
         if (!nextPage) {
             $(node.querySelector(".page-item")).addClass("disabled");
         }
         paginationContainer.appendChild(node);
     }
 
-    function createPageItem(text, href, active) {
+    function createPageItem(text, page, active) {
         let t = $("#template-list-page-item")[0];
-        t.content.querySelector(".page-link").href = href;
+        // t.content.querySelector(".page-link").href = "javascript:switchToPage(" + page + ")";
+
         t.content.querySelector(".page-link").textContent = text;
         if (active) {
             $(t.content.querySelector(".page-item")).addClass("active");
         } else {
             $(t.content.querySelector(".page-item")).removeClass("active");
         }
-        return document.importNode(t.content, true);
+        let node = document.importNode(t.content, true);
+        if (page) $(node).find(".page-link").on("click", () => reloadWithFilters(page))
+        return node;
+    }
+
+    function reloadWithFilters(page) {
+        window.location.href = fullQueryWithFilters(page);
+    }
+
+    function fullQueryWithFilters(page) {
+        let q = "?method=template-list";
+        page = page || parseInt(getQueryValue("page"));
+        q += "&page=" + page;
+        // noinspection EqualityComparisonWithCoercionJS
+        let showArchived = $("#checkbox-show-archived").prop("checked");
+        q += "&ac=" + showArchived;
+
+        let tid = submitee.filterbar.get("tid");
+        if (tid) q += "&tid=" + tid;
+        let state = submitee.filterbar.get("state");
+        if (state) q += "&st=" + state;
+        return q;
+    }
+
+    function addStateFilter(state) {
+        submitee.filterbar.add({
+            key: "state",
+            displayKey: "状态",
+            value: state,
+            displayValue: getLocaleState(state)
+        })
+        reloadWithFilters();
+    }
+
+    function addTemplateIdFilter(templateId) {
+        submitee.filterbar.add({
+            key: "tid",
+            displayKey: "模板ID",
+            value: templateId
+        })
+        reloadWithFilters();
+    }
+
+    function getLocaleState(state) {
+        let displayValue = state;
+        if (state === 'archived') {
+            displayValue = "归档";
+        } else if (state === 'published') {
+            displayValue = "发布";
+        } else if (state === 'editing') {
+            displayValue = "编辑";
+        }
+        return displayValue;
+    }
+
+    function addFilterbarElements() {
+        let tid = getQueryValue("tid");
+        if (tid) {
+            submitee.filterbar.add({
+                key: "tid",
+                displayKey: "模板ID",
+                value: tid,
+                removeCallback: reloadWithFilters
+            });
+        }
+        let state = getQueryValue("st");
+        if (state) {
+            submitee.filterbar.add({
+                key: "state",
+                displayKey: "状态",
+                value: state,
+                displayValue: getLocaleState(state),
+                removeCallback: reloadWithFilters
+            });
+        }
     }
 
     submitee_safe.loadAllScript([
@@ -324,19 +389,19 @@
         "js/field-controllers.js",
         "js/toast.js",
         "js/session.js",
+        "js/filterbar.js"
     ]).then(() => {
+        submitee.filterbar = createFilterBar(".filter-container");
+        addFilterbarElements();
+
         const pageSize = 10;
         let page = parseInt(getQueryValue("page")) || 1;
+
         // noinspection EqualityComparisonWithCoercionJS
         let showArchived = getQueryValue("ac") == 'true';
-        // noinspection EqualityComparisonWithCoercionJS
-        let latestVersion = getQueryValue("lv") == 'true';
-        // noinspection EqualityComparisonWithCoercionJS
-        let publishedOnly = getQueryValue("pb") == 'true';
 
-        $("#checkbox-show-archived").prop("checked", showArchived).bootstrapToggle();
-        $("#checkbox-latest-version").prop("checked", latestVersion).bootstrapToggle();
-        $("#checkbox-published-only").prop("checked", publishedOnly).bootstrapToggle();
+        $("#checkbox-show-archived").prop("checked", showArchived).bootstrapToggle()
+            .on("change", () => setTimeout(() => window.location.href = fullQueryWithFilters(), 200));
 
         let filters = {};
         if (!showArchived) {
@@ -345,11 +410,30 @@
                 {"archived": false}
             ];
         }
-        if (publishedOnly) {
-            filters["published"] = true;
+        let stateFilter = submitee.filterbar.get("state");
+        if (stateFilter) {
+            if (stateFilter === 'archived') {
+                filters["archived"] = true;
+            } else if (stateFilter === 'published') {
+                filters["published"] = true;
+            } else if (stateFilter === "editing") {
+                filters["$and"] = [
+                    {"published": false},
+                    {
+                        "$or": [
+                            {"archived": {"$exists": false}},
+                            {"archived": false}
+                        ]
+                    }
+                ];
+            }
+        }
+        let tidFilter = submitee.filterbar.get("tid");
+        if (tidFilter) {
+            filters["template-id"] = tidFilter;
         }
 
-        fetchTemplateSize(filters, latestVersion).then(size => {
+        fetchTemplateSize(filters, false).then(size => {
             if (size === 0) {
                 $(".empty-mark").removeClass("d-none");
                 return;
@@ -357,7 +441,7 @@
             let maxPages = Math.ceil(size / pageSize);
             if (page > maxPages) page = maxPages;
             buildPagination(page, maxPages);
-            fetchTemplateInfo(filters, latestVersion, (page - 1) * pageSize, pageSize)
+            fetchTemplateInfo(filters, false, (page - 1) * pageSize, pageSize)
                 .then(buildTemplateList, toast_ajax_error)
         }, toast_ajax_error);
     });
