@@ -39,7 +39,7 @@ public class EventLogService {
         }
 
         List<EventCollapseContext> list = query(System.currentTimeMillis() - KEEP_IN_MEMORY_PERIOD,
-                -1, null, null, null).get();
+                -1, null, null, null, null).get();
         for (EventCollapseContext context : list) {
             EventCollapseContext newContext = new EventCollapseContext(KEEP_IN_MEMORY_PERIOD,
                     context.crc32, context.levelText, context.entity, context.activity, context.detail);
@@ -67,7 +67,7 @@ public class EventLogService {
         executorService.execute(new WriteTask(level, entity, activity, detail));
     }
 
-    private List<Map.Entry<Integer, Long>> getOccurs(long start, String level, String entity, String activity, int limit) throws SQLException {
+    private List<Map.Entry<Integer, Long>> getOccurs(long start, String level, String entity, String activity, int limit, String detail) throws SQLException {
         if (limit < 0) limit = 100;
         String sql = "select `event_occurs`.eid AS eid, `event_occurs`.time AS time, `e`.level AS level, " +
                 "`e`.entity AS entity, `e`.activity AS activity from event_occurs left join events e on e.id = event_occurs.eid WHERE TRUE";
@@ -76,6 +76,7 @@ public class EventLogService {
         if (level != null) sql += " AND `level`=?";
         if (entity != null) sql += entity.contains("%") ? " AND `entity` LIKE ?" : " AND `entity`=?";
         if (activity != null) sql += activity.contains("%") ? " AND `activity` LIKE ?" : " AND `activity`=?";
+        if (detail != null) sql += detail.contains("%") ? " AND `detail` LIKE ?" : "AND `detail`=?";
 
         sql += " ORDER BY `time` DESC LIMIT ?";
         try (Connection conn = dataSource.getConnection()) {
@@ -86,6 +87,7 @@ public class EventLogService {
             if (level != null) stmt.setString(idx++, level);
             if (entity != null) stmt.setString(idx++, entity);
             if (activity != null) stmt.setString(idx++, activity);
+            if (detail != null) stmt.setString(idx++, detail);
 
             stmt.setInt(idx, limit);
 
@@ -100,7 +102,7 @@ public class EventLogService {
         }
     }
 
-    public CompletableFuture<List<EventCollapseContext>> query(long start, int limit, String levelText, String entity, String activity) {
+    public CompletableFuture<List<EventCollapseContext>> query(long start, int limit, String levelText, String entity, String activity, String detail) {
         String level;
         if (levelText == null) {
             level = null;
@@ -110,6 +112,8 @@ public class EventLogService {
             level = "WARN";
         } else if (levelText.equalsIgnoreCase("error")) {
             level = "ERROR";
+        } else if (levelText.equalsIgnoreCase("other")) {
+            level = "OTHER";
         } else {
             level = null;
         }
@@ -119,14 +123,18 @@ public class EventLogService {
         if (Objects.equals(activity, "")) {
             activity = null;
         }
+        if (Objects.equals(detail, "")) {
+            detail = null;
+        }
 
         CompletableFuture<List<EventCollapseContext>> future = new CompletableFuture<>();
         String finalEntity = entity;
         String finalActivity = activity;
+        String finalDetail = detail;
         executorService.submit(() -> {
             try (Connection conn = dataSource.getConnection()) {
 
-                List<Map.Entry<Integer, Long>> occursByTime = getOccurs(start, level, finalEntity, finalActivity, limit);
+                List<Map.Entry<Integer, Long>> occursByTime = getOccurs(start, level, finalEntity, finalActivity, limit, finalDetail);
                 Map<Integer, EventCollapseContext> resultMap = new LinkedHashMap<>();
                 for (Map.Entry<Integer, Long> entry : occursByTime) {
                     int eid = entry.getKey();

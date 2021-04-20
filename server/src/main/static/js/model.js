@@ -576,4 +576,49 @@ submitee.getSubmissionPageLink = function (templateUniqueId) {
     return url.toString();
 }
 
+submitee.relativeTimeLocale = function (time) {
+    let date = new Date(parseInt(time));
+    let now = new Date();
+    let result = '';
+
+    // region year
+    let yearOff = now.getFullYear() - date.getFullYear();
+    if (Math.abs(yearOff) > 1) {
+        return date.toLocaleString();
+    } else {
+        result += yearOff === 0 ? "" : (yearOff > 0 ? "去年" : "明年");
+    }
+    // endregion
+
+    // region month
+    let monthOff = now.getMonth() - date.getMonth();
+    if (Math.abs(monthOff) > 1) {
+        result += date.getMonth() + "月";
+    } else {
+        result += monthOff === 0 ? "" : (monthOff > 0 ? "上个月" : "下个月");
+    }
+    // endregion
+
+    // region day
+    let dayOff = now.getDate() - date.getDate();
+    if (monthOff !== 0 || Math.abs(dayOff) > 1) {
+        result += date.getDate() + "日";
+    } else {
+        result += dayOff === 0 ? "" : (dayOff > 0 ? "昨天" : "明天");
+    }
+    // endregion
+
+    // if (Math.abs(dayOff) > 1) return result;
+    result += ` ${date.getHours()}:${date.getMinutes()}`;
+    if (date.getDate() === now.getDate() && date.getHours() === now.getHours() && date.getMinutes() === now.getMinutes() &&
+        date.getSeconds() !== 0) {
+        result += ":" + date.getSeconds();
+    }
+    return result;
+}
+
+submitee.escapeRegex = function (value) {
+    return value.replace(/[\-\[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+}
+
 submitee.mailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;

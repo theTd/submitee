@@ -22,26 +22,29 @@
             font-size: 0.8rem;
         }
 
-        .s-template-row span {
-            padding: 0.1rem 0.2rem;
-            border-radius: 3px;
-            display: inline-block;
-        }
-
         span.template-status-editing {
             border: 1px #17a2b8 solid;
             color: #17a2b8;
+            padding: 0.1rem 0.2rem;
+            border-radius: 3px;
+            display: inline-block;
         }
 
         span.template-status-published {
             border: 1px #28a745 solid;
             background-color: #28a745;
             color: white !important;
+            padding: 0.1rem 0.2rem;
+            border-radius: 3px;
+            display: inline-block;
         }
 
         span.template-status-archived {
             border: 1px #dc3545 solid;
             color: #dc3545;
+            padding: 0.1rem 0.2rem;
+            border-radius: 3px;
+            display: inline-block;
         }
 
         .template-filters > * {
@@ -58,6 +61,15 @@
         }
 
         .filter-button:hover {
+            border: 1px black solid;
+        }
+
+        .header button {
+            background-color: transparent;
+            border: 1px solid transparent;
+        }
+
+        .header button:hover {
             border: 1px black solid;
         }
 
@@ -121,10 +133,18 @@
 <div class="container-fluid">
     <div class="row filter-container"></div>
     <div class="row">
-        <div class="col s-template-id header">编号</div>
-        <div class="col s-template-status header">状态</div>
-        <div class="col s-template-name header">标题</div>
-        <div class="col s-template-comment header">注释</div>
+        <div class="col s-template-id header">
+            <button onclick="addTemplateIdFilter()">编号</button>
+        </div>
+        <div class="col s-template-status header">
+            <button onclick="addStateFilter()">状态</button>
+        </div>
+        <div class="col s-template-name header">
+            <button onclick="addNameFilter()">标题</button>
+        </div>
+        <div class="col s-template-comment header">
+            <button onclick="addCommentFilter()">注释</button>
+        </div>
         <div class="col s-template-actions header"></div>
     </div>
     <hr/>
@@ -342,70 +362,79 @@
         q += "&ac=" + showArchived;
 
         let tid = submitee.filterbar.get("tid");
-        if (tid) q += "&tid=" + tid;
+        if (tid) q += "&tid=" + encodeURIComponent(tid);
         let state = submitee.filterbar.get("state");
-        if (state) q += "&st=" + state;
+        if (state) q += "&st=" + encodeURIComponent(state);
+        let name = submitee.filterbar.get("name");
+        if (name) q += "&nm=" + encodeURIComponent(name);
+        let comment = submitee.filterbar.get("comment");
+        if (comment) q += "&cmt=" + encodeURIComponent(comment);
         return q;
     }
 
     function addStateFilter(state) {
-        submitee.filterbar.add({
-            key: "state",
-            displayKey: "状态",
-            value: state,
-            displayValue: getLocaleState(state)
-        })
-        reloadWithFilters();
+        submitee.filterbar.setValue("state", state);
     }
 
     function addTemplateIdFilter(templateId) {
-        submitee.filterbar.add({
+        submitee.filterbar.setValue("tid", templateId);
+    }
+
+    function addNameFilter() {
+        submitee.filterbar.setValue("name");
+    }
+
+    function addCommentFilter() {
+        submitee.filterbar.setValue("comment");
+    }
+
+    function initFilterbar() {
+        submitee.filterbar.init({
             key: "tid",
-            displayKey: "模板ID",
-            value: templateId
+            displayKey: "编号",
+            value: getQueryValue("tid"),
+            removeCallback: reloadWithFilters,
+            setValueCallback: reloadWithFilters
+        });
+        submitee.filterbar.init({
+            key: "state",
+            displayKey: "状态",
+            value: getQueryValue("st"),
+            removeCallback: reloadWithFilters,
+            setValueCallback: reloadWithFilters,
+            selectionFeeder: {
+                "editing": "<span class='template-status-editing'>编辑</span>",
+                "published": "<span class='template-status-published'>发布</span>",
+                "archived": "<span class='template-status-archived'>归档</span>"
+            }
+        });
+        submitee.filterbar.init({
+            key: "name",
+            displayKey: "标题",
+            value: getQueryValue("nm"),
+            removeCallback: reloadWithFilters,
+            setValueCallback: reloadWithFilters
+        });
+        submitee.filterbar.init({
+            key: "comment",
+            displayKey: "注释",
+            value: getQueryValue("cmt"),
+            removeCallback: reloadWithFilters,
+            setValueCallback: reloadWithFilters
         })
-        reloadWithFilters();
     }
 
-    function getLocaleState(state) {
-        let displayValue = state;
-        if (state === 'archived') {
-            displayValue = "归档";
-        } else if (state === 'published') {
-            displayValue = "发布";
-        } else if (state === 'editing') {
-            displayValue = "编辑";
-        }
-        return displayValue;
-    }
+    function convertInfoRegex(pattern) {
+        let split = pattern.split("*");
 
-    function addFilterbarElements() {
-        let tid = getQueryValue("tid");
-        if (tid) {
-            submitee.filterbar.add({
-                key: "tid",
-                displayKey: "模板ID",
-                value: tid,
-                removeCallback: reloadWithFilters,
-                setValueCallback: reloadWithFilters
-            });
+        let result = "";
+        for (let i = 0; i < split.length; i++) {
+            result += submitee.escapeRegex(split[i]);
+            if (i !== (split.length - 1)) {
+                result += ".*";
+            }
         }
-        let state = getQueryValue("st");
-        if (state) {
-            submitee.filterbar.add({
-                key: "state",
-                displayKey: "状态",
-                value: state,
-                displayValue: getLocaleState(state),
-                removeCallback: reloadWithFilters,
-                setValueCallback: reloadWithFilters,
-                selectionFeeder: {
-                    "editing": "编辑",
-                    "published": "发布",
-                    "archived": "归档"
-                }
-            });
-        }
+        return result;
     }
 
     submitee_safe.loadAllScript([
@@ -420,7 +449,7 @@
         "js/filterbar.js"
     ]).then(() => {
         submitee.filterbar = createFilterBar(".filter-container");
-        addFilterbarElements();
+        initFilterbar();
 
         const pageSize = 10;
         let page = parseInt(getQueryValue("page")) || 1;
@@ -458,7 +487,15 @@
         }
         let tidFilter = submitee.filterbar.get("tid");
         if (tidFilter) {
-            filters["template-id"] = tidFilter;
+            filters["template-id"] = {"$regex": convertInfoRegex(tidFilter)};
+        }
+        let nameFilter = submitee.filterbar.get("name");
+        if (nameFilter) {
+            filters["name"] = {"$regex": convertInfoRegex(nameFilter)};
+        }
+        let commentFilter = submitee.filterbar.get("comment");
+        if (commentFilter) {
+            filters["comment"] = {"$regex": convertInfoRegex(commentFilter)};
         }
 
         fetchTemplateSize(filters, false).then(size => {

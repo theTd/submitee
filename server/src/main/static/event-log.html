@@ -29,11 +29,6 @@
             max-width: 95vw;
         }
 
-        .event-log-row a {
-            text-decoration: none;
-            color: unset;
-        }
-
         .event-log-row button {
             background-color: transparent;
             border: 1px transparent solid;
@@ -43,20 +38,32 @@
             border: 1px black solid;
         }
 
+        .event-log-header button {
+            background-color: transparent;
+            border: 1px transparent solid;
+        }
+
+        .event-log-header button:hover {
+            border: 1px black solid;
+        }
+
+        .event-row-time, .event-row-level {
+            max-width: 95px;
+        }
     </style>
 </head>
 <body>
 <template id="template-event-log-row">
     <div class="row event-log-row">
-        <div class="col-1 event-row-time" style="padding: 0 8px">
+        <div class="col event-row-time">
         </div>
-        <div class="col-1 event-row-level">
+        <div class="col event-row-level">
         </div>
-        <div class="col-2 event-row-entity">
+        <div class="col event-row-entity">
         </div>
-        <div class="col-3 event-row-activity">
+        <div class="col event-row-activity">
         </div>
-        <div class="col-5" style="max-height: 10rem; overflow: auto;" data-expand>
+        <div class="col" style="max-height: 10rem; overflow: auto;" data-expand>
             <pre class="event-row-detail" style="margin: 0; word-break: keep-all;overflow: visible"></pre>
         </div>
     </div>
@@ -64,12 +71,22 @@
 
 <div class="container-fluid">
     <div class="row filter-container"></div>
-    <div class="row">
-        <div class="col-1">时间</div>
-        <div class="col-1">分级</div>
-        <div class="col-2">实体</div>
-        <div class="col-3">行为</div>
-        <div class="col-4">信息</div>
+    <div class="row event-log-header">
+        <div class="col event-row-time">
+            <button onclick="addStartFilter()">时间</button>
+        </div>
+        <div class="col event-row-level">
+            <button onclick="addLevelFilter()">分级</button>
+        </div>
+        <div class="col event-row-entity">
+            <button onclick="addEntityFilter()">实体</button>
+        </div>
+        <div class="col event-row-activity">
+            <button onclick="addActivityFilter()">行为</button>
+        </div>
+        <div class="col event-row-detail">
+            <button onclick="addDetailFilter()">信息</button>
+        </div>
     </div>
     <hr/>
     <hr id="insert-event-log-before"/>
@@ -98,40 +115,23 @@
 <script src="js/safe.js"></script>
 <script>
     function addStartFilter(element) {
-        submitee.filterbar.add({
-            key: "start",
-            displayKey: "起始时间",
-            value: parseInt($(element).attr("data-timestamp")),
-            datePicker: true
-        });
-        reloadWithFilters();
+        submitee.filterbar.setValue("start", parseInt($(element).attr("data-timestamp")));
     }
 
     function addLevelFilter(element) {
-        submitee.filterbar.add({
-            key: "level",
-            displayKey: "分级",
-            value: element.querySelector("span").textContent
-        });
-        reloadWithFilters();
+        submitee.filterbar.setValue("level", element.querySelector("span").textContent);
     }
 
     function addEntityFilter(element) {
-        submitee.filterbar.add({
-            key: "entity",
-            displayKey: "实体",
-            value: element.textContent
-        });
-        reloadWithFilters();
+        submitee.filterbar.setValue("entity", element.textContent);
     }
 
     function addActivityFilter(element) {
-        submitee.filterbar.add({
-            key: "activity",
-            displayKey: "行为",
-            value: element.textContent
-        });
-        reloadWithFilters();
+        submitee.filterbar.setValue("activity", element.textContent);
+    }
+
+    function addDetailFilter() {
+        submitee.filterbar.setValue("detail");
     }
 
     function reloadWithFilters() {
@@ -148,6 +148,8 @@
         if (entityFilter) q += "&et=" + encodeURIComponent(entityFilter);
         let activityFilter = submitee.filterbar.get("activity");
         if (activityFilter) q += "&ac=" + encodeURIComponent(activityFilter);
+        let detailFilter = submitee.filterbar.get("detail");
+        if (detailFilter) q += "&dt=" + encodeURIComponent(detailFilter);
         return q;
     }
 
@@ -159,6 +161,7 @@
                 level: submitee.filterbar.get("level"),
                 entity: submitee.filterbar.get("entity"),
                 activity: submitee.filterbar.get("activity"),
+                detail: submitee.filterbar.get("detail"),
                 start: start,
                 limit: 20
             },
@@ -167,37 +170,11 @@
         })
     }
 
-    /**
-     *
-     * @param {Date} date
-     */
-    function truncateDate(date) {
-        date.setHours(0);
-        date.setMinutes(0)
-        date.setSeconds(0);
-        date.setMilliseconds(0);
-    }
-
-    function formatDate(time) {
-        time = parseInt(time);
-        let target = new Date(time);
-        let now = new Date();
-        truncateDate(target);
-        truncateDate(now);
-        let offset = (target.getTime() - now.getTime()) / (3600 * 1000 * 24);
-
-        let literal = new Date(time).toLocaleTimeString();
-        if (offset !== 0) {
-            literal += ` (${offset > 0 ? '+' + offset : offset})`;
-        }
-        return literal;
-    }
-
     function appendEventRow(time, collapse) {
         let relative = $("#insert-event-log-before")[0];
         let template = $("#template-event-log-row")[0];
         template.content.querySelector(".event-row-time").innerHTML =
-            `<button data-timestamp="${time}" onclick="addStartFilter(this)">${formatDate(time)}</button>`;
+            `<button data-timestamp="${time}" onclick="addStartFilter(this)">${submitee.relativeTimeLocale(time)}</button>`;
         template.content.querySelector(".event-row-time").setAttribute("title", new Date(parseInt(time)).toLocaleString());
         let levelHtml;
         switch (collapse["levelText"]) {
@@ -222,7 +199,6 @@
     }
 
     async function renderEventLogs(errors) {
-        submitee.eventPageEarlyTime = null;
         let collapseMap = {};
         for (let collapse of errors) {
             let id = makeid(6);
@@ -234,69 +210,62 @@
             let id = collapse["temp_id"];
             collapse["occurs"].forEach((t) => sort[t] = id);
         }
-        let early;
         Object.keys(sort).sort(function (o1, o2) {
             return o2 - o1;
         }).forEach(t => {
             let id = sort[t];
             appendEventRow(t, collapseMap[id]);
-            early = t;
+            submitee.eventPageEOF = t;
         })
-        submitee.eventPageEarlyTime = early;
-
-        if (Object.keys(sort).length) {
+        submitee.eventPageEOF -= 1;
+        if (!Object.keys(sort).length) {
             $(".event-eof-mark").removeClass("d-none");
-        }
-
-        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight
-            && submitee.eventPageEarlyTime) {
-            fetchEventLogs(renderEventLogs, submitee.eventPageEarlyTime);
-            submitee.eventPageEarlyTime = null;
         }
     }
 
-    function addFilterbarElements() {
-        let start = getQueryValue("st");
-        if ((start = parseInt(start))) {
-            submitee.filterbar.add({
-                key: "start",
-                displayKey: "起始时间",
-                value: start,
-                removeCallback: reloadWithFilters,
-                setValueCallback: reloadWithFilters,
-                datePicker: true
-            })
-        }
-        let level = getQueryValue("lv");
-        if (level) {
-            submitee.filterbar.add({
-                key: "level",
-                displayKey: "分级",
-                value: level,
-                removeCallback: reloadWithFilters,
-                setValueCallback: reloadWithFilters
-            })
-        }
-        let entity = getQueryValue("et");
-        if (entity) {
-            submitee.filterbar.add({
-                key: "entity",
-                displayKey: "实体",
-                value: entity,
-                removeCallback: reloadWithFilters,
-                setValueCallback: reloadWithFilters
-            });
-        }
-        let activity = getQueryValue("ac");
-        if (activity) {
-            submitee.filterbar.add({
-                key: "activity",
-                displayKey: "行为",
-                value: activity,
-                removeCallback: reloadWithFilters,
-                setValueCallback: reloadWithFilters
-            });
-        }
+    function initFilterbar() {
+        submitee.filterbar.init({
+            key: "start",
+            displayKey: "起始时间",
+            value: parseInt(getQueryValue("st")),
+            removeCallback: reloadWithFilters,
+            setValueCallback: reloadWithFilters,
+            datePicker: true
+        });
+        submitee.filterbar.init({
+            key: "level",
+            displayKey: "分级",
+            value: getQueryValue("lv"),
+            removeCallback: reloadWithFilters,
+            setValueCallback: reloadWithFilters,
+            selectionFeeder: {
+                "ERROR": "<span class='text-danger'>ERROR</span>",
+                "INFO": "<span class='text-info'>INFO</span>",
+                "WARN": "<span class='text-warning'>WARN</span>",
+                "OTHER": "<span class='text-secondary'>OTHER</span>"
+            }
+        });
+        submitee.filterbar.init({
+            key: "entity",
+            displayKey: "实体",
+            value: getQueryValue("et"),
+            removeCallback: reloadWithFilters,
+            setValueCallback: reloadWithFilters
+        });
+        submitee.filterbar.init({
+            key: "activity",
+            displayKey: "行为",
+            value: getQueryValue("ac"),
+            removeCallback: reloadWithFilters,
+            setValueCallback: reloadWithFilters
+        });
+        submitee.filterbar.init({
+            key: "detail",
+            displayKey: "信息",
+            value: getQueryValue("dt"),
+            removeCallback: reloadWithFilters,
+            setValueCallback: reloadWithFilters
+        })
     }
 
     submitee_safe.loadAllScript([
@@ -311,7 +280,7 @@
         "js/filterbar.js"
     ]).then(() => {
         submitee.filterbar = createFilterBar(".filter-container");
-        addFilterbarElements();
+        initFilterbar();
 
         let start = submitee.filterbar.get("start");
         if (start) start = parseInt(start);
@@ -325,10 +294,9 @@
         })
 
         window.onscroll = function (ev) {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
-                if (!submitee.eventPageEarlyTime) return;
-                fetchEventLogs(renderEventLogs, submitee.eventPageEarlyTime);
-                submitee.eventPageEarlyTime = null;
+            if ((window.innerHeight + window.scrollY + 1) >= document.body.offsetHeight) {
+                if (!submitee.eventPageEOF) return;
+                fetchEventLogs(renderEventLogs, submitee.eventPageEOF);
             }
         };
     });

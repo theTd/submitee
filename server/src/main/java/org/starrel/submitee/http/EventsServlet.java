@@ -30,6 +30,7 @@ public class EventsServlet extends SubmiteeHttpServlet {
         String level = req.getParameter("level");
         String entity = req.getParameter("entity");
         String activity = req.getParameter("activity");
+        String detail = req.getParameter("detail");
         String startStr = req.getParameter("start");
         String limitStr = req.getParameter("limit");
 
@@ -42,9 +43,12 @@ public class EventsServlet extends SubmiteeHttpServlet {
         if (activity != null) {
             activity = activity.replace("%", "[%]").replace("*", "%");
         }
+        if (detail != null) {
+            detail = detail.replace("%", "[%]").replace("*", "%");
+        }
 
         CompletableFuture<List<EventLogService.EventCollapseContext>> query =
-                SubmiteeServer.getInstance().getEventLogService().query(start, limit, level, entity, activity);
+                SubmiteeServer.getInstance().getEventLogService().query(start, limit, level, entity, activity, detail);
 
         AsyncContext asyncContext = req.startAsync();
         asyncContext.start(() -> {
