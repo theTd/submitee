@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 public interface AttributeSpec<TValue> {
 
@@ -66,4 +67,6 @@ public interface AttributeSpec<TValue> {
     void childUpdated(String path);
 
     JsonElement toJsonTree();
+
+    JsonElement toJsonTree(Predicate<String> filter);
 }

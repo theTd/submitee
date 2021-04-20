@@ -16,13 +16,13 @@
             align-items: center;
         }
 
-        .event-row-time {
-            text-align: center;
-        }
-
         .event-log-row:hover {
             box-shadow: inset 5px 0 0 0 gray;
             background-color: lightgray;
+        }
+
+        .event-row-time {
+            text-align: center;
         }
 
         .modal-dialog {
@@ -119,15 +119,15 @@
     }
 
     function addLevelFilter(element) {
-        submitee.filterbar.setValue("level", element.querySelector("span").textContent);
+        submitee.filterbar.setValue("level", element ? element.querySelector("span").textContent : null);
     }
 
     function addEntityFilter(element) {
-        submitee.filterbar.setValue("entity", element.textContent);
+        submitee.filterbar.setValue("entity", element ? element.textContent : null);
     }
 
     function addActivityFilter(element) {
-        submitee.filterbar.setValue("activity", element.textContent);
+        submitee.filterbar.setValue("activity", element ? element.textContent : null);
     }
 
     function addDetailFilter() {

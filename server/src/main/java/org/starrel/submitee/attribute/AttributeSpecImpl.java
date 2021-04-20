@@ -10,6 +10,7 @@ import org.starrel.submitee.SubmiteeServer;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Predicate;
 
 public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     private final AttributeSpecImpl<?> parent;
@@ -244,9 +245,15 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         ExceptionReporting.report(AttributeSpecImpl.class, "unhandled top level child update", "");
     }
 
-    @SuppressWarnings("unchecked")
+
     @Override
     public JsonElement toJsonTree() {
+        return toJsonTree(s -> true);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public JsonElement toJsonTree(Predicate<String> filter) {
         if (getSource() instanceof JsonTreeAttributeSource) {
             if (isList) {
                 return ((JsonTreeAttributeSource<Void>) getSource()).getArrayFromPath(fullPath(""), false);
@@ -264,7 +271,17 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
                         }
                     }
                 }
-                return self;
+                if (filter != null) {
+                    JsonObject filtered = new JsonObject();
+                    for (String key : self.keySet()) {
+                        if (filter.test(key)) {
+                            filtered.add(key, self.get(key));
+                        }
+                    }
+                    return filtered;
+                } else {
+                    return self;
+                }
             } else {
                 // is primitive
                 return ((JsonTreeAttributeSource<?>) getSource()).getElementFromPath(fullPath(""));
@@ -277,7 +294,19 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
                 ExceptionReporting.report(AttributeSpecImpl.class, "missing serializer", "missing serializer for " + rootType);
                 return null;
             }
-            return serializer.write(get());
+            JsonElement self = serializer.write(get());
+            if (!self.isJsonObject()) return self;
+            if (filter != null) {
+                JsonObject filtered = new JsonObject();
+                for (String key : self.getAsJsonObject().keySet()) {
+                    if (filter.test(key)) {
+                        filtered.add(key, self.getAsJsonObject().get(key));
+                    }
+                }
+                return filtered;
+            } else {
+                return self;
+            }
         }
     }
 

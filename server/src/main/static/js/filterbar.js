@@ -41,6 +41,7 @@ class FilterBarHandle {
         let selectionFeeder = props["selectionFeeder"];
         let setValueCallback = props["setValueCallback"];
         let datePicker = props["datePicker"];
+        let controller = props["controller"];
 
         if (this.ctx[key]) {
             console.warn("re init filterbar ctx: " + key);
@@ -54,12 +55,14 @@ class FilterBarHandle {
             selectionFeeder: selectionFeeder,
             setValueCallback: setValueCallback,
             datePicker: datePicker,
-            editing: false
+            editing: false,
+            controller: controller
         };
         this.ctx[key] = ctx;
 
-        ctx.controller = selectionFeeder ? new SelectionFilterbarController(ctx) :
-            datePicker ? new DatetimeFilterbarController(ctx) : new TextFilterbarController(ctx);
+        if (!controller) ctx.controller = selectionFeeder ? new SelectionFilterbarController() :
+            datePicker ? new DatetimeFilterbarController() : new TextFilterbarController();
+        ctx.controller.ctx = ctx;
 
         let displayValue = value ? ctx.controller.getLocaleValue(value) : "";
 
@@ -118,10 +121,6 @@ class FilterBarHandle {
 }
 
 class FilterbarController {
-    constructor(ctx) {
-        this.ctx = ctx;
-    }
-
     generateInputHtml(value) {
         return `<span class="alert alert-danger">存在问题的控制器</span>`;
     }
@@ -161,7 +160,6 @@ class TextFilterbarController extends FilterbarController {
 
     focus(jqForm) {
         jqForm.find("input")[0].focus();
-        console.log(jqForm.find("input")[0])
     }
 }
 
@@ -193,9 +191,8 @@ class SelectionFilterbarController extends FilterbarController {
 class DatetimeFilterbarController extends FilterbarController {
     generateInputHtml(value) {
         let time = (value ? new Date(value) : new Date());
-        time = new Date(time.getTime() - time.getTimezoneOffset() * 60000);
+        time = new Date(time.getTime() - (time.getTimezoneOffset() * 60000));
         let format = time.toISOString().split(".")[0];
-        console.log(format);
         return `<input type="datetime-local" value="${format}"/>`;
     }
 

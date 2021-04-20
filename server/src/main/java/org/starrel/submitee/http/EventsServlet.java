@@ -39,12 +39,15 @@ public class EventsServlet extends SubmiteeHttpServlet {
 
         if (entity != null) {
             entity = entity.replace("%", "[%]").replace("*", "%");
+            entity = "%" + entity + "%";
         }
         if (activity != null) {
             activity = activity.replace("%", "[%]").replace("*", "%");
+            activity = "%" + activity + "%";
         }
         if (detail != null) {
             detail = detail.replace("%", "[%]").replace("*", "%");
+            detail = "%" + detail + "%";
         }
 
         CompletableFuture<List<EventLogService.EventCollapseContext>> query =

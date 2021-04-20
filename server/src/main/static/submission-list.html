@@ -8,7 +8,40 @@
 
     <style>
         .submission-row {
+            padding: 1rem 0;
             font-size: 0.8rem;
+            word-break: break-word;
+            transition: 0.2s ease;
+            align-items: center;
+        }
+
+        .submission-row:hover {
+            box-shadow: inset 5px 0 0 0 gray;
+            background-color: lightgray;
+        }
+
+        .filter-button {
+            margin: 0;
+            padding: 0;
+            border: 1px transparent solid;
+            background-color: transparent;
+        }
+
+        .filter-button:hover {
+            border: 1px black solid;
+        }
+
+        .template-uuid-section {
+            cursor: pointer;
+            border: 1px transparent solid;
+        }
+
+        .template-uuid-section:hover {
+            border: 1px black solid;
+        }
+
+        .submission-debug {
+            margin: 0;
         }
     </style>
 </head>
@@ -31,10 +64,15 @@
     </div>
 </template>
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-1">模板</div>
+    <div class="row filter-container"></div>
+    <div class="row header">
+        <div class="col-1">
+            <button class="filter-button" onclick="addTidFilter()">模板</button>
+        </div>
         <div class="col-2">提交者</div>
-        <div class="col-2">时间</div>
+        <div class="col-2">
+            <button class="filter-button" onclick="addStartFilter()">时间</button>
+        </div>
         <div class="col-6">摘要</div>
         <div class="col-1"></div>
     </div>
@@ -67,13 +105,14 @@
     function showDetail(element) {
         submitee.currentSubmissionTarget =
             findParentAttributeByElement(element, "data-submitee-submission-uuid");
-        let pagePromise = submitee.getPage("submission-detail.html");
 
-        pagePromise.then(page => {
-            $(".modal .modal-title").text("提交详情");
+        $(".modal .modal-title").text("提交详情");
+        $(".modal .modal-body").html("<span class='spinner-border'></span>");
+        $(".modal").modal();
+        submitee.getPage("submission-detail.html").then(page => {
             $(".modal .modal-body").html(page);
-            $(".modal").modal();
-        })
+        });
+
     }
 
     /**
@@ -82,31 +121,84 @@
      * @returns {*}
      */
     function createSubmissionElement(submission) {
-        let t = document.querySelector("#template-submission-row");
+        let node = document.importNode(document.querySelector("#template-submission-row").content, true)
 
-        t.content.querySelector(".submission-row").setAttribute("data-submitee-submission-uuid", submission.attributeMap.get("unique-id"));
+        $(node).find(".submission-row").attr("data-submitee-submission-uuid", submission.attributeMap.get("unique-id"));
 
-        t.content.querySelector(".submission-template-id").innerHTML = "<p class='spinner-border spinner-border-sm'></p>";
-        t.content.querySelector(".submission-debug").textContent = submission.debug;
-        t.content.querySelector(".submission-time").textContent = submission.submitTime;
-        t.content.querySelector(".submission-user").innerHTML = submission.submitUser;
-        setTimeout(() => {
-            updateTemplateInfo(submission);
-        })
-        return document.importNode(t.content, true);
+        $(node).find(".submission-template-id").html("<p class='spinner-border spinner-border-sm'></p>");
+        $(node).find(".submission-debug").text(submission.debug.substr(0, submission.debug.length - 1));
+        $(node).find(".submission-time").html(`
+<button class="filter-button" onclick="addStartFilter(this)" data-timestamp="${submission.submitTime}">
+${submitee.relativeTimeLocale(submission.submitTime)}
+</button>
+`
+        ).attr("title",
+            new Date(submission.submitTime).toLocaleString());
+        $(node).find(".submission-user").html(submission.submitUser);
+        return node;
     }
 
-    async function updateTemplateInfo(submission) {
-        let t = await fetchSingleTemplateInfo(submission.attributeMap.get("template-uuid"));
-        let container = $(`.submission-row[data-submitee-submission-uuid=${submission.attributeMap.get("unique-id")}]`);
-        container.find(".submission-template-id").text(t.templateId + ":" + t.version);
-    }
-
-    function buildSubmissionList(submissionList) {
+    async function buildSubmissionList(submissionList) {
         let relative = $("#insert-submission-before")[0];
-        submissionList.forEach(function (value, key) {
-            relative.parentNode.insertBefore(createSubmissionElement(value), relative);
-        })
+
+        // template uuid=>promise map
+        let templatePromises = {};
+        // template uuid=>promise resolve,reject function map
+        let completeMap = {};
+        let setPromise = Array();
+
+        for (let submission of submissionList) {
+            let templateUUID = submission.templateUUID;
+            if (!templatePromises[templateUUID]) {
+                setPromise.push(new Promise(setResolve => {
+                    templatePromises[templateUUID] = new Promise((resolve, reject) => {
+                        completeMap[templateUUID] = {
+                            resolve: resolve,
+                            reject: reject
+                        }
+                        setResolve();
+                    });
+                }))
+            }
+        }
+
+        // wait for complete map all set
+        await Promise.all(setPromise);
+
+        // make batch-get request
+        fetchListedTemplateInfo(Object.keys(completeMap)).then(map => {
+            // resolve found
+            for (let id of Object.keys(map)) {
+                completeMap[id].resolve((map[id]));
+            }
+            // reject not found
+            Object.keys(templatePromises).filter(t => !map[t]).forEach(miss => {
+                completeMap[miss].reject();
+            })
+        }, error => {
+            for (let map of Object.values(completeMap)) {
+                map.reject(error);
+            }
+        });
+
+        for (let submission of submissionList) {
+            let p = templatePromises[submission.templateUUID];
+            relative.parentNode.insertBefore(createSubmissionElement(submission), relative);
+            let inserted = $(`.submission-row[data-submitee-submission-uuid=${submission.uniqueId}]`);
+            p.then(t => {
+                $(inserted).find(".submission-template-id").text(t.templateId + ":" + t.version);
+                $(inserted).find(".submission-template-id").html(`
+<div class="template-uuid-section filter-button" data-tid="${t.uniqueId}">
+<button class="filter-button" onclick="addTidFilter(this)" data-tid="${t.templateId}">${t.templateId}</button>
+:${t.version}</div>
+`
+                ).find(".template-uuid-section")[0].addEventListener("click", (evt) => addTidFilter(evt.target), false);
+
+            }, error => {
+                $(inserted).find(".submission-template-id").html("").append(
+                    createIconTooltip("error", "1rem", "red", `<span>${getMessageFromAjaxError(error)}</span>`, "top"));
+            });
+        }
     }
 
     function buildPagination(currentPage, maxPages) {
@@ -146,6 +238,49 @@
         return document.importNode(t.content, true);
     }
 
+    function fullQueryWithFilters(page) {
+        let q = "?method=submission-list";
+        page = page || parseInt(getQueryValue("page"));
+        q += "&page=" + page;
+
+        let tid = submitee.filterbar.get("tid");
+        if (tid) q += "&tid=" + encodeURIComponent(tid);
+        let start = submitee.filterbar.get("start");
+        if (start) q += "&start=" + start;
+        return q;
+    }
+
+    function addStartFilter(element) {
+        submitee.filterbar.setValue("start", element ? $(element).attr("data-timestamp") : null);
+    }
+
+    function addTidFilter(element) {
+        submitee.filterbar.setValue("tid", element ? $(element).attr("data-tid") : null);
+    }
+
+    function reloadWithFilters() {
+        window.location.href = fullQueryWithFilters();
+    }
+
+    function initFilterbar(templates, templateVersionMap) {
+        submitee.filterbar.init({
+            key: "tid",
+            displayKey: "模板",
+            value: getQueryValue("tid"),
+            setValueCallback: reloadWithFilters,
+            removeCallback: reloadWithFilters,
+            controller: new TemplateFilterbarController(templates, templateVersionMap)
+        })
+        submitee.filterbar.init({
+            key: "start",
+            displayKey: "起始时间",
+            value: parseInt(getQueryValue("start")),
+            setValueCallback: reloadWithFilters,
+            removeCallback: reloadWithFilters,
+            datePicker: true
+        })
+    }
+
     submitee_safe.loadAllScript([
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
         "https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js",
@@ -155,27 +290,59 @@
         "js/field-controllers.js",
         "js/toast.js",
         "js/session.js",
-    ]).then(() => {
+        "js/filterbar.js",
+        "js/template-filterbar-controller.js"
+    ]).then(async () => {
+        submitee.filterbar = createFilterBar(".filter-container");
+        let templates = await fetchTemplateInfo({}, false, 0, null, true);
+        let templateVersionMap = {};
+        for (let t of templates) {
+            let arr = templateVersionMap[t.templateId];
+            if (!arr) {
+                arr = Array();
+                templateVersionMap[t.templateId] = arr;
+            }
+            arr.push(t);
+        }
+        for (let arr of Object.values(templateVersionMap)) {
+            arr.sort((a, b) => {
+                return b.version - a.version;
+            });
+        }
+
+        initFilterbar(templates, templateVersionMap);
+
         const pageSize = 10;
         let page = parseInt(getQueryValue("page")) || 1;
+        let filters = {};
+        let tidFilter = submitee.filterbar.get("tid")
+        if (tidFilter) {
+            if (submitee.uuidPattern.test(tidFilter)) {
+                filters["template-uuid"] = tidFilter;
+            } else {
+                let or = Array();
+                filters["$or"] = or;
+                for (let t of templateVersionMap[tidFilter]) {
+                    or.push({"template-uuid": t.uniqueId});
+                }
+            }
+        }
+        let startFilter = submitee.filterbar.get("start");
+        if (startFilter) {
+            filters["submit-time"] = {"$gte": parseInt(startFilter)};
+        }
 
-        fetchSubmissionInfo({}).then(array => {
-            if (array.length === 0) {
+        fetchSubmissionSize(filters).then(size => {
+            if (size === 0) {
                 $(".empty-mark").removeClass("d-none");
                 return;
             }
-            let maxPages = Math.ceil(array.length / pageSize);
+
+            let maxPages = Math.ceil(size / pageSize);
             if (page > maxPages) page = maxPages;
             buildPagination(page, maxPages);
-
-            let shown = Array();
-            for (let i = pageSize * (page - 1); i < pageSize * page && i < array.length; i++) {
-                shown.push(array[i]);
-            }
-
-            buildSubmissionList(shown);
-        }, xhr => {
-            toast_ajax_error(xhr);
+            fetchSubmissionInfo(filters, (page - 1) * pageSize, pageSize)
+                .then(buildSubmissionList, toast_ajax_error);
         });
     });
 </script>

@@ -31,6 +31,7 @@
         </div>
     </div>
 </template>
+<span class="submission-detail-spinner spinner-border"></span>
 <p class="template-name" style="margin: 0 0 1rem 0; padding-left: 1rem;"></p>
 <div class="container md-1" style="width: 30rem; ">
     <div class="insert-fields-before"></div>
@@ -77,8 +78,11 @@
      */
     function loadSubmission(submission) {
         setCurrentTemplate(submission.attributeMap.get("template-uuid"), () => {
+            let relativeTimeLocale = submitee.relativeTimeLocale(submission.submitTime);
+            let timeLocale = new Date(submission.submitTime).toLocaleString();
+            $(".submission-detail-spinner").addClass("d-none");
             $(".template-name").html(`${submitee.currentTemplate.name}<span class="ml-1" style="font-size: 1rem; color: #e3e3e3">
- 由 ${submission.submitUser} 于 ${submission.submitTime} 提交</span>`);
+ 由 ${submission.submitUser} 于 <span title="${timeLocale}">${relativeTimeLocale}</span> 提交</span>`);
             let title = submission.submitUser + "于" + new Date(submission.submitTimeRaw).toLocaleTimeString() + "上传至" +
                 submitee.currentTemplate.templateId + ":" + submitee.currentTemplate.version;
             setTitle(title);

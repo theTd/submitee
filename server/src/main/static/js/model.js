@@ -95,14 +95,21 @@ class Submission {
         this.attributeMap = new AttributeMap(attributes);
     }
 
+    get uniqueId() {
+        return this.attributeMap.get("unique-id");
+    }
+
+    get templateUUID() {
+        return this.attributeMap.get("template-uuid");
+    }
+
     get submitUser() {
         if (this.attributeMap.get("submit-user.realm-type") === "anonymous") return "匿名用户";
         return this.attributeMap.get("submit-user.realm-type") + ":" + this.attributeMap.get("submit-user.user-id");
     }
 
     get submitTime() {
-        let date = new Date(this.attributeMap.get("submit-time"));
-        return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+        return this.attributeMap.get("submit-time");
     }
 
     get submitTimeRaw() {
@@ -313,7 +320,7 @@ async function fetchTemplateSize(filter, latest) {
     });
 }
 
-async function fetchTemplateInfo(filter, latest, start, length) {
+async function fetchTemplateInfo(filter, latest, start, length, abbrev) {
     return new Promise((resolve, reject) => {
         $.ajax({
             url: "../batch-get/template",
@@ -323,7 +330,8 @@ async function fetchTemplateInfo(filter, latest, start, length) {
                 latest: latest,
                 filter: filter,
                 start: start,
-                length: length
+                length: length,
+                abbrev: abbrev
             }),
             success: function (data) {
                 let all = Array();
@@ -349,24 +357,59 @@ async function fetchSingleTemplateInfo(uuid) {
         $.ajax({
             url: "../info/" + uuid,
             method: "GET",
-            success: function (data) {
-                resolve(new STemplate(data["body"]));
+            success: function (response) {
+                resolve(new STemplate(response["body"]));
             },
-            error: function (error) {
-                reject(error);
-            }
+            error: reject
         });
     });
 }
 
-async function fetchSubmissionInfo(filter, latest) {
+async function fetchListedTemplateInfo(uuidList) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: "../batch-get/template",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({list: uuidList}),
+            success: function (response) {
+                let map = {};
+                for (let r of response) {
+                    let body = r["body"];
+                    map[body["uuid"]] = new STemplate(body);
+                }
+                resolve(map);
+            },
+            error: reject
+        })
+    })
+}
+
+function fetchSubmissionSize(filter) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: "../batch-get/submission/size",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({filter: filter}),
+            success: function (response) {
+                resolve(parseInt(response))
+            },
+            error: reject
+        });
+    });
+}
+
+async function fetchSubmissionInfo(filter, start, length) {
     return new Promise((resolve, reject) => {
         $.ajax({
             url: "../batch-get/submission",
             method: "POST",
             contentType: "application/json",
             data: JSON.stringify({
-                filter: filter
+                filter: filter,
+                start: start,
+                length: length
             }),
             success: function (data) {
                 let all = Array();
@@ -375,9 +418,7 @@ async function fetchSubmissionInfo(filter, latest) {
                 }
                 resolve(all);
             },
-            error: function (xhr) {
-                reject(xhr);
-            }
+            error: reject
         });
     });
 }
@@ -592,7 +633,7 @@ submitee.relativeTimeLocale = function (time) {
 
     // region month
     let monthOff = now.getMonth() - date.getMonth();
-    if (Math.abs(monthOff) > 1) {
+    if (yearOff !== 0 || Math.abs(monthOff) > 1) {
         result += date.getMonth() + "月";
     } else {
         result += monthOff === 0 ? "" : (monthOff > 0 ? "上个月" : "下个月");
@@ -608,11 +649,15 @@ submitee.relativeTimeLocale = function (time) {
     }
     // endregion
 
+    let pad = function (number) {
+        if (number < 10) return '0' + number;
+        return number;
+    }
+
     // if (Math.abs(dayOff) > 1) return result;
-    result += ` ${date.getHours()}:${date.getMinutes()}`;
-    if (date.getDate() === now.getDate() && date.getHours() === now.getHours() && date.getMinutes() === now.getMinutes() &&
-        date.getSeconds() !== 0) {
-        result += ":" + date.getSeconds();
+    result += ` ${date.getHours()}:${pad(date.getMinutes())}`;
+    if (date.getDate() === now.getDate() && date.getSeconds() !== 0) {
+        result += ":" + pad(date.getSeconds());
     }
     return result;
 }
@@ -622,3 +667,4 @@ submitee.escapeRegex = function (value) {
 }
 
 submitee.mailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+submitee.uuidPattern = /\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b/;

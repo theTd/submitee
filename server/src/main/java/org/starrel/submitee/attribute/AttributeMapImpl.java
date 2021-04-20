@@ -34,17 +34,7 @@ public class AttributeMapImpl<TContext extends AttributeHolder<?>> extends Attri
 
     @Override
     public JsonObject toJsonTree(Predicate<String> pathFilter) {
-        JsonObject obj = super.toJsonTree().getAsJsonObject();
-        List<String> removes = new ArrayList<>(0);
-        for (String path : obj.keySet()) {
-            if (!pathFilter.test(path)) {
-                removes.add(path);
-            }
-        }
-        if (removes.isEmpty()) return obj;
-        obj = obj.deepCopy();
-        removes.forEach(obj::remove);
-        return obj;
+        return super.toJsonTree(pathFilter).getAsJsonObject();
     }
 
     @Override

@@ -76,7 +76,7 @@ public class EventLogService {
         if (level != null) sql += " AND `level`=?";
         if (entity != null) sql += entity.contains("%") ? " AND `entity` LIKE ?" : " AND `entity`=?";
         if (activity != null) sql += activity.contains("%") ? " AND `activity` LIKE ?" : " AND `activity`=?";
-        if (detail != null) sql += detail.contains("%") ? " AND `detail` LIKE ?" : "AND `detail`=?";
+        if (detail != null) sql += detail.contains("%") ? " AND `detail` LIKE ?" : " AND `detail`=?";
 
         sql += " ORDER BY `time` DESC LIMIT ?";
         try (Connection conn = dataSource.getConnection()) {
