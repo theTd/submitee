@@ -63,6 +63,8 @@ public class BatchGetServlet extends AbstractJsonServlet {
                 JsonObject filter = JsonUtil.parseObject(body, "filter");
                 if (filter == null) filter = new JsonObject();
 
+                JsonObject order = JsonUtil.parseObject(body, "order");
+
                 JsonArray idList = JsonUtil.parseArray(body, "list");
 
                 boolean getSize = uriParts.length == 2 && uriParts[1].equalsIgnoreCase("size");
@@ -105,7 +107,7 @@ public class BatchGetServlet extends AbstractJsonServlet {
 
                             try {
                                 Document query = Document.parse(SubmiteeServer.GSON.toJson(filter));
-                                patchFilter(query);
+                                query = (Document) patchSelector(query);
                                 objects.addAll(SubmiteeServer.getInstance().getTemplateKeeper().getByQuery(query));
 
                                 if (latest) {
@@ -127,8 +129,13 @@ public class BatchGetServlet extends AbstractJsonServlet {
                         abbrevFilter = SUBMISSION_ABBREV_FILTER;
                         try {
                             Document query = Document.parse(SubmiteeServer.GSON.toJson(filter));
-                            patchFilter(query);
-                            objects.addAll(SubmiteeServer.getInstance().getSubmissions(query));
+                            query = (Document) patchSelector(query);
+                            Document orderBson = null;
+                            if (order != null) {
+                                orderBson = Document.parse(SubmiteeServer.GSON.toJson(order));
+                                orderBson = (Document) patchSelector(orderBson);
+                            }
+                            objects.addAll(SubmiteeServer.getInstance().getSubmissions(query, orderBson));
                         } catch (Exception e) {
                             ExceptionReporting.report(BatchGetServlet.class, "fetching submissions", e);
                             responseInternalError(req, resp);
@@ -181,14 +188,14 @@ public class BatchGetServlet extends AbstractJsonServlet {
         });
     }
 
-    private static Object patchFilter(Object documentOrArray) {
+    private static Object patchSelector(Object documentOrArray) {
         if (documentOrArray instanceof Document) {
             Document document = ((Document) documentOrArray);
             for (String key : new ArrayList<>(document.keySet())) {
                 if (key.startsWith("$")) {
-                    document.put(key, patchFilter(document.get(key)));
+                    document.put(key, patchSelector(document.get(key)));
                 } else {
-                    document.put("body." + key, patchFilter(document.remove(key)));
+                    document.put("body." + key, patchSelector(document.remove(key)));
                 }
             }
             return document;
@@ -197,7 +204,7 @@ public class BatchGetServlet extends AbstractJsonServlet {
             List<Document> array = (List<Document>) documentOrArray;
             ListIterator<Document> iterator = array.listIterator();
             while (iterator.hasNext()) {
-                iterator.set((Document) patchFilter(iterator.next()));
+                iterator.set((Document) patchSelector(iterator.next()));
             }
             return array;
         } else {

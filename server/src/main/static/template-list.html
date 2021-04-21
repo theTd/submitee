@@ -10,8 +10,16 @@
 
     <style>
         .s-template-row {
-            margin-top: 0.5rem;
-            margin-bottom: 0.5rem;
+            padding: 1rem 0;
+            /*font-size: 0.8rem;*/
+            word-break: break-word;
+            transition: 0.2s ease;
+            align-items: center;
+        }
+
+        .s-template-row:hover {
+            box-shadow: inset 5px 0 0 0 gray;
+            background-color: lightgray;
         }
 
         .s-template-row > .col {
@@ -130,7 +138,7 @@
     </li>
 </template>
 
-<div class="container-fluid">
+<div class="container-fluid" style="min-width: 960px">
     <div class="row filter-container"></div>
     <div class="row">
         <div class="col s-template-id header">
@@ -272,8 +280,10 @@
         if (template.published) {
             $(node).find(".template-link-container").removeClass("d-none").append(
                 createOutFlowIconTooltip("link", "2rem", "gray", "复制链接", "top", () => {
-                    navigator.clipboard.writeText(template.submissionPageLink).then(() => {
+                    submitee.copyToClipboard(template.submissionPageLink, () => {
                         create_toast("提示", "已复制到剪切板", 2000, "copy-submission-link");
+                    }, () => {
+                        create_toast("重要提示", "<span style='color: red'>未能与剪切板交互</span>");
                     });
                 })
             )

@@ -417,13 +417,13 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public List<SubmissionImpl> getSubmissions(Bson filter) throws ExecutionException {
-        return submissionKeeper.getSubmissions(filter);
+    public List<SubmissionImpl> getSubmissions(Bson filter, Bson order) throws ExecutionException {
+        return submissionKeeper.getSubmissions(filter, order);
     }
 
     @Override
-    public List<UUID> getSubmissionIdsOfUser(UserDescriptor userDescriptor) {
-        return submissionKeeper.getSubmissionUUIDs(Filters.eq("body.submit-user"));
+    public List<UUID> getSubmissionIdsOfUser(UserDescriptor userDescriptor, Bson order) {
+        return submissionKeeper.getSubmissionUUIDs(Filters.eq("body.submit-user"), order);
     }
 
     @Override

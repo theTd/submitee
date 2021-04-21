@@ -31,13 +31,13 @@
             transition: .2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
         }
 
-        .s-field:hover {
-            box-shadow: inset 0 -4px 0 0 #b7b7b7;
-        }
+        /*.s-field:hover {*/
+        /*    box-shadow: inset 0 -4px 0 0 #b7b7b7;*/
+        /*}*/
 
-        .s-field-editing:hover {
-            box-shadow: 0 0 0 3px rgb(255, 164, 7) !important;
-        }
+        /*.s-field-editing:hover {*/
+        /*    box-shadow: 0 0 0 3px rgb(255, 164, 7) !important;*/
+        /*}*/
 
         .s-field-editing {
             padding-top: 0.5rem;
@@ -150,7 +150,7 @@
     </div>
 </template>
 
-<div class="container-fluid main">
+<div class="container-fluid main" style="min-width: 960px">
     <nav class="row col breadcrumb">
         <div class="breadcrumb-item">所有模板</div>
         <div class="breadcrumb-item" id="breadcrumb-template-name"></div>
@@ -252,7 +252,7 @@
 
 </div>
 
-<div class="modal" tabindex="-1" role="dialog">
+<div class="modal" tabindex="-1" role="dialog" style="z-index: 20001">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -333,6 +333,7 @@
         }
 
         container.parentNode.replaceChild(createFieldRow(field), container);
+        // $(`.s-field[data-submitee-field-name=${field.name}]`)[0].scrollIntoView();
         dirty();
     }
 
@@ -439,6 +440,7 @@
         setTimeout(() => {
             let commentEditor = new window.wangEditor('#' + editorId);
             commentEditor.config.excludeMenus = ['todo'];
+            commentEditor.config.zIndex = 100;
             commentEditor.create();
             field["commentEditor"] = commentEditor;
         }, 1);
@@ -455,6 +457,7 @@
         let controller = submitee.fieldControllers[field.type];
         let confHtml;
         if (controller && (confHtml = controller.generateConfigurationHtml(field))) {
+            template.content.querySelector(".field-configuration").id = controller.getContainerId(field);
             template.content.querySelector(".field-configuration").innerHTML = `<div class="container-fluid">${confHtml}</div>`;
         } else {
             template.content.querySelector(".field-configuration").innerHTML = "";
@@ -521,6 +524,7 @@
         let editor = new window.wangEditor('#template-desc');
         editor.config.excludeMenus = ['todo'];
         editor.config.onchange = dirty;
+        editor.config.zIndex = 100;
         editor.create();
         submitee.currentTemplate.descEditor = editor;
     }
@@ -648,7 +652,7 @@
         if (submitee.currentTemplate.published) {
             $(".template-status-text").html(`<p class="alert alert-info">已发布，过去一小时内已收到10个提交，一共收到10个提交，其中6个未读</p>`);
             $("#btn-template-link").removeClass("d-none").on('click', () => {
-                navigator.clipboard.writeText(submitee.currentTemplate.submissionPageLink).then(() => {
+                submitee.copyToClipboard(submitee.currentTemplate.submissionPageLink, () => {
                     $("#btn-template-link").popover({
                         container: 'body',
                         content: '已复制到剪切板',
@@ -657,7 +661,7 @@
                     }).popover('show');
                 }, () => {
                     create_toast("重要提示", "<span style='color: red'>未能与剪切板交互</span>");
-                });
+                })
             });
 
             $("#btn-cancel-template").removeClass("d-none").on("click", () => {
@@ -670,9 +674,7 @@
                             window.location.reload();
                         }, 500)
                     },
-                    error: function (xhr) {
-                        toast_ajax_error(xhr);
-                    }
+                    error: toast_ajax_error
                 });
             });
             $("#btn-revision-template").removeClass("d-none").on("click", () => {
@@ -691,9 +693,7 @@
                             window.location.href = "?method=edit-template&target=" + response;
                         }, 500)
                     },
-                    error: function (xhr) {
-                        toast_ajax_error(xhr);
-                    }
+                    error: toast_ajax_error
                 });
             });
         } else {
@@ -713,6 +713,28 @@
             });
 
             $("#btn-publish-template").removeClass("d-none").on('click', () => {
+                let errors = {};
+                for (let field of submitee.currentTemplate.fields) {
+                    let error = submitee.fieldControllers[field.type].validateConfiguration(field);
+                    if (error) errors[field.name] = error;
+                }
+                if (Object.keys(errors).length > 0) {
+                    let content = '';
+                    for (let f of Object.keys(errors)) {
+                        let error = errors[f];
+                        content += `<p>${f}:&nbsp;<span style="color: red">${error}</span></p>`;
+                    }
+                    $("#btn-publish-template").popover({
+                        container: 'body',
+                        content: content,
+                        title: "请检查字段配置",
+                        html: true,
+                        placement: 'bottom',
+                        trigger: 'focus',
+                        sanitizeFn: (content) => content
+                    }).popover('show');
+                    return;
+                }
                 $.ajax({
                     url: `../template-control/${submitee.currentTemplate.uniqueId}/publish/`,
                     method: "GET",
@@ -722,9 +744,7 @@
                             window.location.reload();
                         }, 500)
                     },
-                    error: function (xhr) {
-                        toast_ajax_error(xhr);
-                    }
+                    error: toast_ajax_error
                 });
             });
         }
@@ -766,12 +786,8 @@
 
                 // check changes made every 2 seconds
                 setInterval(checkAndSync, 2000);
-            }, error => {
-                toast_ajax_error(error);
-            })
-        }, error => {
-            toast_ajax_error(error);
-        })
+            }, toast_ajax_error);
+        }, toast_ajax_error);
 
         submitee.beforeUnloadChecker = function () {
             if (!submitee.currentTemplate.latest) {

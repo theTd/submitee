@@ -89,5 +89,7 @@ a .material-icons {
     position: absolute;
     left: 3px;
     top: -3px;
-    line-height: normal;
+    line-height: 22px;
+    font-family: monospace;
+    font-size: 21px;
 }

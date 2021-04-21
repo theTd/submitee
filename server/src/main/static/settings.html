@@ -100,7 +100,7 @@
         </div>
     </div>
 </template>
-<div class="container-fluid main">
+<div class="container-fluid main" style="min-width: 960px">
     <div class="row">
         <h4>文件存储</h4>
         <div class="container-fluid" id="container-blob-storage">
@@ -438,6 +438,7 @@
         $("#input-disable-register-message").html(configuration["register-disable-message"] || "");
 
         submitee.registerToggleEditor = new window.wangEditor('#input-disable-register-message');
+        submitee.registerToggleEditor.config.zIndex = 100;
         submitee.registerToggleEditor.config.excludeMenus = ['todo'];
         submitee.registerToggleEditor.config.onchange = changeHook;
         submitee.registerToggleEditor.create();

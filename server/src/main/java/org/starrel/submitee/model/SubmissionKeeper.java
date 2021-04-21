@@ -33,9 +33,10 @@ public class SubmissionKeeper {
         mongoDatabase = SubmiteeServer.getInstance().getMongoDatabase();
     }
 
-    public List<UUID> getSubmissionUUIDs(Bson filters) {
+    public List<UUID> getSubmissionUUIDs(Bson filters, Bson order) {
         List<UUID> ids = new ArrayList<>();
         MongoCursor<Document> r = mongoDatabase.getCollection(Submission.ATTRIBUTE_COLLECTION_NAME).find(filters)
+                .sort(order)
                 .projection(Projections.include("id")).cursor();
         while (r.hasNext()) {
             ids.add(UUID.fromString(r.next().getString("id")));
@@ -43,9 +44,9 @@ public class SubmissionKeeper {
         return ids;
     }
 
-    public List<SubmissionImpl> getSubmissions(Bson filters) throws ExecutionException {
+    public List<SubmissionImpl> getSubmissions(Bson filters, Bson order) throws ExecutionException {
         List<SubmissionImpl> result = new ArrayList<>();
-        for (UUID uuid : getSubmissionUUIDs(filters)) {
+        for (UUID uuid : getSubmissionUUIDs(filters, order)) {
             result.add(getSubmission(uuid));
         }
         return result;

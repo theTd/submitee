@@ -101,6 +101,13 @@ class RadioFieldController extends FieldController {
         });
         field.attributeMap.set("values", values);
     }
+
+    validateConfiguration(field) {
+        let values = field.attributeMap.get("values");
+        if (!values || values.length === 0) {
+            return "尚未配置可选项目";
+        }
+    }
 }
 
 submitee.fieldControllers['radio'] = new RadioFieldController();
@@ -166,6 +173,13 @@ class CheckboxFieldController extends FieldController {
         });
         field.attributeMap.set("values", values);
     }
+
+    validateConfiguration(field) {
+        let values = field.attributeMap.get("values");
+        if (!values || values.length === 0) {
+            return "尚未配置可选项目";
+        }
+    }
 }
 
 submitee.fieldControllers['checkbox'] = new CheckboxFieldController();
@@ -184,6 +198,7 @@ class RichTextFieldController extends FieldController {
             let element = document.getElementById(editorId);
             if (!element) return;
             let editor = new window.wangEditor(element);
+            editor.config.zIndex = 100;
             editor.config.menus = [
                 'bold',
                 'fontSize',
@@ -198,6 +213,24 @@ class RichTextFieldController extends FieldController {
                 'justify',
                 'code',
             ]
+            if (field.attributeMap.get("allow-upload-images")) {
+                editor.config.menus.push("image");
+                editor.config.uploadImgServer = `../upload/${field.owner.uniqueId}/${field.name}`;
+                editor.config.uploadImgHooks = {
+                    fail: function (xhr, editor, result) {
+                        toast_ajax_error(xhr);
+                    },
+                    error: function (xhr, editor) {
+                        toast_ajax_error(xhr)
+                    },
+                    timeout: function (xhr, editor) {
+                        toast_ajax_error(xhr);
+                    },
+                    customInsert: function (insertImg, result, editor) {
+                        insertImg(result.url)
+                    }
+                }
+            }
             editor.create();
             element.editor = editor;
         }, 1);
@@ -208,6 +241,55 @@ class RichTextFieldController extends FieldController {
     resolveSubmission(field) {
         let editorId = this.getContainerId(field) + "-editor";
         return document.getElementById(editorId).editor.txt.html();
+    }
+
+    generateConfigurationHtml(field) {
+        let containerId = this.getContainerId(field);
+        let id = makeid(6);
+
+        let storage = field.attributeMap.get("blob-storage");
+        let options = submitee.createBlobStorageOptions(storage);
+
+        let allowUploadImages = field.attributeMap.get("allow-upload-images");
+        let checked = allowUploadImages ? "checked" : "";
+        let collapsed = allowUploadImages ? "" : "collapse";
+
+        setTimeout(() => {
+            let checkbox = $("#" + id);
+            let collapse = $("#" + containerId).find(".richtext-config-blobstorage");
+            checkbox.on("change", () => {
+                let allow = checkbox.prop("checked");
+                collapse.collapse(allow ? 'show' : 'hide');
+            }).bootstrapToggle();
+        });
+        return `
+<div class="row col">
+<label class="w-100" for="${id}">允许上传图片</label>
+<input type="checkbox" data-size="sm" data-toggle="toggle" data-on="开" data-off="关" id="${id}" ${checked}/>
+</div>
+<div class="row col ${collapsed} richtext-config-blobstorage" data-toggle="collapse">
+<label class="w-100" for="${id}-storage">使用文件存储:</label>
+</div>
+<div class="row col ${collapsed} richtext-config-blobstorage" data-toggle="collapse">
+<select id="${containerId}-storage">${options}</select>
+</div>
+`;
+    }
+
+    applyConfiguration(field) {
+        let containerId = this.getContainerId(field);
+        let allow = $("#" + containerId).find("input[type=checkbox]").prop("checked");
+        let storage = $("#" + containerId + "-storage option:selected").val();
+        field.attributeMap.set("allow-upload-images", allow);
+        field.attributeMap.set("blob-storage", storage);
+    }
+
+    validateConfiguration(field) {
+        let allow = field.attributeMap.get("allow-upload-images");
+        let storage = field.attributeMap.get("blob-storage");
+        if (allow) {
+            return submitee.validateBlobStorage(storage);
+        }
     }
 }
 
@@ -274,13 +356,8 @@ class FileFieldController extends FieldController {
     generateConfigurationHtml(field) {
         let id = this.getContainerId(field);
 
-        let value = field.attributeMap.get("blob_storage");
-        let options = `<option name="${id}-storage" value="">---------------</option>`;
-        Object.keys(configuration["blob_storages"]).forEach(storageName => {
-            let providerName = configuration["blob_storage_providers"][configuration["blob_storages"][storageName]['provider']];
-            let selected = value === storageName ? "selected" : ""
-            options += `<option name="${id}-storage" value="${storageName}" ${selected}>${storageName} (${providerName})</option>`;
-        });
+        let value = field.attributeMap.get("blob-storage");
+        let options = submitee.createBlobStorageOptions(value);
 
         let maxFiles = field.attributeMap.get("max-files");
         let types = field.attributeMap.get("allowed-types")
@@ -296,9 +373,7 @@ class FileFieldController extends FieldController {
 <label class="w-100" for="${id}-storage">使用文件存储:</label>
 </div>
 <div class="row col">
-<select id="${id}-storage">
-${options}
-</select>
+<select id="${id}-storage">${options}</select>
 </div>
 <div class="row mt-2 col">
 <label for="${id}-max-files">最大文件数量</label>
@@ -320,7 +395,7 @@ ${options}
         let id = this.getContainerId(field);
 
         let storage = $(`#${id}-storage option:selected`).val();
-        field.attributeMap.set("blob_storage", storage);
+        field.attributeMap.set("blob-storage", storage);
 
         let max = parseInt($(`#${id}-max-files`).val())
         field.attributeMap.set("max-files", max);
@@ -334,18 +409,8 @@ ${options}
     }
 
     validateConfiguration(field) {
-        let value = field.attributeMap.get("blob_storage");
-        if (!value) {
-            return "未配置文件存储";
-        }
-        if (!configuration["blob_storages"][value]) {
-            return "配置的文件存储已不再可用";
-        }
-        if (configuration["blob_storage_errors"]) {
-            if (configuration["blob_storage_errors"][value]) {
-                return "配置的文件存储存在错误: " + configuration["blob_storage_errors"][value];
-            }
-        }
+        let value = field.attributeMap.get("blob-storage");
+        return submitee.validateBlobStorage(value);
     }
 
     async generateReportHtml(field, value) {
@@ -378,3 +443,26 @@ ${options}
 }
 
 submitee.fieldControllers["file"] = new FileFieldController();
+submitee.createBlobStorageOptions = function (selected, name) {
+    let options = `<option name="${name}" value="">---------------</option>`;
+    Object.keys(configuration["blob_storages"]).forEach(storageName => {
+        let providerName = configuration["blob_storage_providers"][configuration["blob_storages"][storageName]['provider']];
+        let sel = selected === storageName ? "selected" : ""
+        options += `<option name="${name}" value="${storageName}" ${sel}>${storageName} (${providerName})</option>`;
+    });
+    return options;
+}
+
+submitee.validateBlobStorage = function (value) {
+    if (!value) {
+        return "未配置文件存储";
+    }
+    if (!configuration["blob_storages"][value]) {
+        return "配置的文件存储已不再可用";
+    }
+    if (configuration["blob_storage_errors"]) {
+        if (configuration["blob_storage_errors"][value]) {
+            return "配置的文件存储存在错误: " + configuration["blob_storage_errors"][value];
+        }
+    }
+}

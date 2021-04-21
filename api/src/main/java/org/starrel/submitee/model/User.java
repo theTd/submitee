@@ -22,7 +22,7 @@ public interface User extends AttributeHolder<User> {
 
     String getId();
 
-    List<? extends Submission> getSubmissions(Bson query) throws ExecutionException;
+    List<? extends Submission> getSubmissions(Bson query, Bson order) throws ExecutionException;
 
     Submission createSubmission(STemplate template);
 

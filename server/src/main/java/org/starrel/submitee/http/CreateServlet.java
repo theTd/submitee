@@ -130,6 +130,7 @@ public class CreateServlet extends AbstractJsonServlet {
                 // endregion
 
                 JsonObject submissionBody = JsonUtil.parseObject(body, "body");
+                submissionBody = Util.sanitizeJson(submissionBody);
                 String debugInfo = JsonUtil.parseString(body, "debug");
 
                 Submission submission = getSession(req).getUser().createSubmission(template);

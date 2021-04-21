@@ -36,9 +36,9 @@ public abstract class AbstractUser implements User {
     }
 
     @Override
-    public List<? extends Submission> getSubmissions(Bson query) throws ExecutionException {
+    public List<? extends Submission> getSubmissions(Bson query, Bson order) throws ExecutionException {
         return SubmiteeServer.getInstance().getSubmissions(Filters.and(query,
-                Filters.eq("body.submit-user", descriptor.toString())));
+                Filters.eq("body.submit-user", descriptor.toString())), order);
     }
 
     @Override

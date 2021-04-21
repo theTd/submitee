@@ -2,13 +2,14 @@ package org.starrel.submitee;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.ByteStreams;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import org.apache.commons.mail.HtmlEmail;
 import org.eclipse.jetty.http.HttpStatus;
+import org.owasp.html.HtmlPolicyBuilder;
+import org.owasp.html.PolicyFactory;
+import org.owasp.html.Sanitizers;
 import org.starrel.submitee.attribute.AttributeSpec;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -17,9 +18,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -173,5 +172,53 @@ public abstract class Util {
             email.send();
             return null;
         });
+    }
+
+    private final static PolicyFactory POLICY;
+
+    static {
+        POLICY = new HtmlPolicyBuilder()
+                .allowElements("font")
+                .allowAttributes("color").onElements("font")
+                .allowAttributes("face").onElements("font")
+                .allowElements("pre")
+                .allowElements("code")
+                .allowAttributes("class").onElements("code")
+                .allowElements("xmp")
+                .toFactory().and(Sanitizers.FORMATTING).and(Sanitizers.LINKS)
+                .and(Sanitizers.BLOCKS).and(Sanitizers.STYLES).and(Sanitizers.TABLES).and(Sanitizers.IMAGES);
+    }
+
+    public static String sanitizeHtml(String untrustedHtml) {
+        return POLICY.sanitize(untrustedHtml);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T extends JsonElement> T sanitizeJson(T element) {
+        if (element == null || element.isJsonNull()) return null;
+        if (element.isJsonObject()) {
+            JsonObject obj = element.getAsJsonObject();
+            for (String key : new ArrayList<>(obj.keySet())) {
+                obj.add(key, sanitizeJson(obj.get(key)));
+            }
+            return (T) obj;
+        } else if (element.isJsonArray()) {
+            JsonArray arr = element.getAsJsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                arr.set(i, sanitizeJson(arr.get(i)));
+            }
+            return (T) arr;
+        } else if (element.isJsonPrimitive()) {
+            JsonPrimitive primitive = element.getAsJsonPrimitive();
+            if (primitive.isString()) {
+                String str = primitive.getAsString();
+                if (str.contains("<")) {
+                    return (T) new JsonPrimitive(sanitizeHtml(str));
+                }
+            }
+            return (T) primitive;
+        } else {
+            return element;
+        }
     }
 }

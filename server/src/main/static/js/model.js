@@ -385,13 +385,16 @@ async function fetchListedTemplateInfo(uuidList) {
     })
 }
 
-function fetchSubmissionSize(filter) {
+function fetchSubmissionSize(filter, order) {
     return new Promise((resolve, reject) => {
         $.ajax({
             url: "../batch-get/submission/size",
             method: "POST",
             contentType: "application/json",
-            data: JSON.stringify({filter: filter}),
+            data: JSON.stringify({
+                filter: filter,
+                order: order
+            }),
             success: function (response) {
                 resolve(parseInt(response))
             },
@@ -400,7 +403,7 @@ function fetchSubmissionSize(filter) {
     });
 }
 
-async function fetchSubmissionInfo(filter, start, length) {
+async function fetchSubmissionInfo(filter, start, length, order) {
     return new Promise((resolve, reject) => {
         $.ajax({
             url: "../batch-get/submission",
@@ -409,7 +412,8 @@ async function fetchSubmissionInfo(filter, start, length) {
             data: JSON.stringify({
                 filter: filter,
                 start: start,
-                length: length
+                length: length,
+                order: order
             }),
             success: function (data) {
                 let all = Array();
@@ -664,6 +668,11 @@ submitee.relativeTimeLocale = function (time) {
 
 submitee.escapeRegex = function (value) {
     return value.replace(/[\-\[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+}
+
+submitee.copyToClipboard = function (text, success, error) {
+    if (!navigator.clipboard) error();
+    navigator.clipboard.writeText(text).then(success, error);
 }
 
 submitee.mailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;

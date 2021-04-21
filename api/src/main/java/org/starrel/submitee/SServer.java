@@ -68,9 +68,9 @@ public interface SServer {
 
     Submission getSubmission(UUID uniqueId) throws ExecutionException;
 
-    List<? extends Submission> getSubmissions(Bson query) throws ExecutionException;
+    List<? extends Submission> getSubmissions(Bson query, Bson order) throws ExecutionException;
 
-    List<UUID> getSubmissionIdsOfUser(UserDescriptor userDescriptor);
+    List<UUID> getSubmissionIdsOfUser(UserDescriptor userDescriptor, Bson order);
 
     Submission createSubmission(UserDescriptor userDescriptor, STemplate template);
 

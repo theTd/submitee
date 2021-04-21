@@ -42,6 +42,7 @@
 
         .submission-debug {
             margin: 0;
+            max-height: 10rem;
         }
     </style>
 </head>
@@ -63,7 +64,7 @@
         </div>
     </div>
 </template>
-<div class="container-fluid">
+<div class="container-fluid" style="min-width: 960px">
     <div class="row filter-container"></div>
     <div class="row header">
         <div class="col-1">
@@ -84,7 +85,7 @@
     </nav>
 </div>
 <div class="modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog" role="document" style="max-width: 95vw; width: max-content">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"></h5>
@@ -329,10 +330,11 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         }
         let startFilter = submitee.filterbar.get("start");
         if (startFilter) {
-            filters["submit-time"] = {"$gte": parseInt(startFilter)};
+            filters["submit-time"] = {"$lte": parseInt(startFilter)};
         }
 
-        fetchSubmissionSize(filters).then(size => {
+        let order = {"submit-time": -1};
+        fetchSubmissionSize(filters, order).then(size => {
             if (size === 0) {
                 $(".empty-mark").removeClass("d-none");
                 return;
@@ -341,7 +343,7 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
             let maxPages = Math.ceil(size / pageSize);
             if (page > maxPages) page = maxPages;
             buildPagination(page, maxPages);
-            fetchSubmissionInfo(filters, (page - 1) * pageSize, pageSize)
+            fetchSubmissionInfo(filters, (page - 1) * pageSize, pageSize, order)
                 .then(buildSubmissionList, toast_ajax_error);
         });
     });
