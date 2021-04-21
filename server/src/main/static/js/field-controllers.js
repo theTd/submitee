@@ -418,7 +418,7 @@ class FileFieldController extends FieldController {
             let html = "";
             for (let key of value) {
                 let meta = await submitee.getFileMeta(key);
-                html += `<p><a href="../get-file/${key}"><i class="material-icons">link</i>${meta["filename"]} (${this.formatFilesize(meta["size"])})</a></p>`;
+                html += `<p style="margin: 0"><a href="../get-file/${key}"><i class="material-icons">link</i>${meta["filename"]} (${this.formatFilesize(meta["size"])})</a></p>`;
             }
             resolve(html);
         });

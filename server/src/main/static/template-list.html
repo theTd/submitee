@@ -497,7 +497,11 @@
         }
         let tidFilter = submitee.filterbar.get("tid");
         if (tidFilter) {
-            filters["template-id"] = {"$regex": convertInfoRegex(tidFilter)};
+            if (tidFilter.indexOf("*") >= 0) {
+                filters["template-id"] = {"$regex": convertInfoRegex(tidFilter)};
+            } else {
+                filters["template-id"] = tidFilter;
+            }
         }
         let nameFilter = submitee.filterbar.get("name");
         if (nameFilter) {
@@ -508,7 +512,10 @@
             filters["comment"] = {"$regex": convertInfoRegex(commentFilter)};
         }
 
-        fetchTemplateSize(filters, false).then(size => {
+        console.log(filters)
+
+        let order = {"create-time": -1};
+        fetchTemplateSize(filters, false, order).then(size => {
             if (size === 0) {
                 $(".empty-mark").removeClass("d-none");
                 return;
@@ -516,7 +523,7 @@
             let maxPages = Math.ceil(size / pageSize);
             if (page > maxPages) page = maxPages;
             buildPagination(page, maxPages);
-            fetchTemplateInfo(filters, false, (page - 1) * pageSize, pageSize)
+            fetchTemplateInfo(filters, false, (page - 1) * pageSize, pageSize, true, order)
                 .then(buildTemplateList, toast_ajax_error)
         }, toast_ajax_error);
     });

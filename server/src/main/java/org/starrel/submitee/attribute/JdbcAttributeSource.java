@@ -91,6 +91,11 @@ public class JdbcAttributeSource implements AttributeSource {
     }
 
     @Override
+    public void addListAttribute(String path, int index, Object value) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public <TValue> List<TValue> getListAttributes(String path, Class<TValue> type) {
         throw new UnsupportedOperationException();
     }

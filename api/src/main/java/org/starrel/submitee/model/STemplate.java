@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
-public interface STemplate extends AttributeHolder<STemplate> {
+public interface STemplate extends AttributeHolder<STemplate>, EventLogHolder {
 
     UUID getUniqueId();
 

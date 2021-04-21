@@ -55,6 +55,10 @@ public class PasteServlet extends AbstractJsonServlet {
                         responseClassifiedError(req, resp, ClassifiedErrors.TEMPLATE_ALREADY_PUBLISHED);
                         return;
                     }
+                    if (template.getPublishTime() != null) {
+                        responseClassifiedError(req, resp, ClassifiedErrors.EVER_PUBLISHED_TEMPLATE);
+                        return;
+                    }
 //                    STemplateImpl.CONSTANT_ATTRIBUTES.forEach(content::remove);
 //                    for (String constantAttribute : STemplateImpl.CONSTANT_ATTRIBUTES) {
 //                        content.

@@ -65,6 +65,7 @@ public class TemplateControlServlet extends SubmiteeHttpServlet {
                     return;
                 }
                 template.getAttributeMap().set("archived", true);
+                template.pushEvent(user.getDescriptor().toString(), "archive", null);
 
                 SubmiteeServer.getInstance().pushEvent(Level.INFO, TemplateControlServlet.class,
                         "template archived", String.format("user=%s, template=%s",
@@ -79,6 +80,7 @@ public class TemplateControlServlet extends SubmiteeHttpServlet {
                     return;
                 }
                 template.getAttributeMap().set("published", false);
+                template.pushEvent(user.toString(), "cancel", null);
 
                 SubmiteeServer.getInstance().pushEvent(Level.INFO, TemplateControlServlet.class,
                         "template cancelled", String.format("user=%s, template=%s", user, template));
@@ -113,11 +115,18 @@ public class TemplateControlServlet extends SubmiteeHttpServlet {
                     }
                 }
 
+                if (template.getPublishTime() != null) {
+                    responseClassifiedError(req, resp, ClassifiedErrors.EVER_PUBLISHED_TEMPLATE);
+                    return;
+                }
+
                 template.getAttributeMap().setAutoSaveAttribute(false);
                 template.setPublished(true);
                 template.setPublishedBy(getSession(req).getUser().getDescriptor());
                 template.setPublishTime(new Date());
+                template.pushEvent(user.getDescriptor().toString(), "publish", null);
                 template.getAttributeMap().setAutoSaveAttribute(true);
+
 
                 SubmiteeServer.getInstance().pushEvent(Level.INFO, TemplateControlServlet.class, "template published",
                         String.format("user=%s, template=%s", user, template));

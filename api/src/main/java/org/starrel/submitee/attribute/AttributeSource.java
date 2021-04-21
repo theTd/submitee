@@ -24,5 +24,7 @@ public interface AttributeSource {
 
     void addListAttribute(String path, Object value);
 
+    void addListAttribute(String path, int index, Object value);
+
     <TValue> List<TValue> getListAttributes(String path, Class<TValue> type);
 }

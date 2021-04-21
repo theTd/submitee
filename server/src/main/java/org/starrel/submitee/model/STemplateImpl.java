@@ -1,5 +1,6 @@
 package org.starrel.submitee.model;
 
+import com.google.common.base.Preconditions;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -182,6 +183,25 @@ public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
     @Override
     public boolean isPublicAccessible() {
         return isPublished();
+    }
+
+    @Override
+    public void pushEvent(String issuer, String eventType, JsonObject body) {
+        pushEvent(issuer, eventType, body, new Date());
+    }
+
+    @Override
+    public void pushEvent(String issuer, String eventType, JsonObject body, Date time) {
+        Preconditions.checkNotNull(issuer);
+        Preconditions.checkNotNull(eventType);
+        AttributeSpec<JsonObject> events = this.attributeMap.ofList("events", JsonObject.class);
+        JsonObject obj = new JsonObject();
+        obj.addProperty("time", time.getTime());
+        obj.addProperty("issuer", issuer);
+        obj.addProperty("type", eventType);
+        if (body != null) obj.add("attr", body);
+
+        events.add(0, obj);
     }
 
     @Override

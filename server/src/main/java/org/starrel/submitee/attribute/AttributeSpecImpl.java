@@ -195,7 +195,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     @Override
     public TValue get(int index) {
         if (!isList) throw new UnsupportedOperationException("not list");
-        return getSource().getListAttribute(fullPath(path), index, rootType);
+        return getSource().getListAttribute(path, index, rootType);
     }
 
     @Override
@@ -208,14 +208,14 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     @Override
     public void add(int index, TValue tValue) {
         if (!isList) throw new UnsupportedOperationException("not list");
-        getSource().setListAttribute(fullPath(path), index, tValue);
+        getSource().addListAttribute(path, index, tValue);
         childUpdated(path);
     }
 
     @Override
     public List<TValue> getList(Class<TValue> type) {
         if (isList) throw new UnsupportedOperationException("not list");
-        return getSource().getListAttributes(fullPath(path), type);
+        return getSource().getListAttributes(path, type);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

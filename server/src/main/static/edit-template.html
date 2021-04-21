@@ -9,6 +9,7 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/timeline.css" rel="stylesheet">
     <title></title>
 
     <style>
@@ -149,11 +150,15 @@
         </div>
     </div>
 </template>
+<template id="template-template-activity">
+    <li class="event" data-date="">
+        <h3>title</h3>
+        <p>message</p>
+    </li>
+</template>
 
 <div class="container-fluid main" style="min-width: 960px">
     <nav class="row col breadcrumb">
-        <div class="breadcrumb-item">所有模板</div>
-        <div class="breadcrumb-item" id="breadcrumb-template-name"></div>
     </nav>
 
     <div class="row col" id="template-status">
@@ -245,6 +250,12 @@
         </div>
 
         <div id="insert-realm-before"></div>
+    </div>
+    <h4>动作</h4>
+    <div class="container-fluid">
+        <ul class="timeline">
+            <li class="d-none" id="insert-activity-before"></li>
+        </ul>
     </div>
 </div>
 
@@ -515,7 +526,16 @@
     }
 
     function loadTemplateMetadata() {
-        $("#breadcrumb-template-name")[0].textContent = submitee.currentTemplate.name || submitee.currentTemplate.templateId;
+        // todo
+        let breadcrumb = $(".breadcrumb");
+        breadcrumb.html(`
+<a class="breadcrumb-item" href="?method=template-list">所有模板</a>
+<a class="breadcrumb-item" href="?method=template-list&tid=${encodeURIComponent(submitee.currentTemplate.grouping + "-*")}">${submitee.currentTemplate.grouping}</a>
+<a class="breadcrumb-item" href="?method=template-list&tid=${encodeURIComponent(submitee.currentTemplate.templateId)}">${submitee.currentTemplate.templateId}</a>
+<a class="breadcrumb-item" href="#">${submitee.currentTemplate.templateId}:${submitee.currentTemplate.version}</a>
+`
+        );
+
         $("#template-metadata-name").val(submitee.currentTemplate.name).on("keyup", dirty)
         $("#template-metadata-comment").val(submitee.currentTemplate.comment).on("keyup", dirty);
 
@@ -555,7 +575,11 @@
 
         if (!currentTemplate.latest) {
             if (currentTemplate.published) {
-                create_toast("重要提示", "当前模板已经发布，如需编辑模板信息请使用修订模板", "edit-published-template");
+                create_toast("重要提示", "当前模板已经发布，如需编辑模板信息请使用<a href='javascript:createRevisionTemplate()'>修订模板</a>", "none-editable-template");
+                return;
+            }
+            if (currentTemplate.attributeMap.get("publish-time")) {
+                create_toast("重要提示", "当前模板曾经发布过，如需编辑请使用<a href='javascript:createRevisionTemplate()'>修订模板</a>", "none-editable-template");
                 return;
             }
             readTemplateConfig();
@@ -677,25 +701,10 @@
                     error: toast_ajax_error
                 });
             });
-            $("#btn-revision-template").removeClass("d-none").on("click", () => {
-                readTemplateConfig();
-                submitee.currentTemplate.latest = true;
-                $.ajax({
-                    url: "../create/template/" + submitee.currentTemplate.attributeMap.get("template-id"),
-                    method: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify({
-                        content: submitee.currentTemplate.attributeMap.root
-                    }),
-                    success: function (response) {
-                        create_toast("提示", "<p>已完成</p><p>正在跳转...</p>");
-                        setTimeout(() => {
-                            window.location.href = "?method=edit-template&target=" + response;
-                        }, 500)
-                    },
-                    error: toast_ajax_error
-                });
-            });
+            $("#btn-revision-template").removeClass("d-none").on("click", createRevisionTemplate);
+        } else if (submitee.currentTemplate.attributeMap.get("publish-time")) {
+            $(".template-status-text").html(`<p class="alert alert-secondary">已撤销发布，如需再次发布请使用修订模板</p>`);
+            $("#btn-revision-template").removeClass("d-none").on("click", createRevisionTemplate);
         } else {
             $(".template-status-text").html(`<p class="alert alert-warning">尚未发布，使用<bold>发布模板</bold>来公开该模板</p>`);
             $("#btn-template-preview").removeClass("d-none").on('click', () => {
@@ -713,6 +722,15 @@
             });
 
             $("#btn-publish-template").removeClass("d-none").on('click', () => {
+                // noinspection EqualityComparisonWithCoercionJS
+                if (!submitee.currentTemplate.name || submitee.currentTemplate.name == '') {
+                    noSanitizePopover("#btn-publish-template", "<span style='color: red'>模板没有标题</span>", "bottom");
+                    return;
+                }
+                if (!submitee.currentTemplate.fields || submitee.currentTemplate.fields.length === 0) {
+                    noSanitizePopover("#btn-publish-template", "<span style='color: red'>没有添加任何字段</span>", "bottom");
+                    return;
+                }
                 let errors = {};
                 for (let field of submitee.currentTemplate.fields) {
                     let error = submitee.fieldControllers[field.type].validateConfiguration(field);
@@ -724,15 +742,7 @@
                         let error = errors[f];
                         content += `<p>${f}:&nbsp;<span style="color: red">${error}</span></p>`;
                     }
-                    $("#btn-publish-template").popover({
-                        container: 'body',
-                        content: content,
-                        title: "请检查字段配置",
-                        html: true,
-                        placement: 'bottom',
-                        trigger: 'focus',
-                        sanitizeFn: (content) => content
-                    }).popover('show');
+                    noSanitizePopover("#btn-publish-template", content, "bottom", "请检查字段配置");
                     return;
                 }
                 $.ajax({
@@ -747,6 +757,93 @@
                     error: toast_ajax_error
                 });
             });
+        }
+    }
+
+    function createRevisionTemplate() {
+        if (submitee.creatingRevision) return;
+        submitee.creatingRevision = true;
+        readTemplateConfig();
+        submitee.currentTemplate.latest = true;
+        $.ajax({
+            url: "../create/template/" + submitee.currentTemplate.attributeMap.get("template-id"),
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                content: submitee.currentTemplate.attributeMap.root
+            }),
+            success: function (response) {
+                create_toast("提示", "<p>已完成</p><p>正在跳转...</p>");
+                setTimeout(() => {
+                    window.location.href = "?method=edit-template&target=" + response;
+                }, 500)
+            },
+            error: toast_ajax_error,
+            complete: () => {
+                submitee.creatingRevision = false;
+            }
+        });
+    }
+
+    function loadTemplateAbbrev(uuid, container) {
+        fetchTemplateInfo({"uuid": uuid}, false, NaN, NaN, true).then(arr => {
+            let template = arr[0];
+            if (!template) {
+                $(container).text(uuid);
+            } else {
+                $(container).text(`${template.templateId}:${template.version} (${template.name})`);
+            }
+        }, error => {
+            toast_ajax_error(error);
+            $(container).text(uuid);
+        });
+    }
+
+    function createActivityRow(activity) {
+        let node = document.importNode($("#template-template-activity")[0].content, true);
+        if (activity.type === "revision") {
+            let revisionUUID = activity.attr["revision-uuid"];
+            $(node).find("h3").text("修订").addClass("text-warning");
+            let linkId = makeid(6);
+            $(node).find("p").html(`创建在:
+<a id="${linkId}" href="?method=edit-template&target=${revisionUUID}"><span class="spinner-border spinner-border-sm"></span></a>`);
+            setTimeout(() => loadTemplateAbbrev(revisionUUID, "#" + linkId));
+            $(node).find("li").attr("data-date", submitee.relativeTimeLocale(activity.time));
+        } else if (activity.type === "create") {
+            let inherited = activity.attr ? activity.attr["inherited-from"] : null;
+            $(node).find("h3").text("创建").addClass("text-primary");
+            if (inherited) {
+                let linkId = makeid(6);
+                $(node).find("p").html(`修订自:
+<a id="${linkId}" href="?method=edit-template&target=${inherited}"><span class="spinner-border spinner-border-sm"></span></a>`);
+                setTimeout(() => loadTemplateAbbrev(inherited, "#" + linkId));
+            } else {
+                $(node).find("p").addClass("d-none");
+            }
+            $(node).find("li").attr("data-date", submitee.relativeTimeLocale(activity.time));
+        } else if (activity.type === "archive") {
+            $(node).find("h3").text("归档").addClass("text-danger");
+            $(node).find("p").addClass("d-none");
+            $(node).find("li").attr("data-date", submitee.relativeTimeLocale(activity.time));
+        } else if (activity.type === "cancel") {
+            $(node).find("h3").text("撤销发布").addClass("text-secondary");
+            $(node).find("p").addClass("d-none");
+            $(node).find("li").attr("data-date", submitee.relativeTimeLocale(activity.time));
+        } else if (activity.type === "publish") {
+            $(node).find("h3").text("发布").addClass("text-success");
+            $(node).find("p").addClass("d-none");
+            $(node).find("li").attr("data-date", submitee.relativeTimeLocale(activity.time));
+        }
+        return node;
+    }
+
+    function loadActivity() {
+        let relative = $("#insert-activity-before")[0];
+        let eventsArray = submitee.currentTemplate.attributeMap.get("events");
+        if (!eventsArray) return;
+        eventsArray.sort((a, b) => a.time - b.time);
+        for (let ev of eventsArray) {
+            relative.parentNode.insertBefore(createActivityRow(ev), relative);
         }
     }
 
@@ -783,6 +880,7 @@
                 loadDistinguish();
 
                 loadActions();
+                loadActivity();
 
                 // check changes made every 2 seconds
                 setInterval(checkAndSync, 2000);

@@ -217,3 +217,31 @@ function setTitle(title) {
 }
 
 setTitle(document.title);
+
+function noSanitizePopover(selector, html, placement, title) {
+    let o = $(selector);
+    if (o.data("bs.popover")) {
+        $("#" + o.data("bs.popover")["tip"].id).remove();
+        o.data("bs.popover", null);
+    }
+    if (title) {
+        o.popover({
+            container: 'body',
+            content: html,
+            title: title,
+            html: true,
+            placement: placement,
+            trigger: 'focus',
+            sanitizeFn: (content) => content
+        }).popover('show');
+    } else {
+        o.popover({
+            container: 'body',
+            content: html,
+            html: true,
+            placement: placement,
+            trigger: 'focus',
+            sanitizeFn: (content) => content
+        }).popover('show');
+    }
+}

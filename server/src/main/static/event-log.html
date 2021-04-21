@@ -289,7 +289,7 @@
 
         $(".container-fluid").on("click", "[data-expand]", function (evt) {
             $(".modal .modal-title").text("detail");
-            $(".modal .modal-body").html(`<pre>${evt.target.textContent}</pre>`);
+            $(".modal .modal-body").html(`<pre></pre>`).find("pre").text(evt.target.textContent);
             $(".modal").modal();
         })
 

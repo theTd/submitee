@@ -44,6 +44,7 @@ public class CreateServlet extends AbstractJsonServlet {
                     if (uriParts.length == 1) {
                         // create new
                         STemplate created = SubmiteeServer.getInstance().createTemplate();
+                        created.pushEvent(user.getDescriptor().toString(), "create", null);
                         resp.setStatus(HttpStatus.OK_200);
                         resp.setContentType("application/json");
                         resp.getWriter().println(SubmiteeServer.GSON.toJson(created.getUniqueId().toString()));
@@ -70,6 +71,10 @@ public class CreateServlet extends AbstractJsonServlet {
                         }
                         STemplateImpl revisionTemplate = SubmiteeServer.getInstance().getTemplateKeeper()
                                 .createRevisionTemplate(revision.getTemplateId(), content);
+                        revisionTemplate.pushEvent(user.getDescriptor().toString(), "create",
+                                ((JsonObject) SubmiteeServer.GSON.toJsonTree(Collections.singletonMap("inherited-from", revision.getUniqueId().toString()))));
+                        revision.pushEvent(user.getDescriptor().toString(), "revision",
+                                ((JsonObject) SubmiteeServer.GSON.toJsonTree(Collections.singletonMap("revision-uuid", revisionTemplate.getUniqueId().toString()))));
 
                         resp.setStatus(HttpStatus.OK_200);
                         resp.setContentType("application/json");

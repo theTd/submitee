@@ -25,6 +25,11 @@ public interface AttributeHolder<THolder extends AttributeHolder<?>> {
         getAttributeMap().set(path, value);
     }
 
+    /**
+     * @return x
+     * @deprecated switch to acl
+     */
+    @Deprecated
     default boolean isPublicAccessible() {
         return false;
     }

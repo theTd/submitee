@@ -147,6 +147,10 @@ class STemplate {
         return this.attributeMap.get("uuid");
     }
 
+    get grouping() {
+        return this.attributeMap.get("grouping");
+    }
+
     get templateId() {
         return this.attributeMap.get("template-id");
     }
@@ -300,7 +304,7 @@ function getQueryValue(name, queryString) {
     return null;
 }
 
-async function fetchTemplateSize(filter, latest) {
+async function fetchTemplateSize(filter, latest, order) {
     return new Promise((resolve, reject) => {
         $.ajax({
             url: "../batch-get/template/size",
@@ -308,7 +312,8 @@ async function fetchTemplateSize(filter, latest) {
             contentType: "application/json",
             data: JSON.stringify({
                 latest: latest,
-                filter: filter
+                filter: filter,
+                order: order
             }),
             success: function (response) {
                 resolve(parseInt(response));
@@ -320,7 +325,7 @@ async function fetchTemplateSize(filter, latest) {
     });
 }
 
-async function fetchTemplateInfo(filter, latest, start, length, abbrev) {
+async function fetchTemplateInfo(filter, latest, start, length, abbrev, order) {
     return new Promise((resolve, reject) => {
         $.ajax({
             url: "../batch-get/template",
@@ -331,7 +336,8 @@ async function fetchTemplateInfo(filter, latest, start, length, abbrev) {
                 filter: filter,
                 start: start,
                 length: length,
-                abbrev: abbrev
+                abbrev: abbrev,
+                order: order
             }),
             success: function (data) {
                 let all = Array();

@@ -142,6 +142,18 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
+    public void addListAttribute(String path, Object value) {
+        AttributeSerializer serializer = SubmiteeServer.getInstance().getAttributeSerializer(value.getClass());
+        if (serializer == null)
+            throw new RuntimeException("could not find serializer of type " + value.getClass().getName());
+
+        JsonArray array = getArrayFromPath(path, true);
+        assert array != null;
+        array.add(serializer.write(value));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Override
     public void setListAttribute(String path, int index, Object value) {
         AttributeSerializer serializer = SubmiteeServer.getInstance().getAttributeSerializer(value.getClass());
         if (serializer == null)
@@ -154,14 +166,26 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
-    public void addListAttribute(String path, Object value) {
+    public void addListAttribute(String path, int index, Object value) {
         AttributeSerializer serializer = SubmiteeServer.getInstance().getAttributeSerializer(value.getClass());
         if (serializer == null)
             throw new RuntimeException("could not find serializer of type " + value.getClass().getName());
 
+        JsonElement add = serializer.write(value);
+
         JsonArray array = getArrayFromPath(path, true);
         assert array != null;
-        array.add(serializer.write(value));
+        if (index >= array.size()) {
+            array.add(add);
+        } else {
+            // insert
+            array.add(array.get(array.size() - 1));
+            int cur = array.size();
+            while (--cur > index) {
+                array.set(cur, array.get(cur - 1));
+            }
+            array.set(index, add);
+        }
     }
 
     JsonObject getObjectFromPath(String path, boolean createParentNode) {
@@ -216,13 +240,14 @@ public class JsonTreeAttributeSource<TValue> implements AttributeSource {
                 } else {
                     return null;
                 }
-            } else if (!node.isJsonObject()) {
-                throw new RuntimeException(pathTrace + " is not json object");
             }
 
             if (!pathIte.hasNext()) {
                 return node.getAsJsonArray();
             } else {
+                if (!node.isJsonObject()) {
+                    throw new RuntimeException(pathTrace + " is not json object");
+                }
                 currentNode = node.getAsJsonObject();
                 pathTrace.append(".");
             }

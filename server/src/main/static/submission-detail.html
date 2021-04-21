@@ -19,6 +19,18 @@
             font-size: 2rem;
             color: white;
         }
+
+        .field-container {
+            margin: 1rem 0;
+            padding-top: 0.2rem;
+            padding-bottom: 0.2rem;
+            transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+            border-radius: 10px;
+        }
+
+        .field-container:hover {
+            box-shadow: 0 0 0 3px rgb(255, 191, 110) !important;
+        }
     </style>
 </head>
 <body>
@@ -26,7 +38,7 @@
     <div class="row field-container">
         <div class="col-3 container-field-name"></div>
         <div class="col-9 container-field-body">
-            <div class="container-field-input"></div>
+            <div class="container-field-report"></div>
             <div class="container-field-desc"></div>
         </div>
     </div>
@@ -40,22 +52,21 @@
 
 <script src="js/safe.js"></script>
 <script>
-    function createFieldLine(controller, field, html) {
-        let template = $("#template-field-container")[0];
-        let fieldType = submitee.fieldControllers[field.type].displayName;
-        template.content.querySelector(".container-field-name").textContent = `[${fieldType}] ${field.name}`;
+    function createFieldLine(controller, field, reportHtml) {
+        let node = document.importNode($("#template-field-container")[0].content, true);
+        let fieldTypeName = submitee.fieldControllers[field.type].displayName;
+
+        $(node).find(".container-field-name").text(`[${fieldTypeName}] ${field.name}`);
         if (field.comment) {
-            template.content.querySelector(".container-field-desc").innerHTML = field.comment;
-            template.content.querySelector(".container-field-desc").style.display = "inline-block";
+            $(node).find(".container-field-desc").html(field.comment);
         } else {
-            template.content.querySelector(".container-field-desc").innerHTML = "";
-            template.content.querySelector(".container-field-desc").style.display = "none";
+            $(node).find(".container-field-desc").addClass("d-none");
         }
 
-        template.content.querySelector(".container-field-input").innerHTML = html;
-        template.content.querySelector(".field-container").setAttribute("data-submitee-field-name", field.name);
-        template.content.querySelector(".field-container").id = controller.getContainerId(field);
-        return document.importNode(template.content, true);
+        $(node).find(".container-field-report").html(reportHtml);
+        $(node).find(".field-container").attr("data-submitee-field-name", field.name);
+        $(node).find(".field-container").attr("id", controller.getContainerId(field));
+        return node;
     }
 
     async function buildFields(submission) {
