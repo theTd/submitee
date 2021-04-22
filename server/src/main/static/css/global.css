@@ -36,7 +36,7 @@ a .material-icons {
 .filter-container {
     background-color: #5a5a5a;
     border-radius: 5px;
-    min-height: 3rem;
+    min-height: 2.6rem;
     padding: 0.3rem 0;
     margin-bottom: 1rem;
     align-items: center;
@@ -44,11 +44,12 @@ a .material-icons {
 
 .filter-element {
     background-color: #ffffff;
-    height: 2.5rem;
+    height: 2rem;
+    font-size: 0.8rem;
     display: flex;
     flex-flow: row;
     align-items: center;
-    border-radius: 10px;
+    border-radius: 5px;
     margin: 0 0 0 0.5rem;
 }
 
@@ -57,9 +58,10 @@ a .material-icons {
 }
 
 .filter-element-title {
-    background-color: #85ff69;
+    background-color: #28a745;
+    color: white;
     display: inline-flex;
-    border-radius: 10px 0 0 10px;
+    border-radius: 5px 0 0 5px;
     padding: 0 0.5rem;
     font-weight: bold;
     height: 100%;
@@ -92,4 +94,47 @@ a .material-icons {
     line-height: 22px;
     font-family: monospace;
     font-size: 21px;
+}
+
+.extended-list {
+    margin: 0;
+    padding: 0;
+    max-height: 20rem;
+    overflow-x: hidden;
+    overflow-y: inherit;
+}
+
+.extended-list-item, .extended-list-create-widget {
+    margin: 0;
+    list-style-type: none;
+    min-height: 2rem;
+    font-size: 1rem;
+    padding: 0.2rem 0.4rem;
+    transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.extended-list-item:hover {
+    background-color: rgba(141, 141, 141, 0.38);
+}
+
+.extended-list-create-widget:hover {
+    background-color: unset !important;
+}
+
+.extended-list-item > button {
+    background-color: transparent;
+    border: 0
+}
+
+.extended-list-item.active {
+    background-color: rgba(141, 141, 141, 0.53);
+}
+
+.extended-list-context-container {
+    transition: 0.2s ease left;
+    max-width: max-content;
+}
+
+.extended-list-context-container.hide {
+    max-width: 0;
 }

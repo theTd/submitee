@@ -122,7 +122,6 @@
 
 <script src="js/safe.js"></script>
 <script>
-
     function register() {
         let email = $("#input-email").val();
         if (!submitee.mailPattern.test(email)) {
@@ -258,13 +257,11 @@
         // todo
     }
 
-
     submitee_safe.loadAllScript([
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
         "https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js",
         "js/model.js",
-        "js/toast.js",
-        "js/safe.js"
+        "js/ui.js"
     ]).then(() => {
         let redirect = getQueryValue("d");
         if (redirect) {

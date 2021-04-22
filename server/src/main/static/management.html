@@ -17,13 +17,48 @@
 
     <style>
         .management-nav {
-            max-width: 100% !important;
+            max-width: 250px !important;
         }
 
-        @media (min-width: 1200px) {
+        #management-methods {
+            flex-direction: column;
+            text-align: unset;
+        }
+
+        #management-methods .list-group-item {
+            border-radius: 0 !important;
+        }
+
+        #management-methods .list-group-item:first-child {
+            border-radius: 5px 5px 0 0 !important;
+        }
+
+        #management-methods .list-group-item:last-child {
+            border-radius: 0 0 5px 5px !important;
+        }
+
+        @media (max-width: 1200px) {
             .management-nav {
-                max-width: 250px !important;
+                max-width: 100% !important;
             }
+
+            #management-methods {
+                flex-direction: row;
+                text-align: center;
+            }
+
+            #management-methods .list-group-item {
+                border-radius: 0 !important;
+            }
+
+            #management-methods .list-group-item:first-child {
+                border-radius: 5px 0 0 5px !important;
+            }
+
+            #management-methods .list-group-item:last-child {
+                border-radius: 0 5px 5px 0 !important;
+            }
+
         }
     </style>
 
@@ -33,7 +68,7 @@
 <div id="session-header"></div>
 <div class="container-fluid mt-1">
     <div class="row">
-        <div class="order-1 order-xl-1 col-12 col-xl management-nav">
+        <div class="order-1 order-xl-1 col-12 col-xl management-nav mt-4">
             <h4 class="row ml-3 text-dark">配置列表</h4>
             <div class="list-group" id="management-methods">
                 <a href="?method=template-list" data-submitee-management-method-alt="edit-template"
@@ -87,9 +122,9 @@
         "https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js",
         "https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js",
         "js/model.js",
-        "js/field-controllers.js",
-        "js/toast.js",
         "js/session.js",
+        "js/field-controllers.js",
+        "js/ui.js",
     ]).then(() => {
         submitee.beforeUnloadChecker = null;
 

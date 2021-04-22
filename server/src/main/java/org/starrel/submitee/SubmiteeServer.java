@@ -14,10 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.json.JsonWriterSettings;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -162,6 +159,11 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
             ServerConnector connector = new ServerConnector(jettyServer);
             connector.setHost(address.getHostName());
             connector.setPort(address.getPort());
+            for (ConnectionFactory factory : connector.getConnectionFactories()) {
+                if (factory instanceof HttpConnectionFactory) {
+                    ((HttpConnectionFactory) factory).getHttpConfiguration().setSendServerVersion(false);
+                }
+            }
             jettyServer.addConnector(connector);
         }
     }

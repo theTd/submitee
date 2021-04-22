@@ -47,9 +47,6 @@
     </style>
 </head>
 <body>
-<template id="template-submission-page-item">
-    <li class="page-item"><a class="page-link" href="#">3</a></li>
-</template>
 <template id="template-submission-row">
     <div class="row submission-row">
         <div class="col-1 submission-template-id">模板</div>
@@ -79,10 +76,9 @@
     </div>
     <hr/>
     <hr id="insert-submission-before"/>
-    <nav class="row col">
-        <ul class="pagination" id="submission-list-pagination">
-        </ul>
+    <nav class="row col" id="submission-list-pagination">
     </nav>
+    <div class="mt-4"></div>
 </div>
 <div class="modal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document" style="max-width: 95vw; width: max-content">
@@ -109,7 +105,10 @@
 
         $(".modal .modal-title").text("提交详情");
         $(".modal .modal-body").html("<span class='spinner-border'></span>");
-        $(".modal").modal();
+        $(".modal").on('shown.bs.modal', function () {
+            $(document).off('focusin.modal');
+        }).modal();
+
         submitee.getPage("submission-detail.html").then(page => {
             $(".modal .modal-body").html(page);
         });
@@ -202,47 +201,9 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         }
     }
 
-    function buildPagination(currentPage, maxPages) {
-        let paginationContainer = $("#submission-list-pagination")[0];
-        let prevPage = currentPage - 1;
-        if (prevPage < 1) prevPage = null;
-        let nextPage = currentPage + 1;
-        if (nextPage > maxPages) nextPage = null;
-
-        let node;
-        node = createPageItem("上一页", prevPage ? "?method=submission-list&page=" + prevPage : "");
-        if (!prevPage) {
-            $(node.querySelector(".page-item")).addClass("disabled");
-        }
-        paginationContainer.appendChild(node);
-
-        for (let i = 1; i <= maxPages; i++) {
-            paginationContainer.appendChild(createPageItem(i, "?method=submission-list&page=" + i, i === currentPage));
-        }
-
-        node = createPageItem("下一页", nextPage ? "?method=submission-list&page=" + nextPage : "");
-        if (!nextPage) {
-            $(node.querySelector(".page-item")).addClass("disabled");
-        }
-        paginationContainer.appendChild(node);
-    }
-
-    function createPageItem(text, href, active) {
-        let t = $("#template-submission-page-item")[0];
-        t.content.querySelector(".page-link").href = href;
-        t.content.querySelector(".page-link").textContent = text;
-        if (active) {
-            $(t.content.querySelector(".page-item")).addClass("active");
-        } else {
-            $(t.content.querySelector(".page-item")).removeClass("active");
-        }
-        return document.importNode(t.content, true);
-    }
-
     function fullQueryWithFilters(page) {
         let q = "?method=submission-list";
-        page = page || parseInt(getQueryValue("page"));
-        q += "&page=" + page;
+        if (Number.isInteger(page)) q += "&page=" + page;
 
         let tid = submitee.filterbar.get("tid");
         if (tid) q += "&tid=" + encodeURIComponent(tid);
@@ -259,8 +220,8 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         submitee.filterbar.setValue("tid", element ? $(element).attr("data-tid") : null);
     }
 
-    function reloadWithFilters() {
-        window.location.href = fullQueryWithFilters();
+    function reloadWithFilters(page) {
+        window.location.href = fullQueryWithFilters(page);
     }
 
     function initFilterbar(templates, templateVersionMap) {
@@ -288,10 +249,9 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         "https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js",
         "https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js",
         "js/model.js",
-        "js/field-controllers.js",
-        "js/toast.js",
         "js/session.js",
-        "js/filterbar.js",
+        "js/field-controllers.js",
+        "js/ui.js",
         "js/template-filterbar-controller.js"
     ]).then(async () => {
         submitee.filterbar = createFilterBar(".filter-container");
@@ -342,7 +302,7 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
 
             let maxPages = Math.ceil(size / pageSize);
             if (page > maxPages) page = maxPages;
-            buildPagination(page, maxPages);
+            buildPagination("#submission-list-pagination", page, maxPages, reloadWithFilters);
             fetchSubmissionInfo(filters, (page - 1) * pageSize, pageSize, order)
                 .then(buildSubmissionList, toast_ajax_error);
         });

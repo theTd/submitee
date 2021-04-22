@@ -132,12 +132,6 @@
         </div>
     </div>
 </template>
-<template id="template-list-page-item">
-    <li class="page-item">
-        <button class="page-link"></button>
-    </li>
-</template>
-
 <div class="container-fluid" style="min-width: 960px">
     <div class="row filter-container"></div>
     <div class="row">
@@ -158,10 +152,7 @@
     <hr/>
     <div class="row empty-mark d-none col-12 justify-content-center" style="color: gray; font-style: italic">(空)</div>
     <hr id="insert-template-before"/>
-    <nav class="row col">
-        <ul class="pagination" id="template-list-pagination">
-        </ul>
-    </nav>
+    <nav class="row col" id="template-list-pagination"></nav>
     <hr/>
     <div class="row justify-content-end mb-3">
         <div class="col template-filters">
@@ -170,9 +161,8 @@
                    data-off="关"/>
         </div>
         <div class="col s-template-actions">
-            <a class="btn btn-outline-success" href="#" onclick="createTemplate()">创建<br/>模板</a>
+            <button class="btn btn-outline-success" onclick="createTemplate()">创建<br/>模板</button>
         </div>
-
     </div>
 </div>
 
@@ -319,57 +309,13 @@
         })
     }
 
-    function buildPagination(currentPage, maxPages) {
-        let paginationContainer = $("#template-list-pagination")[0];
-        let prevPage = currentPage - 1;
-        if (prevPage < 1) prevPage = null;
-        let nextPage = currentPage + 1;
-        if (nextPage > maxPages) nextPage = null;
-
-        let node;
-        node = createPageItem("上一页", prevPage);
-        if (!prevPage) {
-            $(node.querySelector(".page-item")).addClass("disabled");
-        }
-        paginationContainer.appendChild(node);
-
-        for (let i = 1; i <= maxPages; i++) {
-            paginationContainer.appendChild(createPageItem(i, i, i === currentPage));
-        }
-
-        node = createPageItem("下一页", nextPage);
-        if (!nextPage) {
-            $(node.querySelector(".page-item")).addClass("disabled");
-        }
-        paginationContainer.appendChild(node);
-    }
-
-    function createPageItem(text, page, active) {
-        let t = $("#template-list-page-item")[0];
-        // t.content.querySelector(".page-link").href = "javascript:switchToPage(" + page + ")";
-
-        t.content.querySelector(".page-link").textContent = text;
-        if (active) {
-            $(t.content.querySelector(".page-item")).addClass("active");
-        } else {
-            $(t.content.querySelector(".page-item")).removeClass("active");
-        }
-        let node = document.importNode(t.content, true);
-        if (page) $(node).find(".page-link").on("click", () => reloadWithFilters(page))
-        return node;
-    }
-
     function reloadWithFilters(page) {
         window.location.href = fullQueryWithFilters(page);
     }
 
     function fullQueryWithFilters(page) {
         let q = "?method=template-list";
-        page = page || parseInt(getQueryValue("page"));
-        q += "&page=" + page;
-        // noinspection EqualityComparisonWithCoercionJS
-        let showArchived = $("#checkbox-show-archived").prop("checked");
-        q += "&ac=" + showArchived;
+        if (Number.isInteger(page)) q += "&page=" + page;
 
         let tid = submitee.filterbar.get("tid");
         if (tid) q += "&tid=" + encodeURIComponent(tid);
@@ -379,6 +325,11 @@
         if (name) q += "&nm=" + encodeURIComponent(name);
         let comment = submitee.filterbar.get("comment");
         if (comment) q += "&cmt=" + encodeURIComponent(comment);
+
+        // noinspection EqualityComparisonWithCoercionJS
+        let showArchived = $("#checkbox-show-archived").prop("checked") || state === "archived";
+        q += "&ac=" + showArchived;
+
         return q;
     }
 
@@ -453,10 +404,9 @@
         "https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js",
         "https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js",
         "js/model.js",
-        "js/field-controllers.js",
-        "js/toast.js",
         "js/session.js",
-        "js/filterbar.js"
+        "js/field-controllers.js",
+        "js/ui.js"
     ]).then(() => {
         submitee.filterbar = createFilterBar(".filter-container");
         initFilterbar();
@@ -512,8 +462,6 @@
             filters["comment"] = {"$regex": convertInfoRegex(commentFilter)};
         }
 
-        console.log(filters)
-
         let order = {"create-time": -1};
         fetchTemplateSize(filters, false, order).then(size => {
             if (size === 0) {
@@ -522,7 +470,7 @@
             }
             let maxPages = Math.ceil(size / pageSize);
             if (page > maxPages) page = maxPages;
-            buildPagination(page, maxPages);
+            buildPagination("#template-list-pagination", page, maxPages, reloadWithFilters);
             fetchTemplateInfo(filters, false, (page - 1) * pageSize, pageSize, true, order)
                 .then(buildTemplateList, toast_ajax_error)
         }, toast_ajax_error);
