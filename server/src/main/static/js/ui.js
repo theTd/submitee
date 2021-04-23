@@ -509,11 +509,49 @@ function noSanitizePopover(selector, html, placement, title) {
     }
 }
 
+function fetchPinyinCompositeList(stringOrArray) {
+    let arr = false;
+    if (Array.isArray(stringOrArray)) {
+        arr = true;
+        let map = {};
+        for (let element of stringOrArray) {
+            if (typeof element !== 'string') throw Error("not string");
+            map[element] = 1;
+        }
+        stringOrArray = Object.keys(map);
+    } else if (typeof stringOrArray !== 'string') {
+        throw Error("not string");
+    }
+    if (!arr) {
+        stringOrArray = [stringOrArray];
+    }
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: "../pinyin",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({list: stringOrArray}),
+            success: function (response) {
+                if (!arr) resolve(response[0]);
+                let map = {};
+                let cur = 0;
+                for (let element of stringOrArray) {
+                    map[element] = response[cur++];
+                }
+                resolve(map);
+            },
+            error: reject
+        })
+    });
+}
+
 class ExtendedList {
     constructor(containerSelector) {
         this.container = $($(containerSelector)[0]);
         if (!this.container) throw new Error("invalid container");
         this.selections = Array();
+        this.pinyinList = {};
+        this.nodeCreateSelection = this.createNodeCreateSelection();
     }
 
     show() {
@@ -522,6 +560,7 @@ class ExtendedList {
 
         $(outerContainer).addClass("d-flex");
         $(outerContainer).addClass("flex-row");
+        $(outerContainer).addClass("extended-list-container");
 
         let leftContainer = document.createElement("div");
         this.leftContainer = leftContainer;
@@ -550,7 +589,7 @@ class ExtendedList {
 
         this.container.popover({
             content: outerContainer,
-            placement: 'top',
+            placement: 'right',
             html: true,
             sanitizeFn: (content) => content,
             focus: true,
@@ -569,26 +608,48 @@ class ExtendedList {
                 document.removeEventListener("click", listener, true);
             }
         }
-        setTimeout(() => document.addEventListener("click", listener, true));
+        setTimeout(() => {
+            document.addEventListener("click", listener, true)
+            $(this.leftContainer).find(".extended-list-search")[0].focus();
+        });
+        this.updatePinyinList();
     }
 
     addSelection(selection) {
         this.selections.push(selection);
         if (this.outerContainer) {
             $(this.selectionList).append(this.createNodeSelection(selection));
+            this.updatePinyinList();
         }
+    }
+
+    replaceSelection(previousSelection, newSelection) {
+        let prevElement = this.getSelectionElement(previousSelection);
+        let newElement = this.createNodeSelection(newSelection);
+        this.selectionList.replaceChild(newElement, prevElement);
+        this.updatePinyinList();
+    }
+
+    getSelectionElementByKey(key) {
+        return $(this.selectionList).find(`li[data-selection-key=${key}]`)[0];
+    }
+
+    getSelectionElement(selection) {
+        return this.getSelectionElementByKey(this.getSelectionKey(selection));
     }
 
     createNodeSelection(selection) {
         let li = document.createElement("li");
-        $(li).html(`<button style="width: 100%; height: 100%; text-align: unset">${this.localizeSelection(selection)}</button>`);
+        let key = this.getSelectionKey(selection);
+        $(li).html(`<button style="width: 100%; height: 100%; text-align: unset">${key}</button>`);
         $(li).on("click", () => this.onSelect(selection));
+        $(li).attr("data-selection-key", key);
         $(li).addClass("extended-list-item");
         $(li).addClass("extended-list-item-selection");
         return li;
     }
 
-    localizeSelection(selection) {
+    getSelectionKey(selection) {
         return selection + "";
     }
 
@@ -623,20 +684,41 @@ class ExtendedList {
 </button>
 </form>`);
         let lst = this;
-        $(node).find("form").on("submit", async () => {
+        $(node).find("input").on("change", () => {
+            $(node).find("input")[0].setCustomValidity("");
+        })
+        $(node).find("form").on("submit", () => {
             let input = $(node).find("input").val();
-            if (!input) return;
-            try {
-                let createdSelection = await lst.createSelection(input);
-                if (createdSelection) {
-                    this.leftContainer.removeChild(node);
-                    lst.addSelection(createdSelection);
-                    this.leftContainer.appendChild(this.createNodeCreateSelection());
-                    $(this.container).popover("update");
+            if (input) {
+                try {
+                    let create = lst.createSelection(input);
+                    if (!create) throw Error("无法完成操作");
+                    let inst = this;
+                    let callback = function (result) {
+                        if (result) {
+                            inst.leftContainer.removeChild(node);
+                            lst.addSelection(result);
+                            inst.leftContainer.appendChild(inst.nodeCreateSelection);
+                            $(inst.container).popover("update");
+                        }
+                    }
+                    if (create.then) {
+                        create.then(result => callback(result), error => {
+                            let input = $(node).find("input")[0];
+                            input.setCustomValidity(error);
+                            input.reportValidity();
+                        });
+                    } else {
+                        callback(create);
+                    }
+                } catch (e) {
+                    let input = $(node).find("input")[0];
+                    input.setCustomValidity(e.message);
+                    input.reportValidity();
                 }
-            } catch (e) {
+            } else {
                 let input = $(node).find("input")[0];
-                input.setCustomValidity(e.message);
+                input.setCustomValidity("空命名");
                 input.reportValidity();
             }
             return false;
@@ -649,14 +731,13 @@ class ExtendedList {
         return node;
     }
 
-    async createSelection(input) {
+    createSelection(input) {
         return false;
     }
 
     createNodeCreateSelection() {
         let node = document.createElement("div");
         $(node).addClass("extended-list-item");
-        // $(node).addClass("extended-list-item-create-button");
         $(node).css("height", "1.2rem");
         $(node).css("min-height", "unset")
         $(node).html(`
@@ -674,6 +755,56 @@ class ExtendedList {
         return node;
     }
 
+    updatePinyinList() {
+        let updateList = Array();
+        for (let childNode of this.selectionList.childNodes) {
+            let key = $(childNode).attr("data-selection-key");
+            if (!key) continue;
+            if (!this.pinyinList[key]) {
+                updateList.push(key);
+            }
+        }
+
+        if (updateList.length !== 0) {
+            fetchPinyinCompositeList(updateList).then(response => {
+                for (let key of Object.keys(response)) {
+                    this.pinyinList[key] = response[key];
+                }
+                this.updateSearch();
+            }, error => {
+                console.warn("ignoring xhr failure: " + getMessageFromAjaxError(error));
+            });
+        }
+    }
+
+    updateSearch() {
+        let search = $(this.leftContainer).find(".extended-list-search").val()
+        for (let childNode of this.selectionList.childNodes) {
+            let key = $(childNode).attr("data-selection-key");
+            if (!key) {
+                console.warn("search cancelled due to data-selection-key missing");
+                return;
+            }
+
+            let pinyinList = this.pinyinList[key];
+            let matchArray = Array();
+            matchArray.push(key);
+            if (pinyinList) {
+                for (let p of pinyinList) matchArray.push(p);
+            }
+            let show = false;
+            for (let match of matchArray) {
+                if (match.indexOf(search) !== -1) {
+                    show = true;
+                    $(childNode).removeClass("d-none");
+                    break;
+                }
+            }
+            if (!show) $(childNode).addClass("d-none");
+            $(this.container).popover("update");
+        }
+    }
+
     createNodeSearch() {
         let node = document.createElement("div");
         $(node).addClass("extended-list-item");
@@ -681,23 +812,9 @@ class ExtendedList {
         $(node).addClass("d-flex").addClass("flex-row").addClass("align-items-center").addClass("ml-1");
         $(node).css("padding-top", "0.3rem");
         $(node).html(`
-<input size="1" type="text" style="border:1px solid black; border-radius: 2px; min-width: 4rem; width: 100%"/>
+<input class="extended-list-search" size="1" type="text" style="min-width: 4rem; width: 100%"/>
 <i class="material-icons ml-2" style="font-size: 1.2rem">search</i>`);
-        $(node).find("input").on("keyup", () => {
-            let pattern = $(node).find("input").val();
-
-            for (let childNode of this.selectionList.childNodes) {
-                if ($(childNode).hasClass("extended-list-item-selection")) {
-                    let text = $(childNode).text();
-                    if (text.indexOf(pattern) !== -1) {
-                        $(childNode).removeClass("d-none");
-                    } else {
-                        $(childNode).addClass("d-none");
-                    }
-                    $(this.container).popover("update");
-                }
-            }
-        });
+        $(node).find("input").on("keyup", () => this.updateSearch());
         return node;
     }
 }

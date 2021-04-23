@@ -40,12 +40,15 @@ submitee_safe.loadScriptPromise = function (url, distinct) {
  *
  * @param {string[]} scripts
  */
-submitee_safe.loadAllScript = async function (scripts) {
+submitee_safe.loadAllScript = function (scripts) {
     if (!submitee_safe.distinctLoadedScripts) submitee_safe.distinctLoadedScripts = {};
     if (!submitee_safe.loadedScripts) submitee_safe.loadedScripts = {}
     return new Promise(async resolve => {
+        let cur = 0;
         for (let url of scripts) {
+            cur++;
             if (submitee_safe.loadedScripts[url]) continue;
+            console.log(`loading script ${url} (${cur}/${scripts.length})`);
             await submitee_safe.loadScriptPromise(url, null);
         }
         resolve();

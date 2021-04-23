@@ -147,6 +147,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         servletHandler.addServlet(SessionServlet.class, "/session/*");
         servletHandler.addServlet(TemplateControlServlet.class, "/template-control/*");
         servletHandler.addServlet(EventsServlet.class, "/events/*");
+        servletHandler.addServlet(PinyinServlet.class, "/pinyin");
         return servletHandler;
     }
 
