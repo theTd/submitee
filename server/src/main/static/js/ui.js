@@ -546,15 +546,14 @@ function fetchPinyinCompositeList(stringOrArray) {
 }
 
 class ExtendedList {
-    constructor(containerSelector) {
-        this.container = $($(containerSelector)[0]);
-        if (!this.container) throw new Error("invalid container");
+    constructor() {
+        this.container = null;
         this.selections = Array();
         this.pinyinList = {};
         this.nodeCreateSelection = this.createNodeCreateSelection();
     }
 
-    show() {
+    initList() {
         let outerContainer = document.createElement("div");
         this.outerContainer = outerContainer;
 
@@ -587,32 +586,53 @@ class ExtendedList {
         outerContainer.appendChild(contextContainer);
         this.contextContainer = contextContainer;
 
+        setTimeout(() => {
+            $(this.leftContainer).find(".extended-list-search")[0].focus();
+        }, 100);
+        this.updatePinyinList();
+    }
+
+    show(containerSelector) {
+        if (this.container) close();
+
+        this.container = $(containerSelector);
+        if (!this.container) throw Error("unknown container: " + containerSelector);
+
+        if (!this.outerContainer) {
+            this.initList();
+        }
+
         this.container.popover({
-            content: outerContainer,
+            content: this.outerContainer,
             placement: 'right',
             html: true,
             sanitizeFn: (content) => content,
             focus: true,
             template: `
-<div class="popover" role="tooltip">
+<div class="popover" role="tooltip" style="max-width: unset">
 <div class="arrow"></div>
 <h3 class="popover-header"></h3>
 <div class="popover-body" style="box-shadow: #8d8d8d 0 0 5px 1px;margin: 0; padding: 0"></div>
 </div>`
         }).popover('show');
 
-        let lst = this;
+        let inst = this;
         let listener = function (evt) {
-            if (!outerContainer.contains(evt.target)) {
-                lst.close();
+            if (!inst.outerContainer.contains(evt.target)) {
+                inst.close();
                 document.removeEventListener("click", listener, true);
             }
         }
         setTimeout(() => {
             document.addEventListener("click", listener, true)
-            $(this.leftContainer).find(".extended-list-search")[0].focus();
         });
-        this.updatePinyinList();
+    }
+
+    close() {
+        if (this.container) {
+            this.container.popover('dispose');
+            delete this.container;
+        }
     }
 
     addSelection(selection) {
@@ -654,10 +674,6 @@ class ExtendedList {
     }
 
     onSelect(selection) {
-    }
-
-    close() {
-        this.container.popover('dispose');
     }
 
     allowCreate() {
@@ -817,4 +833,42 @@ class ExtendedList {
         $(node).find("input").on("keyup", () => this.updateSearch());
         return node;
     }
+}
+
+class CascadedList extends ExtendedList {
+
+    onSelect(selection) {
+        if (this.haveCascadeList(selection)) {
+            let context = this.getCascadeList(selection);
+            context.initList();
+            this.setActivating(this.getSelectionElementByKey(this.getSelectionKey(selection)));
+            this.setContextContent(context.outerContainer);
+        } else {
+            this.setActivating(null);
+            this.setContextContent(null)
+            this.onFinalSelect(selection);
+        }
+    }
+
+    setActivating(li) {
+        if (this.activating) {
+            $(this.activating).removeClass("active");
+        }
+        $(li).addClass("active");
+        this.activating = li;
+    }
+
+    onFinalSelect(selection) {
+    }
+
+    haveCascadeList(selection) {
+        return false;
+    }
+
+    getCascadeList(selection) {
+    }
+}
+
+class EditableCascadedList extends CascadedList {
+
 }

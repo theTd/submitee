@@ -47,7 +47,10 @@ submitee_safe.loadAllScript = function (scripts) {
         let cur = 0;
         for (let url of scripts) {
             cur++;
-            if (submitee_safe.loadedScripts[url]) continue;
+            if (submitee_safe.loadedScripts[url]) {
+                console.log(`skipping loaded script ${url} (${cur}/${scripts.length})`);
+                continue;
+            }
             console.log(`loading script ${url} (${cur}/${scripts.length})`);
             await submitee_safe.loadScriptPromise(url, null);
         }

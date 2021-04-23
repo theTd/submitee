@@ -92,8 +92,8 @@ a .material-icons {
     left: 3px;
     top: -3px;
     line-height: 22px;
-    font-family: monospace;
-    font-size: 21px;
+    font-family: sans-serif;
+    font-size: 16px;
 }
 
 .extended-list {

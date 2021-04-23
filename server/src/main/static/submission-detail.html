@@ -67,6 +67,7 @@
     <div class="insert-fields-before"></div>
     <button class="btn btn-sm btn-outline-info" id="btn-add-tag">添加标签</button>
     <button class="btn btn-sm btn-outline-info">导出</button>
+    <button class="btn btn-sm btn-outline-info" id="btn-cascade">级联菜单测试</button>
 </div>
 
 <script src="js/safe.js"></script>
@@ -149,10 +150,6 @@
             let addTagButton = $("#btn-add-tag");
             addTagButton.on("click", () => {
                 let list = new class extends ExtendedList {
-                    constructor() {
-                        super("#btn-add-tag");
-                    }
-
                     onSelect(selection) {
                         console.log(selection.name + " was selected");
                     }
@@ -256,8 +253,97 @@ font-size: 0.8rem; height: 1.3rem; padding: 0; width: 100%; margin-top: 0.8rem;"
                 list.addSelection({name: "紫色", color: "#af00af"});
                 list.addSelection({name: "红色", color: "#ff4242"});
                 list.addSelection({name: "黄色", color: "#FFC21A"});
-                list.show();
+                list.show("#btn-add-tag");
             });
+
+            $("#btn-cascade").on("click", async () => {
+                let modelPromise = new Promise(resolve => {
+                    $.ajax({
+                        url: "assets/region.json",
+                        success: function (response) {
+                            let obj;
+                            if (typeof response === 'string') {
+                                obj = JSON.parse(response);
+                            } else {
+                                obj = response;
+                            }
+                            let model = {};
+                            for (let id of Object.keys(obj).sort()) {
+                                let tid = id.substr(4);
+                                let sid = id.substr(2, 2);
+                                let fid = id.substr(0, 2);
+                                let display = obj[id];
+                                if (tid === '00') {
+                                    if (sid === '00') {
+                                        // first class
+                                        model[id] = {id: id, display: display};
+                                        console.log("added " + id + " to root level");
+                                    } else {
+                                        // second class
+                                        let o = model[fid + "0000"];
+                                        if (!o) continue;
+
+                                        let child = o["child"];
+                                        if (!child) {
+                                            child = {};
+                                            o["child"] = child;
+                                        }
+                                        child[id] = {id: id, display: display};
+                                    }
+                                } else {
+                                    // third class
+                                    let lvl = model[fid + "0000"];
+                                    if (lvl["child"]) {
+                                        let s = lvl["child"][fid + sid + "00"];
+                                        if (s) lvl = s;
+                                    }
+
+                                    let child = lvl["child"];
+                                    if (!child) {
+                                        child = {};
+                                        lvl["child"] = child;
+                                    }
+                                    child[id] = {id: id, display: display};
+                                }
+                            }
+                            resolve(model);
+                        }
+                    })
+                })
+
+                let model = await modelPromise;
+
+                let fnInitCascadedList = function (struct) {
+                    let list = new RegionCascadedList();
+                    for (let k of Object.keys(struct)) {
+                        let obj = struct[k];
+                        obj["id"] = k;
+                        list.addSelection(obj);
+                    }
+                    return list;
+                }
+
+                class RegionCascadedList extends CascadedList {
+                    onFinalSelect(selection) {
+                        console.log(`selected ${selection.display} (${selection.id})`);
+                    }
+
+                    haveCascadeList(selection) {
+                        return selection["child"];
+                    }
+
+                    getCascadeList(selection) {
+                        return fnInitCascadedList(selection["child"]);
+                    }
+
+                    getSelectionKey(selection) {
+                        return selection["display"];
+                    }
+                }
+
+                let rootList = fnInitCascadedList(model);
+                rootList.show("#btn-cascade");
+            })
         })
     })
 </script>

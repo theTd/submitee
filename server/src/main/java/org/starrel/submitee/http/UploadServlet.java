@@ -69,7 +69,7 @@ public class UploadServlet extends SubmiteeHttpServlet {
 
         AttributeMap<SFieldImpl> fieldAttributeMap = targetField.getAttributeMap();
         String blobStorageName = fieldAttributeMap.get("blob-storage", String.class);
-        if (blobStorageName == null) {
+        if (blobStorageName == null || blobStorageName.isEmpty()) {
             ExceptionReporting.report(UploadServlet.class, "blob-storage not defined",
                     String.format("tried to upload file to field %s:%s not defined blob-storage", template.getTemplateId(), fieldName));
             responseInternalError(req, resp);

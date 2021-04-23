@@ -252,8 +252,7 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         "js/model.js",
         "js/session.js",
         "js/field-controllers.js",
-        "js/ui.js",
-        "js/template-filterbar-controller.js"
+        "js/ui.js"
     ]).then(async () => {
         submitee.filterbar = createFilterBar(".filter-container");
         let templates = await fetchTemplateInfo({}, false, 0, null, true);
