@@ -156,6 +156,10 @@ class RichTextFieldController extends FieldController {
         this.displayName = "富文本"
     }
 
+    async submissionInit() {
+        await submitee_safe.loadScriptPromise("https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js");
+    }
+
     generateSubmissionHtml(field) {
         let containerId = this.getContainerId(field);
         let editorId = containerId + "-editor";
@@ -269,6 +273,12 @@ class FileFieldController extends FieldController {
 
     async submissionInit() {
         submitee.fileTemp = {};
+        await new Promise(resolve => {
+            submitee_safe.loadAllScript([
+                "https://cdn.jsdelivr.net/npm/uppy@1.27.0/dist/uppy.min.js",
+                "https://cdn.jsdelivr.net/npm/@uppy/locales@1.18.0/dist/zh_CN.min.js"
+            ]).then(resolve)
+        })
     }
 
     /**
@@ -432,3 +442,201 @@ submitee.validateBlobStorage = function (value) {
         }
     }
 }
+
+class CascadedListFieldController extends FieldController {
+    constructor() {
+        super("cascaded-list")
+        this.displayName = "级联选择器"
+    }
+
+    resolveSubmission(field) {
+        return field.selectedPath;
+    }
+
+    generateSubmissionHtml(field) {
+        let containerId = this.getContainerId(field);
+        setTimeout(() => {
+            let renderFn = this.renderSelection;
+            let updateFn = function () {
+                let path = field.selectedPath;
+                if (!path) {
+                    $("#" + containerId).find("button").text("开始选择");
+                } else {
+                    $("#" + containerId).find("button").html(renderFn(field.selectedPath));
+                }
+            }
+            $("#" + containerId).find("button").on("click", () => {
+                let dataRoot = field.attributeMap.get("selections");
+                let clz = class extends EditableCascadedList {
+                    constructor(path) {
+                        super();
+                        this.path = path;
+                    }
+
+                    haveCascadeList(selection) {
+                        return selection["child"];
+                    }
+
+                    getPathOfSelection(selection) {
+                        let trim = {};
+                        Object.assign(trim, selection);
+                        delete trim["child"];
+                        let path = this.path ? JSON.parse(JSON.stringify(this.path)) : Array();
+                        path.push(trim);
+                        return path;
+                    }
+
+                    getCascadeList(selection) {
+                        return createFn(selection["child"], this.getPathOfSelection(selection));
+                    }
+
+                    onFinalSelect(selection) {
+                        field.selectedPath = this.getPathOfSelection(selection);
+                        updateFn();
+                        rootList.close();
+                    }
+                }
+                let createFn = function (data, path) {
+                    let l = new clz(path);
+                    for (let d of data) {
+                        l.addSelection(d);
+                    }
+                    return l;
+                }
+                let rootList = createFn(dataRoot, null);
+                rootList.show("#" + containerId + " button", "top");
+                field.selectionEditor = rootList;
+            });
+            updateFn();
+        });
+        return `<button type="button" class="btn btn-outline-primary" style="min-width: 10rem"></button>`;
+    }
+
+    generateConfigurationHtml(field) {
+        let containerId = this.getContainerId(field);
+        setTimeout(() => {
+            let dataRoot = field.attributeMap.get("selections");
+            if (!dataRoot) dataRoot = [];
+            field.dataRoot = dataRoot;
+
+            $("#" + containerId).find("button").on("click", () => {
+                let clz = class extends EditableCascadedList {
+                    constructor(dataList) {
+                        super();
+                        this.dataList = dataList;
+                    }
+
+                    allowCreate() {
+                        return true;
+                    }
+
+                    allowSort() {
+                        return true;
+                    }
+
+                    allowEdit() {
+                        return true;
+                    }
+
+                    allowCreateCascadeList() {
+                        return true;
+                    }
+
+                    haveCascadeList(selection) {
+                        return selection["child"];
+                    }
+
+                    getCascadeList(selection) {
+                        let d = this.dataList[this.findIdx(selection)];
+                        let child = d["child"]
+                        if (!child) {
+                            child = [];
+                            d["child"] = child;
+                        }
+                        return createFn(child);
+                    }
+
+                    close() {
+                        // field.dataRoot = this.dataList;
+                        console.log(field.dataRoot);
+                        super.close();
+                    }
+
+                    findIdx(selection) {
+                        for (let i = 0; i < this.dataList.length; i++) {
+                            if (this.dataList[i].name === selection.name) {
+                                return i;
+                            }
+                        }
+                    }
+
+                    onEdit(selection, newSelection) {
+                        this.dataList.splice(this.findIdx(selection), 1, newSelection);
+                    }
+
+                    onDelete(selection) {
+                        this.dataList.splice(this.findIdx(selection), 1);
+                    }
+
+                    onCreate(selection) {
+                        this.dataList.push(selection);
+                    }
+
+                    onMoveUp(selection) {
+                        let idx = this.findIdx(selection);
+                        let newIdx = idx - 1;
+                        let rm = this.dataList.splice(idx, 1)[0];
+                        this.dataList.splice(newIdx, 0, rm);
+                    }
+
+                    onMoveDown(selection) {
+                        let idx = this.findIdx(selection);
+                        let newIdx = idx + 1;
+                        let rm = this.dataList.splice(idx, 1)[0];
+                        this.dataList.splice(newIdx, 0, rm);
+                    }
+                }
+                let createFn = function (data) {
+                    let l = new clz(data);
+                    for (let d of data) {
+                        l.addSelection(d);
+                    }
+                    return l;
+                }
+                let rootList = createFn(field.dataRoot);
+                rootList.show("#" + containerId + " button", "bottom");
+            });
+        });
+        return `<button type="button" class="btn btn-primary">编辑</button>`;
+    }
+
+    applyConfiguration(field) {
+        field.attributeMap.set("selections", field.dataRoot);
+    }
+
+    validateConfiguration(field) {
+        let selections = field.attributeMap.get("selections");
+        if (!selections || selections.length === 0) {
+            return "未配置可选项";
+        }
+    }
+
+    renderSelection(path) {
+        if (!path || path.length === 0) return "";
+        let display = "";
+        for (let i = 0; i < path.length; i++) {
+            let p = path[i];
+            display += `<span class='ml-1 mr-1' style='color: ${p.color}'>${p.name}</span>`;
+            if (i !== path.length - 1) {
+                display += "<span style='color: #007bff; font-weight: bold'>&gt;</span>";
+            }
+        }
+        return display;
+    }
+
+    generateReportHtml(field, value) {
+        return this.renderSelection(value);
+    }
+}
+
+submitee.fieldControllers["cascaded-list"] = new CascadedListFieldController();

@@ -596,7 +596,7 @@ class ExtendedList {
     }
 
     show(containerSelector, placement) {
-        if (this.container) close();
+        if (this.container) this.close();
 
         this.container = $(containerSelector);
         if (!this.container) throw Error("unknown container: " + containerSelector);
@@ -1098,7 +1098,7 @@ ${sortButtons}${editButton}${createCascadeListButton}
     }
 
     allowSort() {
-        return true;
+        return false;
     }
 
     allowEdit() {
