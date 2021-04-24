@@ -962,7 +962,10 @@ font-size: 0.8rem; height: 1.3rem; padding: 0; width: 100%; margin-top: 0.8rem;"
                 input.reportValidity();
                 return false;
             }
-            let newSelection = {name: name, color: color};
+            let newSelection = {};
+            Object.assign(newSelection, selection);
+            newSelection["name"] = name;
+            newSelection["color"] = color;
             if (name !== selection.name && this.getSelectionElement(newSelection)) {
                 let input = $(node).find("input[type=text]")[0];
                 input.setCustomValidity("命名冲突");
@@ -990,75 +993,80 @@ font-size: 0.8rem; height: 1.3rem; padding: 0; width: 100%; margin-top: 0.8rem;"
         $(li).css("position", "relative");
         let createCascadeListButton = this.haveCascadeList(selection) ? `
 <button class="editable-cascaded-list-create-cascade-list-button editable-extended-list-button text-success" title="该项有子列表">
-<i class="material-icons" style="font-size: 1.1rem;">playlist_play</i></button>
-`
+<i class="material-icons" style="font-size: 1.1rem;">playlist_play</i></button>`
             : this.allowCreateCascadeList() ? `
 <button class="editable-cascaded-list-create-cascade-list-button editable-extended-list-button" title="创建子列表">
-<i class="material-icons" style="font-size: 1.1rem">playlist_add</i></button>`
-                : "";
+<i class="material-icons" style="font-size: 1.1rem">playlist_add</i></button>` : "";
+        let sortButtons = this.allowSort() ? `
+<button class="editable-cascaded-list-moveup-button editable-extended-list-button" title="向上移动"><i class="material-icons" style="font-size: 1.1rem">north</i></button>
+<button class="editable-cascaded-list-movedown-button editable-extended-list-button" title="向下移动"><i class="material-icons" style="font-size: 1.1rem">south</i></button>` : "";
+        let editButton = this.allowEdit() ? `
+<button class="editable-cascaded-list-edit-button editable-extended-list-button" title="编辑"><i class="material-icons" style="font-size: 1.1rem">edit</i></button>` : "";
         $(li).html(`
 <div style="width: 100%; height: 100%; text-align: unset; color: ${selection.color}; display: flex; flex-direction: row; justify-content: space-between">
 <span style="width: 100%; text-align: center; padding: 0 0.7rem;">${selection.name}</span>
-<button class="editable-cascaded-list-moveup-button editable-extended-list-button" title="向上移动"><i class="material-icons" style="font-size: 1.1rem">north</i></button>
-<button class="editable-cascaded-list-movedown-button editable-extended-list-button" title="向下移动"><i class="material-icons" style="font-size: 1.1rem">south</i></button>
-<button class="editable-cascaded-list-edit-button editable-extended-list-button" title="编辑"><i class="material-icons" style="font-size: 1.1rem">edit</i></button>
-${createCascadeListButton}
+${sortButtons}${editButton}${createCascadeListButton}
 </div>
 `);
-        $(li).find(".editable-cascaded-list-edit-button")[0].addEventListener("click", (evt) => {
-            evt.stopPropagation();
-            this.setActivating(li);
-            $(li).addClass("active");
-            this.setContextContent(this.createEditContext(selection));
-        }, true);
-        $(li).find(".editable-cascaded-list-moveup-button")[0].addEventListener("click", (evt) => {
-            evt.stopPropagation();
-            let prevIdx = this.selections.indexOf(selection);
-            if (prevIdx === 0) {
-                // already top
-                return;
-            }
-            let newIdx = prevIdx - 1;
-            let alter = this.selections[newIdx];
-            if (!alter) throw Error("selection on idx " + newIdx + " not found");
-            this.selections.splice(prevIdx, 1);
-            this.selections.splice(newIdx, 0, selection);
+        if (this.allowEdit()) {
+            $(li).find(".editable-cascaded-list-edit-button")[0].addEventListener("click", (evt) => {
+                evt.stopPropagation();
+                this.setActivating(li);
+                $(li).addClass("active");
+                this.setContextContent(this.createEditContext(selection));
+            }, true);
+        }
 
-            let alterKey = this.getSelectionKey(alter);
-            let movedKey = this.getSelectionKey(selection);
-            let element = this.selectionList.removeChild(this.getSelectionElementByKey(movedKey));
-            let before = this.getSelectionElementByKey(alterKey);
-            before.parentNode.insertBefore(element, before);
-            this.onMoveUp(selection);
-        }, true);
-        $(li).find(".editable-cascaded-list-movedown-button")[0].addEventListener("click", (evt) => {
-            evt.stopPropagation();
-            let prevIdx = this.selections.indexOf(selection);
-            if (prevIdx === this.selections.length - 1) {
-                // already bottom
-                return;
-            }
-            let newIdx = prevIdx + 1;
-            this.selections.splice(prevIdx, 1);
-            this.selections.splice(newIdx, 0, selection);
+        if (this.allowSort()) {
+            $(li).find(".editable-cascaded-list-moveup-button")[0].addEventListener("click", (evt) => {
+                evt.stopPropagation();
+                let prevIdx = this.selections.indexOf(selection);
+                if (prevIdx === 0) {
+                    // already top
+                    return;
+                }
+                let newIdx = prevIdx - 1;
+                let alter = this.selections[newIdx];
+                if (!alter) throw Error("selection on idx " + newIdx + " not found");
+                this.selections.splice(prevIdx, 1);
+                this.selections.splice(newIdx, 0, selection);
 
-            let before;
-            if (newIdx === this.selections.length - 1) {
-                // move to bottom
-            } else {
-                let beforeSelection = this.selections[newIdx + 1];
-                before = this.getSelectionElementByKey(this.getSelectionKey(beforeSelection));
-            }
-            let movedKey = this.getSelectionKey(selection);
-            let element = this.selectionList.removeChild(this.getSelectionElementByKey(movedKey));
-            if (!before) {
-                // append to bottom
-                this.selectionList.appendChild(element);
-            } else {
-                this.selectionList.insertBefore(element, before);
-            }
-            this.onMoveDown(selection);
-        });
+                let alterKey = this.getSelectionKey(alter);
+                let movedKey = this.getSelectionKey(selection);
+                let element = this.selectionList.removeChild(this.getSelectionElementByKey(movedKey));
+                let before = this.getSelectionElementByKey(alterKey);
+                before.parentNode.insertBefore(element, before);
+                this.onMoveUp(selection);
+            }, true);
+            $(li).find(".editable-cascaded-list-movedown-button")[0].addEventListener("click", (evt) => {
+                evt.stopPropagation();
+                let prevIdx = this.selections.indexOf(selection);
+                if (prevIdx === this.selections.length - 1) {
+                    // already bottom
+                    return;
+                }
+                let newIdx = prevIdx + 1;
+                this.selections.splice(prevIdx, 1);
+                this.selections.splice(newIdx, 0, selection);
+
+                let before;
+                if (newIdx === this.selections.length - 1) {
+                    // move to bottom
+                } else {
+                    let beforeSelection = this.selections[newIdx + 1];
+                    before = this.getSelectionElementByKey(this.getSelectionKey(beforeSelection));
+                }
+                let movedKey = this.getSelectionKey(selection);
+                let element = this.selectionList.removeChild(this.getSelectionElementByKey(movedKey));
+                if (!before) {
+                    // append to bottom
+                    this.selectionList.appendChild(element);
+                } else {
+                    this.selectionList.insertBefore(element, before);
+                }
+                this.onMoveDown(selection);
+            });
+        }
 
         if (this.haveCascadeList(selection) || this.allowCreateCascadeList()) {
             $(li).find(".editable-cascaded-list-create-cascade-list-button")[0].addEventListener("click", (evt) => {
@@ -1088,6 +1096,14 @@ ${createCascadeListButton}
         return li;
     }
 
+    allowSort() {
+        return true;
+    }
+
+    allowEdit() {
+        return false;
+    }
+
     onSelect(selection) {
         if (this.haveCascadeList(selection)) {
             let lst = this.getCascadeList(selection);
@@ -1114,5 +1130,42 @@ ${createCascadeListButton}
     }
 
     onCreate(selection) {
+    }
+}
+
+class TagSelector extends EditableCascadedList {
+    constructor(tags, selectHook) {
+        super();
+        this.tags = tags;
+        this.selectHook = selectHook;
+        for (let value of Object.values(this.tags)) {
+            this.addSelection(value);
+        }
+    }
+
+    getSelectionKey(selection) {
+        return selection.name;
+    }
+
+    onFinalSelect(selection) {
+        if (this.selectHook) {
+            this.selectHook(selection.id);
+        }
+    }
+
+    allowEdit() {
+        return false;
+    }
+
+    allowCreate() {
+        return false;
+    }
+
+    haveCascadeList(selection) {
+        return false;
+    }
+
+    enableSearch() {
+        return false;
     }
 }

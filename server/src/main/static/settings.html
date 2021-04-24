@@ -246,6 +246,12 @@
             </div>
         </div>
     </div>
+    <div class="row">
+        <h4>标签编辑</h4>
+        <div class="container-fluid">
+            <div id="tags-editor"></div>
+        </div>
+    </div>
 </div>
 
 <script src="js/safe.js"></script>
@@ -620,11 +626,100 @@
         });
     }
 
+    function loadTags() {
+        let tags = configuration["tags"];
+        if (!tags) tags = {};
+
+        let lst = new class extends EditableCascadedList {
+            allowEdit() {
+                return true;
+            }
+
+            allowCreate() {
+                return true;
+            }
+
+            allowSort() {
+                return false;
+            }
+
+            createSelection(input) {
+                if (this.getSelectionElementByKey(input)) {
+                    throw Error("命名冲突");
+                }
+                let create = {id: makeid(6), name: input, color: "#000000"};
+                this.editTag(create.id, create);
+
+                // noinspection JSValidateTypes
+                return create;
+            }
+
+            getSelectionKey(selection) {
+                return selection.name;
+            }
+
+            onEdit(selection, newSelection) {
+                console.log(selection);
+                console.log(newSelection);
+                this.editTag(selection.id, newSelection);
+            }
+
+            async editTag(id, selection) {
+                tags[id] = selection;
+                selection[id] = id;
+                try {
+                    await new Promise((resolve, reject) => {
+                        $.ajax({
+                            url: "../configuration/edit-tag",
+                            method: "POST",
+                            contentType: "application/json",
+                            data: JSON.stringify({
+                                edit: id,
+                                method: "set",
+                                data: selection
+                            }),
+                            success: resolve,
+                            error: reject
+                        })
+                    });
+                } catch (e) {
+                    toast_ajax_error(e);
+                }
+            }
+
+            async onDelete(selection) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        $.ajax({
+                            url: "../configuration/edit-tag",
+                            method: "POST",
+                            contentType: "application/json",
+                            data: JSON.stringify({
+                                edit: selection.id,
+                                method: "delete"
+                            }),
+                            success: resolve,
+                            error: reject
+                        })
+                    });
+                } catch (e) {
+                    toast_ajax_error(e);
+                }
+            }
+        }
+        for (let tag of Object.values(tags)) {
+            lst.addSelection(tag);
+        }
+        lst.initList();
+        $("#tags-editor").append(lst.outerContainer);
+    }
+
     function loadConfiguration() {
         loadBlobStorages();
         loadRegisterToggle();
         loadSmtpSettings();
         loadGrecaptcha();
+        loadTags();
     }
 
     configuration = {};
@@ -639,9 +734,7 @@
                 console.log(configuration);
                 loadConfiguration();
             },
-            error: function (error) {
-                toast_ajax_error(error);
-            }
+            error: toast_ajax_error
         })
     }
 

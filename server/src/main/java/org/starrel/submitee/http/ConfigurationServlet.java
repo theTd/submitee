@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import jakarta.servlet.AsyncContext;
 import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.*;
+import org.starrel.submitee.attribute.AttributeSpec;
 import org.starrel.submitee.blob.BlobStorage;
 import org.starrel.submitee.blob.BlobStorageProvider;
 
@@ -92,16 +93,27 @@ public class ConfigurationServlet extends AbstractJsonServlet {
         configurationMap.put("smtp", SubmiteeServer.getInstance().getAttributeMap().of("smtp").toJsonTree());
         // endregion
 
+        // region grecaptcha
         configurationMap.put("grecaptcha-sitekey", SubmiteeServer.getInstance().getAttribute("grecaptcha-sitekey", String.class));
         configurationMap.put("grecaptcha-secretkey", SubmiteeServer.getInstance().getAttribute("grecaptcha-secretkey", String.class));
+        // endregion
 
         // region user realms
         Map<String, String> userRealms = new LinkedHashMap<>();
         for (UserRealm realm : SubmiteeServer.getInstance().getUserRealms()) {
             userRealms.put(realm.getTypeId(), I18N.fromKey(String.format("user_realm.%s.title", realm.getTypeId())).format(req));
         }
-        // endregion
         configurationMap.put("user-realms", userRealms);
+        // endregion
+
+        // region tags
+        AttributeSpec<Void> tags = SubmiteeServer.getInstance().getAttributeMap().of("tags", Void.class);
+        Map<String, TagMeta> tagMap = new LinkedHashMap<>();
+        for (String tagId : tags.getKeys()) {
+            tagMap.put(tagId, tags.get(tagId, TagMeta.class));
+        }
+        configurationMap.put("tags", tagMap);
+        // endregion
 
         resp.setStatus(HttpStatus.OK_200);
         resp.setContentType("application/json");
@@ -239,6 +251,37 @@ public class ConfigurationServlet extends AbstractJsonServlet {
                         asyncContext.complete();
                     }
                 });
+                break;
+            }
+            case "edit-tag": {
+                String edit = JsonUtil.parseString(body, "edit");
+                String method = JsonUtil.parseString(body, "method");
+                JsonObject data = JsonUtil.parseObject(body, "data");
+                if (edit == null || method == null || edit.isEmpty() || method.isEmpty()) {
+                    ExceptionReporting.report(ConfigurationServlet.class, "parsing edit-tag request body",
+                            "unexpected request body: " + SubmiteeServer.GSON.toJson(body));
+                    responseBadRequest(req, resp);
+                    return;
+                }
+                switch (method) {
+                    case "delete": {
+                        SubmiteeServer.getInstance().getAttributeMap().of("tags", Void.class).delete(edit);
+                        break;
+                    }
+                    case "set": {
+                        AttributeSpec<Void> tags = SubmiteeServer.getInstance().getAttributeMap().of("tags", Void.class);
+                        TagMeta obj = TagMeta.SERIALIZER.parse(data);
+                        tags.set(edit, obj);
+                        break;
+                    }
+                    default: {
+                        ExceptionReporting.report(ConfigurationServlet.class, "parsing edit-tag method",
+                                "unexpected method: " + method);
+                        responseBadRequest(req, resp);
+                        return;
+                    }
+                }
+                resp.setStatus(HttpStatus.OK_200);
                 break;
             }
             default: {

@@ -216,6 +216,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
         addAttributeSerializer(UUID.class, AttributeSerializers.UUID);
         addAttributeSerializer(UserDescriptor.class, UserDescriptor.SERIALIZER);
         addAttributeSerializer(HistoryAddressEntry.class, HistoryAddressEntry.SERIALIZER);
+        addAttributeSerializer(TagMeta.class, TagMeta.SERIALIZER);
 
         addAttributeSerializer(JsonObject.class, new AttributeSerializer<JsonObject>() {
             @Override

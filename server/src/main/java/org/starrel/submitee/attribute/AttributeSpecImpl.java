@@ -107,7 +107,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     public <TListValue> AttributeSpecImpl<TListValue> ofList(String path, Class<TListValue> type) {
         int idx = path.indexOf(".");
         if (idx != -1) {
-            return of(path.substring(0, idx), Void.class).of(path.substring(idx + 1), type);
+            return of(path.substring(0, idx), Void.class).ofList(path.substring(idx + 1), type);
         }
 
         AttributeSpecImpl<TListValue> spec = (AttributeSpecImpl<TListValue>) specCache.get(path,
@@ -119,7 +119,7 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
         return spec;
     }
 
-    private AttributeSpec<?> getSpec(String path) {
+    private AttributeSpecImpl<?> getSpec(String path) {
         if (path.isEmpty()) return this;
 
         try {
@@ -221,8 +221,8 @@ public class AttributeSpecImpl<TValue> implements AttributeSpec<TValue> {
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
     public <TSubValue> List<TSubValue> getList(String path, Class<TSubValue> type) {
-        if (isList) throw new UnsupportedOperationException("not list");
-        AttributeSpec<?> spec = getSpec(path);
+        AttributeSpecImpl<?> spec = getSpec(path);
+        if (!spec.isList) throw new UnsupportedOperationException("not list");
         if (spec != this) {
             return spec.getList(((Class) type));
         } else {
