@@ -102,6 +102,10 @@ a .material-icons {
     max-height: 20rem;
     overflow-x: hidden;
     overflow-y: inherit;
+    min-width: 5rem;
+    max-width: 15rem;
+    display: flex;
+    flex-direction: column;
 }
 
 .extended-list-container input {
@@ -110,12 +114,21 @@ a .material-icons {
 }
 
 .extended-list-item, .extended-list-create-widget {
+    width: 100%;
     margin: 0;
     list-style-type: none;
     min-height: 2rem;
     font-size: 1rem;
     padding: 0.2rem 0.4rem;
     transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.extended-list-item.disabled > button {
+    opacity: 0.65;
+}
+
+.extended-list-item.highlight > button {
+    font-weight: bold;
 }
 
 .extended-list-item:hover {
@@ -142,4 +155,21 @@ a .material-icons {
 
 .extended-list-context-container.hide {
     max-width: 0;
+}
+
+.editable-extended-list-button {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.8rem;
+    background-color: transparent;
+    transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.editable-extended-list-button:hover {
+    color: #007bff;
+}
+
+.editable-extended-list-button:active {
+    box-shadow: none;
 }

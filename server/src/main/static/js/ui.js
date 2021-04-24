@@ -564,11 +564,12 @@ class ExtendedList {
         let leftContainer = document.createElement("div");
         this.leftContainer = leftContainer;
 
-        $(leftContainer).append(this.createNodeSearch());
+        if (this.enableSearch()) {
+            $(leftContainer).append(this.createNodeSearch());
+        }
         let selectionList = document.createElement("ul");
         this.selectionList = selectionList;
         $(selectionList).addClass("extended-list");
-        $(selectionList).css("max-width", "15rem");
         // $(selectionList).append(this.createNodeSearch());
         for (let selection of this.selections) {
             $(selectionList).append(this.createNodeSelection(selection));
@@ -586,13 +587,15 @@ class ExtendedList {
         outerContainer.appendChild(contextContainer);
         this.contextContainer = contextContainer;
 
-        setTimeout(() => {
-            $(this.leftContainer).find(".extended-list-search")[0].focus();
-        }, 100);
-        this.updatePinyinList();
+        if (this.enableSearch()) {
+            setTimeout(() => {
+                $(this.leftContainer).find(".extended-list-search")[0].focus();
+            }, 100);
+            this.updatePinyinList();
+        }
     }
 
-    show(containerSelector) {
+    show(containerSelector, placement) {
         if (this.container) close();
 
         this.container = $(containerSelector);
@@ -604,7 +607,7 @@ class ExtendedList {
 
         this.container.popover({
             content: this.outerContainer,
-            placement: 'right',
+            placement: placement || 'right',
             html: true,
             sanitizeFn: (content) => content,
             focus: true,
@@ -620,11 +623,11 @@ class ExtendedList {
         let listener = function (evt) {
             if (!inst.outerContainer.contains(evt.target)) {
                 inst.close();
-                document.removeEventListener("click", listener, true);
+                document.removeEventListener("mousedown", listener, true);
             }
         }
         setTimeout(() => {
-            document.addEventListener("click", listener, true)
+            document.addEventListener("mousedown", listener, true)
         });
     }
 
@@ -651,7 +654,7 @@ class ExtendedList {
     }
 
     getSelectionElementByKey(key) {
-        return $(this.selectionList).find(`li[data-selection-key=${key}]`)[0];
+        return $(this.selectionList).find(`li[data-selection-key="${key}"]`)[0];
     }
 
     getSelectionElement(selection) {
@@ -670,13 +673,17 @@ class ExtendedList {
     }
 
     getSelectionKey(selection) {
-        return selection + "";
+        return selection;
     }
 
     onSelect(selection) {
     }
 
     allowCreate() {
+        return false;
+    }
+
+    enableSearch() {
         return false;
     }
 
@@ -699,7 +706,7 @@ class ExtendedList {
 <i class="material-icons text-danger" style="font-size: 1rem">close</i>
 </button>
 </form>`);
-        let lst = this;
+        let inst = this;
         $(node).find("input").on("change", () => {
             $(node).find("input")[0].setCustomValidity("");
         })
@@ -707,13 +714,13 @@ class ExtendedList {
             let input = $(node).find("input").val();
             if (input) {
                 try {
-                    let create = lst.createSelection(input);
+                    let create = inst.createSelection(input);
                     if (!create) throw Error("无法完成操作");
-                    let inst = this;
+
                     let callback = function (result) {
                         if (result) {
                             inst.leftContainer.removeChild(node);
-                            lst.addSelection(result);
+                            inst.addSelection(result);
                             inst.leftContainer.appendChild(inst.nodeCreateSelection);
                             $(inst.container).popover("update");
                         }
@@ -766,7 +773,7 @@ class ExtendedList {
             let widget = this.createNodeCreateForm();
             this.leftContainer.append(widget);
             $(widget).find("input")[0].focus();
-            this.container.popover("update");
+            if (this.container) this.container.popover("update");
         });
         return node;
     }
@@ -796,6 +803,13 @@ class ExtendedList {
     updateSearch() {
         let search = $(this.leftContainer).find(".extended-list-search").val()
         for (let childNode of this.selectionList.childNodes) {
+            if (!search) {
+                $(childNode).removeClass("disabled");
+                $(childNode).removeClass("highlight");
+                $(childNode).css("order", "unset");
+                continue;
+            }
+
             let key = $(childNode).attr("data-selection-key");
             if (!key) {
                 console.warn("search cancelled due to data-selection-key missing");
@@ -812,11 +826,19 @@ class ExtendedList {
             for (let match of matchArray) {
                 if (match.indexOf(search) !== -1) {
                     show = true;
-                    $(childNode).removeClass("d-none");
+                    $(childNode).removeClass("disabled");
+                    $(childNode).addClass("highlight");
+                    $(childNode).css("order", "1");
+                    $(childNode).find("button").removeAttr("tabindex");
                     break;
                 }
             }
-            if (!show) $(childNode).addClass("d-none");
+            if (!show) {
+                $(childNode).addClass("disabled");
+                $(childNode).removeClass("highlight");
+                $(childNode).css("order", "10");
+                $(childNode).find("button").attr("tabindex", "-1")
+            }
             $(this.container).popover("update");
         }
     }
@@ -870,5 +892,227 @@ class CascadedList extends ExtendedList {
 }
 
 class EditableCascadedList extends CascadedList {
+    allowCreate() {
+        return true;
+    }
 
+    allowCreateCascadeList() {
+        return false;
+    }
+
+    addSelection(selection) {
+        if (!selection["name"]) {
+            throw Error("no name: " + JSON.stringify(selection));
+        } else if (this.getSelectionElementByKey(selection["name"])) {
+            throw Error("name conflict");
+        }
+        super.addSelection(selection);
+    }
+
+    createSelection(input) {
+        if (this.getSelectionElementByKey(input)) {
+            throw Error("命名冲突");
+        }
+        let create = {name: input, color: "#000000"};
+        this.onCreate(create);
+        // noinspection JSValidateTypes
+        return create;
+    }
+
+    getSelectionKey(selection) {
+        return super.getSelectionKey(selection.name);
+    }
+
+    createEditContext(selection) {
+        let node = document.createElement("form");
+        $(node).addClass("container");
+        $(node).addClass("")
+        $(node).css("padding", "2rem");
+        $(node).css("width", "10rem");
+        let id = makeid(6);
+        $(node).html(`
+<div class="row flex-row align-items-center flex-nowrap">
+<label for="${id}" style="width: 3rem;margin: 3px 0">颜色</label>
+<input style="padding: 0;text-align: center;width: 100%" type="color" value="${selection.color || "#000000"}" id="${id}"/><br/>
+</div>
+<div class="row flex-row align-items-center flex-nowrap">
+<label for="${id}1" style="width: 3rem;margin: 3px 0">名称</label>
+<input style="padding: 0;text-align: center;width: 100%" type="text" size="1" value="${selection.name}" id="${id}1"/>
+<br/>
+</div>
+<div class="row justify-content-center">
+<button type="submit" class="btn btn-sm btn-outline-primary" style="
+font-size: 0.8rem; height: 1.3rem; padding: 0; width: 100%; margin-top: 0.8rem;">应用</button>
+</div>
+<div class="row justify-content-center">
+<button type="button" class="btn btn-sm btn-outline-danger" style="
+font-size: 0.8rem; height: 1.3rem; padding: 0; width: 100%; margin-top: 0.8rem;">删除</button>
+</div>
+`);
+        $(node).find("input[type=text]").on("change", () => {
+            let input = $(node).find("input[type=text]")[0];
+            input.setCustomValidity("");
+        })
+        $(node).on("submit", () => {
+            let color = $(node).find("input[type=color]").val();
+            let name = $(node).find("input[type=text]").val();
+            if (!name) {
+                let input = $(node).find("input[type=text]")[0];
+                input.setCustomValidity("空命名");
+                input.reportValidity();
+                return false;
+            }
+            let newSelection = {name: name, color: color};
+            if (name !== selection.name && this.getSelectionElement(newSelection)) {
+                let input = $(node).find("input[type=text]")[0];
+                input.setCustomValidity("命名冲突");
+                input.reportValidity();
+                return false;
+            }
+            this.setActivating(null);
+            this.setContextContent(null);
+            this.replaceSelection(selection, newSelection);
+            this.onEdit(selection, newSelection);
+            return false;
+        });
+        $(node).find("button[type=button]").on("click", (evt) => {
+            this.selections.splice(this.selections.indexOf(selection), 1);
+            this.selectionList.removeChild(this.getSelectionElementByKey(this.getSelectionKey(selection)));
+            this.setActivating(null);
+            this.setContextContent(null);
+            this.onDelete(selection);
+        })
+        return node;
+    }
+
+    createNodeSelection(selection) {
+        let li = document.createElement("li");
+        $(li).css("position", "relative");
+        let createCascadeListButton = this.haveCascadeList(selection) ? `
+<button class="editable-cascaded-list-create-cascade-list-button editable-extended-list-button text-success" title="该项有子列表">
+<i class="material-icons" style="font-size: 1.1rem;">playlist_play</i></button>
+`
+            : this.allowCreateCascadeList() ? `
+<button class="editable-cascaded-list-create-cascade-list-button editable-extended-list-button" title="创建子列表">
+<i class="material-icons" style="font-size: 1.1rem">playlist_add</i></button>`
+                : "";
+        $(li).html(`
+<div style="width: 100%; height: 100%; text-align: unset; color: ${selection.color}; display: flex; flex-direction: row; justify-content: space-between">
+<span style="width: 100%; text-align: center; padding: 0 0.7rem;">${selection.name}</span>
+<button class="editable-cascaded-list-moveup-button editable-extended-list-button" title="向上移动"><i class="material-icons" style="font-size: 1.1rem">north</i></button>
+<button class="editable-cascaded-list-movedown-button editable-extended-list-button" title="向下移动"><i class="material-icons" style="font-size: 1.1rem">south</i></button>
+<button class="editable-cascaded-list-edit-button editable-extended-list-button" title="编辑"><i class="material-icons" style="font-size: 1.1rem">edit</i></button>
+${createCascadeListButton}
+</div>
+`);
+        $(li).find(".editable-cascaded-list-edit-button")[0].addEventListener("click", (evt) => {
+            evt.stopPropagation();
+            this.setActivating(li);
+            $(li).addClass("active");
+            this.setContextContent(this.createEditContext(selection));
+        }, true);
+        $(li).find(".editable-cascaded-list-moveup-button")[0].addEventListener("click", (evt) => {
+            evt.stopPropagation();
+            let prevIdx = this.selections.indexOf(selection);
+            if (prevIdx === 0) {
+                // already top
+                return;
+            }
+            let newIdx = prevIdx - 1;
+            let alter = this.selections[newIdx];
+            if (!alter) throw Error("selection on idx " + newIdx + " not found");
+            this.selections.splice(prevIdx, 1);
+            this.selections.splice(newIdx, 0, selection);
+
+            let alterKey = this.getSelectionKey(alter);
+            let movedKey = this.getSelectionKey(selection);
+            let element = this.selectionList.removeChild(this.getSelectionElementByKey(movedKey));
+            let before = this.getSelectionElementByKey(alterKey);
+            before.parentNode.insertBefore(element, before);
+            this.onMoveUp(selection);
+        }, true);
+        $(li).find(".editable-cascaded-list-movedown-button")[0].addEventListener("click", (evt) => {
+            evt.stopPropagation();
+            let prevIdx = this.selections.indexOf(selection);
+            if (prevIdx === this.selections.length - 1) {
+                // already bottom
+                return;
+            }
+            let newIdx = prevIdx + 1;
+            this.selections.splice(prevIdx, 1);
+            this.selections.splice(newIdx, 0, selection);
+
+            let before;
+            if (newIdx === this.selections.length - 1) {
+                // move to bottom
+            } else {
+                let beforeSelection = this.selections[newIdx + 1];
+                before = this.getSelectionElementByKey(this.getSelectionKey(beforeSelection));
+            }
+            let movedKey = this.getSelectionKey(selection);
+            let element = this.selectionList.removeChild(this.getSelectionElementByKey(movedKey));
+            if (!before) {
+                // append to bottom
+                this.selectionList.appendChild(element);
+            } else {
+                this.selectionList.insertBefore(element, before);
+            }
+            this.onMoveDown(selection);
+        });
+
+        if (this.haveCascadeList(selection) || this.allowCreateCascadeList()) {
+            $(li).find(".editable-cascaded-list-create-cascade-list-button")[0].addEventListener("click", (evt) => {
+                evt.stopPropagation();
+                if (this.haveCascadeList(selection)) {
+                    this.onSelect(selection);
+                } else {
+                    let lst = this.getCascadeList(selection);
+                    if (lst) {
+                        this.selectionList.replaceChild(this.createNodeSelection(selection),
+                            this.getSelectionElementByKey(this.getSelectionKey(selection)));
+                        this.setActivating(this.getSelectionElementByKey(this.getSelectionKey(selection)));
+                        lst.initList();
+                        this.setContextContent(lst.outerContainer);
+                    } else {
+                        console.warn("no cascaded list created for selection " + selection["name"]);
+                    }
+                }
+            }, true);
+        }
+
+        $(li).css("cursor", "pointer");
+        $(li).on("click", () => this.onSelect(selection));
+        $(li).addClass("extended-list-item");
+        $(li).addClass("extended-list-item-selection");
+        $(li).attr("data-selection-key", selection.name);
+        return li;
+    }
+
+    onSelect(selection) {
+        if (this.haveCascadeList(selection)) {
+            let lst = this.getCascadeList(selection);
+            lst.initList();
+            this.setContextContent(lst.outerContainer);
+            this.setActivating(this.getSelectionElementByKey(this.getSelectionKey(selection)));
+        } else {
+            this.setActivating(null);
+            this.setContextContent(null);
+            this.onFinalSelect(selection);
+        }
+    }
+
+    onMoveUp(selection) {
+    }
+
+    onMoveDown(selection) {
+    }
+
+    onEdit(selection, newSelection) {
+    }
+
+    onDelete(selection) {
+    }
+
+    onCreate(selection) {
+    }
 }

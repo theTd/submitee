@@ -33,22 +33,7 @@
             box-shadow: 0 0 0 3px rgb(255, 191, 110) !important;
         }
 
-        .tag-list-edit-button {
-            margin: 0;
-            padding: 0;
-            border: 0;
-            font-size: 0.8rem;
-            background-color: transparent;
-            transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
-        }
 
-        .tag-list-edit-button:hover {
-            color: #28a745;
-        }
-
-        .tag-list-edit-button:active {
-            box-shadow: none;
-        }
     </style>
 </head>
 <body>
@@ -68,6 +53,7 @@
     <button class="btn btn-sm btn-outline-info" id="btn-add-tag">添加标签</button>
     <button class="btn btn-sm btn-outline-info">导出</button>
     <button class="btn btn-sm btn-outline-info" id="btn-cascade">级联菜单测试</button>
+    <button class="btn btn-sm btn-outline-info" id="btn-editable-cascade">可编辑级联菜单测试</button>
 </div>
 
 <script src="js/safe.js"></script>
@@ -147,112 +133,54 @@
             }
             loadSubmission(array[0]);
 
-            let addTagButton = $("#btn-add-tag");
-            addTagButton.on("click", () => {
-                let list = new class extends ExtendedList {
-                    onSelect(selection) {
-                        console.log(selection.name + " was selected");
+            let tagList = [
+                {name: "紫色", color: "#af00af"},
+                {name: "红色", color: "#ff4242"},
+                {name: "黄色", color: "#FFC21A"}
+            ];
+
+            $("#btn-add-tag").on("click", () => {
+                let list = new class extends EditableCascadedList {
+                    onCreate(selection) {
+                        tagList.push(selection);
                     }
 
-                    allowCreate() {
-                        return true;
-                    }
-
-                    createSelection(input) {
-                        if (this.getSelectionElementByKey(input)) {
-                            throw Error("命名冲突");
-                        }
-                        return {name: input, color: "#000000"};
-                    }
-
-                    createEditContext(selection, li) {
-                        let node = document.createElement("form");
-                        $(node).addClass("container");
-                        $(node).addClass("")
-                        $(node).css("padding", "2rem");
-                        $(node).css("width", "10rem");
-                        let id = makeid(6);
-                        $(node).html(`
-<div class="row flex-row align-items-center flex-nowrap">
-<label for="${id}" style="width: 3rem;margin: 3px 0">颜色</label>
-<input style="padding: 0;text-align: center;width: 100%" type="color" value="${selection.color}" id="${id}"/><br/>
-</div>
-<div class="row flex-row align-items-center flex-nowrap">
-<label for="${id}1" style="width: 3rem;margin: 3px 0">名称</label>
-<input style="padding: 0;text-align: center;width: 100%" type="text" size="1" value="${selection.name}" id="${id}1"/>
-<br/>
-</div>
-<div class="row justify-content-center">
-<button type="submit" class="btn btn-sm btn-outline-primary" style="
-font-size: 0.8rem; height: 1.3rem; padding: 0; width: 100%; margin-top: 0.8rem;">应用</button>
-</div>
-`);
-                        $(node).find("input[type=text]").on("change", () => {
-                            let input = $(node).find("input[type=text]")[0];
-                            input.setCustomValidity("");
-                        })
-                        $(node).on("submit", () => {
-                            let color = $(node).find("input[type=color]").val();
-                            let name = $(node).find("input[type=text]").val();
-                            if (!name) {
-                                let input = $(node).find("input[type=text]")[0];
-                                input.setCustomValidity("空命名");
-                                input.reportValidity();
-                                return false;
+                    findIndex(sel) {
+                        for (let i = 0; i < tagList.length; i++) {
+                            if (tagList[i].name === sel.name) {
+                                return i;
                             }
-                            let newSelection = {name: name, color: color};
-                            if (name !== selection.name && this.getSelectionElement(newSelection)) {
-                                let input = $(node).find("input[type=text]")[0];
-                                input.setCustomValidity("命名冲突");
-                                input.reportValidity();
-                                return false;
-                            }
-                            this.setActivating(null);
-                            this.setContextContent(null);
-                            this.replaceSelection(selection, newSelection);
-                            return false;
-                        });
-                        return node;
-                    }
-
-                    setActivating(li) {
-                        if (this.activating) {
-                            $(this.activating).removeClass("active");
                         }
-                        this.activating = li;
                     }
 
-                    createNodeSelection(selection) {
-                        let li = document.createElement("li");
-                        $(li).css("position", "relative");
-                        $(li).html(`
-<div style="width: 100%; height: 100%; text-align: unset; color: ${selection.color}; display: flex; flex-direction: row; justify-content: space-between">
-<span style="width: 100%; text-align: center;">${selection.name}</span>
-<button class="tag-list-edit-button"><i class="material-icons" style="font-size: 1.1rem">edit</i></button>
-</div>
-`);
-                        $(li).find(".tag-list-edit-button")[0].addEventListener("click", (evt) => {
-                            evt.stopPropagation();
-                            this.setActivating(li);
-                            $(li).addClass("active");
-                            this.setContextContent(this.createEditContext(selection, li));
-                        }, true);
-
-                        $(li).css("cursor", "pointer");
-                        $(li).on("click", () => this.onSelect(selection));
-                        $(li).addClass("extended-list-item");
-                        $(li).addClass("extended-list-item-selection");
-                        $(li).attr("data-selection-key", selection.name);
-                        return li;
+                    onDelete(selection) {
+                        tagList.splice(this.findIndex(selection), 1);
                     }
 
-                    getSelectionKey(selection) {
-                        return selection.name;
+                    onFinalSelect(selection) {
+                        console.log("selected " + selection.name);
+                    }
+
+                    onEdit(selection, newSelection) {
+                        let d = tagList[this.findIndex(selection)];
+                        Object.assign(d, newSelection);
+                    }
+
+                    onMoveUp(selection) {
+                        let idx = this.findIndex(selection);
+                        let newIdx = idx - 1;
+                        let d = tagList.splice(idx, 1);
+                        tagList.splice(newIdx, 0, d[0]);
+                    }
+
+                    onMoveDown(selection) {
+                        let idx = this.findIndex(selection);
+                        let newIdx = idx + 1;
+                        let d = tagList.splice(idx, 1);
+                        tagList.splice(newIdx, 0, d[0]);
                     }
                 }
-                list.addSelection({name: "紫色", color: "#af00af"});
-                list.addSelection({name: "红色", color: "#ff4242"});
-                list.addSelection({name: "黄色", color: "#FFC21A"});
+                tagList.forEach(d => list.addSelection(d));
                 list.show("#btn-add-tag");
             });
 
@@ -277,7 +205,6 @@ font-size: 0.8rem; height: 1.3rem; padding: 0; width: 100%; margin-top: 0.8rem;"
                                     if (sid === '00') {
                                         // first class
                                         model[id] = {id: id, display: display};
-                                        console.log("added " + id + " to root level");
                                     } else {
                                         // second class
                                         let o = model[fid + "0000"];
@@ -339,11 +266,102 @@ font-size: 0.8rem; height: 1.3rem; padding: 0; width: 100%; margin-top: 0.8rem;"
                     getSelectionKey(selection) {
                         return selection["display"];
                     }
+
+                    enableSearch() {
+                        return true;
+                    }
                 }
 
                 let rootList = fnInitCascadedList(model);
                 rootList.show("#btn-cascade");
-            })
+            });
+
+            let rootData = [{name: "initial element"}];
+
+            $("#btn-editable-cascade").on("click", () => {
+
+                let createListFn = function (dataList) {
+                    let lst = new list(dataList);
+                    for (let d of dataList) {
+                        lst.addSelection(d);
+                    }
+                    return lst;
+                }
+
+                let list = class extends EditableCascadedList {
+                    constructor(dataList) {
+                        super();
+                        this.dataList = dataList;
+                    }
+
+                    findDataListIndex(selection) {
+                        let name = selection["name"];
+                        for (let i = 0; i < this.dataList.length; i++) {
+                            if (this.dataList[i].name === name) {
+                                return i;
+                            }
+                        }
+                    }
+
+                    getCascadeList(selection) {
+                        let child = selection["child"];
+                        if (child) {
+                            return createListFn(child);
+                        } else {
+                            selection["child"] = Array();
+                            return createListFn(selection["child"]);
+                        }
+                    }
+
+                    haveCascadeList(selection) {
+                        return selection["child"];
+                    }
+
+                    onMoveUp(selection) {
+                        let idx = this.findDataListIndex(selection);
+                        let newIdx = idx - 1;
+                        let d = this.dataList.splice(idx, 1);
+                        this.dataList.splice(newIdx, 0, d[0]);
+                    }
+
+                    onMoveDown(selection) {
+                        let idx = this.findDataListIndex(selection);
+                        let newIdx = idx + 1;
+                        let d = this.dataList.splice(idx, 1);
+                        this.dataList.splice(newIdx, 0, d[0]);
+                    }
+
+                    onEdit(selection, newSelection) {
+                        let idx = this.findDataListIndex(selection);
+                        if (idx === -1) {
+                            console.warn("idx of datalist not found of selection " + this.getSelectionKey(selection));
+                            return;
+                        }
+                        let d = this.dataList[idx];
+                        d.name = newSelection.name;
+                        d.color = newSelection.color;
+                    }
+
+                    onCreate(selection) {
+                        this.dataList.push(JSON.parse(JSON.stringify(selection)));
+                    }
+
+                    onDelete(selection) {
+                        this.dataList.splice(this.findDataListIndex(selection), 1);
+                    }
+
+                    allowCreateCascadeList() {
+                        return true;
+                    }
+
+                    onFinalSelect(selection) {
+                        console.log(selection.name + " is selected");
+                    }
+                }
+
+                let lst = createListFn(rootData);
+                lst.show("#btn-editable-cascade", "bottom");
+            });
         })
     })
 </script>
