@@ -5,11 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.http.HttpStatus;
-import org.jsoup.Jsoup;
-import org.starrel.submitee.ClassifiedErrors;
-import org.starrel.submitee.ExceptionReporting;
-import org.starrel.submitee.JsonUtil;
-import org.starrel.submitee.SubmiteeServer;
+import org.starrel.submitee.*;
 import org.starrel.submitee.model.STemplateImpl;
 
 import java.io.IOException;
@@ -63,23 +59,16 @@ public class PasteServlet extends AbstractJsonServlet {
                     }
 
                     String descText = JsonUtil.parseString(content, "desc");
-                    if (descText != null) {
-                        if (descText.isEmpty()) {
-                            content.remove("desc");
-                        } else {
-                            try {
-                                String text = Jsoup.parse(descText).text();
-                                if (text == null || text.isEmpty()) {
-                                    content.remove("desc");
-                                }
-                            } catch (Exception e) {
-                                ExceptionReporting.report(PasteServlet.class, "parsing desc html", e);
-                                content.remove("desc");
-                            }
-                        }
+                    if (Util.isEmptyHtml(descText)) {
+                        content.remove("desc");
                     }
 
+                    template.getAttributeMap().setAutoSaveAttribute(false);
                     template.getAttributeMap().set("", content);
+                    for (SFieldImpl f : template.getFields().values()) {
+                        if (Util.isEmptyHtml(f.getComment())) f.setComment(null);
+                    }
+                    template.getAttributeMap().setAutoSaveAttribute(true);
                     // TODO: 2021-04-06-0006 switch to apply method
                     resp.setStatus(HttpStatus.OK_200);
                 } catch (Exception e) {

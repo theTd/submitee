@@ -7,4 +7,6 @@ public interface SField extends AttributeHolder<SField> {
     String getName();
 
     String getType();
+
+    String getComment();
 }

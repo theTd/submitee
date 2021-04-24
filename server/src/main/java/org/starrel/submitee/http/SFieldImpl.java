@@ -13,6 +13,7 @@ public class SFieldImpl implements SField {
 
     private final AttributeSpec<String> name;
     private final AttributeSpec<String> type;
+    private final AttributeSpec<String> comment;
 
     public SFieldImpl(STemplateImpl template, JsonObject attributeBody) {
         this.template = template;
@@ -21,6 +22,7 @@ public class SFieldImpl implements SField {
 
         this.name = this.attributeMap.of("name", String.class);
         this.type = this.attributeMap.of("type", String.class);
+        this.comment = this.attributeMap.of("comment", String.class);
     }
 
     @Override
@@ -44,7 +46,16 @@ public class SFieldImpl implements SField {
     }
 
     @Override
+    public String getComment() {
+        return comment.get();
+    }
+
+    @Override
     public void attributeUpdated(String path) {
         // TODO: 2021-04-08-0008 parent
+    }
+
+    public void setComment(String comment) {
+        this.comment.set(comment);
     }
 }

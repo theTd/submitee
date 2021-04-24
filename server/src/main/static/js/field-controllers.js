@@ -37,7 +37,46 @@ class TextFieldController extends FieldController {
 
 submitee.fieldControllers['text'] = new TextFieldController();
 
-class RadioFieldController extends FieldController {
+class AbstractListFieldController extends FieldController {
+    generateConfigurationHtml(field) {
+        let id = makeid(6);
+        let selections = field.attributeMap.get("selections");
+        let lst = new class extends EditableCascadedList {
+            allowCreate() {
+                return true;
+            }
+
+            allowEdit() {
+                return true;
+            }
+        }
+        if (selections) {
+            for (let sel of selections) {
+                lst.addSelection(sel);
+            }
+        }
+        setTimeout(() => {
+            lst.initList();
+            $("#" + id).append(lst.outerContainer);
+        })
+        field.selectionEditor = lst;
+        return `<label class="w-100">编辑可选项</label><div id="${id}" class="card" style="width: fit-content"></div>`;
+    }
+
+    applyConfiguration(field) {
+        let lst = field.selectionEditor;
+        field.attributeMap.set("selections", lst.selections);
+    }
+
+    validateConfiguration(field) {
+        let values = field.attributeMap.get("selections");
+        if (!values || values.length === 0) {
+            return "尚未配置可选项目";
+        }
+    }
+}
+
+class RadioFieldController extends AbstractListFieldController {
     constructor() {
         super("radio");
         this.displayName = "单选";
@@ -59,126 +98,53 @@ class RadioFieldController extends FieldController {
      * @returns {string}
      */
     generateSubmissionHtml(field) {
-        let values = field.attributeMap.get("values");
-
-        if (!values) {
-            return `<div class="alert alert-warning">存在问题的字段: ${field.name}</div>`;
-        }
-
+        let selections = field.attributeMap.get("selections");
+        if (!selections) return super.generateConfigurationHtml(field);
         let radioList = "";
-        let containerId = this.getContainerId(field);
-        values.forEach(function (val) {
-            let radioId = `${containerId}-${val}`;
-            radioList += `<input id="${radioId}" type="radio" name="${field.name}" value="${val}" /><label class="ml-1" for="${radioId}">${val}</label><div class="w-100"></div>`;
+        selections.forEach(function (sel) {
+            let id = makeid(6);
+            radioList += `
+<input id="${id}" type="radio" name="${field.name}" value="${sel.name}" />
+<label class="ml-1" for="${id}" style="color: ${sel.color}">${sel.name}</label><br/>`;
         })
         return radioList;
-    }
-
-    generateConfigurationHtml(field) {
-        let id = "radio-conf-" + field.name;
-
-        let values = field.attributeMap.get("values");
-        let present = "";
-        if (values) {
-            values.forEach(function (val, index) {
-                present += val;
-                if (index !== values.length - 1) present += " ";
-            })
-        }
-
-        return `
-<label class="w-100" for="${id}">可选项目： (使用空格分隔)</label>
-<input id="${id}" type="text" id="radio-conf-${field.name}" value="${present}"/>
-`;
-    }
-
-    applyConfiguration(field) {
-        let id = "radio-conf-" + field.name;
-        let valuesString = $("#" + id).val();
-        let values = Array();
-        valuesString.split(" ").forEach(value => {
-            if (value) values.push(value);
-        });
-        field.attributeMap.set("values", values);
-    }
-
-    validateConfiguration(field) {
-        let values = field.attributeMap.get("values");
-        if (!values || values.length === 0) {
-            return "尚未配置可选项目";
-        }
     }
 }
 
 submitee.fieldControllers['radio'] = new RadioFieldController();
 
-class CheckboxFieldController extends FieldController {
+class CheckboxFieldController extends AbstractListFieldController {
     constructor() {
         super("checkbox");
         this.displayName = "多选"
     }
 
-    generateSubmissionHtml(field) {
-        let values = field.attributeMap.get("values");
-
-        if (!values) {
-            return `<div class="alert alert-warning">存在问题的字段: ${field.name}</div>`;
-        }
-
-        let checkboxList = "";
-        let containerId = this.getContainerId(field);
-        values.forEach(function (val) {
-            let checkboxId = `${containerId}-${val}`;
-            checkboxList += `<input id="${checkboxId}" type="checkbox" name="${field.name}" value="${val}" /><label class="ml-1" for="${checkboxId}">${val}</label><div class="w-100"></div>`;
-        })
-        return checkboxList;
-    }
-
+    /**
+     *
+     * @param {SField} field
+     * @returns {string}
+     */
     resolveSubmission(field) {
         let containerId = super.getContainerId(field);
-        let checked = $(`#${containerId} input[name=${field.name}]:checked`);
-
-        let array = Array();
-        for (let val of checked) {
-            array.push(val.value);
-        }
-
-        return array;
+        return $(`#${containerId} input[name=${field.name}]:checked`).val();
     }
 
-    generateConfigurationHtml(field) {
-        let id = "checkbox-conf-" + field.name;
-
-        let values = field.attributeMap.get("values");
-        let present = "";
-        if (values) {
-            values.forEach(function (val, index) {
-                present += val;
-                if (index !== values.length - 1) present += " ";
-            })
-        }
-
-        return `
-<label class="w-100" for="${id}">可选项目： (使用空格分隔)</label>
-<input id="${id}" type="text" id="checkbox-conf-${field.name}" value="${present}"/>
-`;
-    }
-
-    applyConfiguration(field) {
-        let id = "checkbox-conf-" + field.name;
-        let valuesString = $("#" + id).val();
-        let values = Array();
-        valuesString.split(" ").forEach(value => {
-            if (value) values.push(value);
-        });
-        field.attributeMap.set("values", values);
-    }
-
-    validateConfiguration(field) {
-        let values = field.attributeMap.get("values");
-        if (!values || values.length === 0) {
-            return "尚未配置可选项目";
-        }
+    /**
+     *
+     * @param {SField} field
+     * @returns {string}
+     */
+    generateSubmissionHtml(field) {
+        let selections = field.attributeMap.get("selections");
+        if (!selections) return super.generateConfigurationHtml(field);
+        let radioList = "";
+        selections.forEach(function (sel) {
+            let id = makeid(6);
+            radioList += `
+<input id="${id}" type="checkbox" name="${field.name}" value="${sel.name}" />
+<label class="ml-1" for="${id}" style="color: ${sel.color}">${sel.name}</label><br/>`;
+        })
+        return radioList;
     }
 }
 

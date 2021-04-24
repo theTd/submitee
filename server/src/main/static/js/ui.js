@@ -972,10 +972,11 @@ font-size: 0.8rem; height: 1.3rem; padding: 0; width: 100%; margin-top: 0.8rem;"
                 input.reportValidity();
                 return false;
             }
+            this.onEdit(selection, newSelection);
             this.setActivating(null);
             this.setContextContent(null);
             this.replaceSelection(selection, newSelection);
-            this.onEdit(selection, newSelection);
+            this.selections.splice(this.selections.indexOf(selection), 1, newSelection);
             return false;
         });
         $(node).find("button[type=button]").on("click", (evt) => {

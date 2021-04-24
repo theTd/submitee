@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import org.apache.commons.mail.HtmlEmail;
 import org.eclipse.jetty.http.HttpStatus;
+import org.jsoup.Jsoup;
 import org.owasp.html.HtmlPolicyBuilder;
 import org.owasp.html.PolicyFactory;
 import org.owasp.html.Sanitizers;
@@ -220,5 +221,19 @@ public abstract class Util {
         } else {
             return element;
         }
+    }
+
+    public static boolean isEmptyHtml(String html) {
+        if (html == null || html.isEmpty()) return true;
+        String text;
+        try {
+            text = Jsoup.parse(html).text();
+        } catch (Exception e) {
+            ExceptionReporting.report(Util.class, "parsing html", "html=" + html);
+            return true;
+        }
+        if (text == null) return true;
+        text = text.replace(" ", "");
+        return text.isEmpty();
     }
 }

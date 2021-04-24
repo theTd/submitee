@@ -512,7 +512,6 @@ function requireControllers(set) {
     return Promise.all(promises);
 }
 
-
 function getFieldTypeDisplayName(type) {
     let c = submitee.fieldControllers[type];
     return c ? c.displayName : type;
