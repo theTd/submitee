@@ -1135,14 +1135,23 @@ ${sortButtons}${editButton}${createCascadeListButton}
 }
 
 class TagSelector extends EditableCascadedList {
-    constructor(tags, selectHook, exclude) {
+    constructor(tags, selectHook, exclude, canEdit) {
         super();
         this.tags = tags;
         this.selectHook = selectHook;
         this.exclude = Array.isArray(exclude) ? exclude : [];
+        this.canEdit = !!canEdit;
 
-        for (let value of Object.values(this.tags)) {
-            this.addSelection(value);
+        if (!canEdit) {
+            for (let value of Object.values(this.tags)) {
+                this.addSelection(value);
+            }
+        } else {
+            for (let meta of Object.values(this.tags)) {
+                if (this.exclude.indexOf(meta.id) !== -1) {
+                    this.addSelection(meta);
+                }
+            }
         }
     }
 
@@ -1151,6 +1160,7 @@ class TagSelector extends EditableCascadedList {
     }
 
     onFinalSelect(selection) {
+        this.setContextContent(null);
         if (this.selectHook) {
             this.selectHook(selection);
         }
@@ -1161,7 +1171,7 @@ class TagSelector extends EditableCascadedList {
     }
 
     allowCreate() {
-        return false;
+        return this.canEdit;
     }
 
     haveCascadeList(selection) {
@@ -1172,17 +1182,91 @@ class TagSelector extends EditableCascadedList {
         return false;
     }
 
-    createNodeSelection(selection) {
-        let sel = super.createNodeSelection(selection);
-        if (this.exclude.indexOf(selection.id) !== -1) {
-            $(sel).addClass("disabled");
-            $(sel).css("order", "10");
-            $(sel).attr("tab-index", -1);
-        } else {
-            $(sel).css("order", "1");
-            // $(sel).attr("tab-index", 0);
+    createNodeCreateSelection() {
+        let node = document.createElement("div");
+        $(node).addClass("extended-list-item");
+        $(node).css("height", "1.2rem");
+        $(node).css("min-height", "unset")
+        $(node).html(`
+<button style="width: 100%; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center;
+ justify-items: center;">
+ <i style="font-size: 0.8rem" class="material-icons text-success font-weight-bold">add</i>
+ </button>`);
+
+        let outerList = this;
+        let fnBuildInsertList = function () {
+            let availableTags = Array();
+            for (let tagMeta of Object.values(outerList.tags)) {
+                if (outerList.exclude.indexOf(tagMeta.id) === -1) {
+                    availableTags.push(tagMeta);
+                }
+            }
+            if (availableTags.length === 0) {
+                outerList.setContextContent(null);
+                return;
+            }
+
+            let insertList = new class extends TagSelector {
+                constructor() {
+                    super(availableTags);
+                }
+
+                onFinalSelect(selection) {
+                    outerList.exclude.push(selection.id);
+                    outerList.addSelection(selection);
+                    fnBuildInsertList();
+                }
+            }
+            insertList.initList();
+            outerList.setContextContent(insertList.outerContainer);
         }
-        return sel;
+        $(node).find("button").on("click", fnBuildInsertList);
+        return node;
+    }
+
+    createNodeSelection(selection) {
+        let li = document.createElement("li");
+        $(li).css("position", "relative");
+        let removeButton = this.canEdit ? `
+<button class="tag-selector-remove-button editable-extended-list-button" title="移除">
+<i class="material-icons" style="font-size: 1.1rem">close</i></button>
+        ` : "";
+        $(li).html(`
+<div style="width: 100%; height: 100%; text-align: unset; color: ${selection.color}; display: flex; flex-direction: row; justify-content: space-between">
+<span style="width: 100%; text-align: center; padding: 0 0.7rem;">${selection.name}</span>
+${removeButton}
+</div>
+`);
+        if (this.canEdit) {
+            $(li).find(".tag-selector-remove-button")[0].addEventListener("click", (evt) => {
+                evt.stopPropagation();
+                this.onRemoveTag(selection.id);
+                this.setContextContent(null);
+                this.getSelectionElementByKey(this.getSelectionKey(selection)).remove();
+                this.exclude.splice(this.exclude.indexOf(selection.id), 1);
+            })
+        }
+
+        $(li).css("cursor", "pointer");
+        $(li).on("click", () => this.onFinalSelect(selection));
+        $(li).addClass("extended-list-item");
+        $(li).addClass("extended-list-item-selection");
+        $(li).attr("data-selection-key", selection.name);
+
+        if (!this.canEdit) {
+            if (this.exclude.indexOf(selection.id) !== -1) {
+                $(li).addClass("disabled");
+                $(li).css("order", "10");
+                $(li).attr("tab-index", -1);
+            } else {
+                $(li).css("order", "1");
+                // $(sel).attr("tab-index", 0);
+            }
+        }
+        return li;
+    }
+
+    onRemoveTag() {
     }
 }
 
@@ -1335,7 +1419,7 @@ async function asyncCreateRegionCascadedList(selectCallback) {
     return fnInitCascadedList(submitee["region-model"]);
 }
 
-function createTagElement(tagId, configuration, deleteCallback, clickCallback) {
+function createTagElement(tagId, configuration, deleteCallback, clickCallback, appendCallback) {
     if (!configuration["tags"]) return;
     let tagMeta = configuration["tags"][tagId];
     if (!tagMeta) return;
@@ -1344,7 +1428,7 @@ function createTagElement(tagId, configuration, deleteCallback, clickCallback) {
     $(div).addClass("position-relative");
     $(div).css("background-color", tagMeta["color"]);
     if (clickCallback) {
-        $(div).html(`<button class="btn-tag-box-label">${tagMeta["name"]}</button><button class="btn-tag-box-delete" title="删除标签"></button>`);
+        $(div).html(`<button class="btn-tag-box-append"></button><button class="btn-tag-box-label">${tagMeta["name"]}</button><button class="btn-tag-box-delete" title="删除标签"></button>`);
         $(div).find(".btn-tag-box-label").on("click", () => {
             clickCallback();
         });
@@ -1356,6 +1440,13 @@ function createTagElement(tagId, configuration, deleteCallback, clickCallback) {
     } else {
         $(div).find(".btn-tag-box-delete").on("click", () => {
             deleteCallback();
+        });
+    }
+    if (!appendCallback) {
+        $(div).find(".btn-tag-box-append").remove();
+    } else {
+        $(div).find(".btn-tag-box-append").on("click", () => {
+            appendCallback();
         });
     }
     return div;

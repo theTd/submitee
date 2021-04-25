@@ -201,12 +201,11 @@ public class BatchGetServlet extends AbstractJsonServlet {
             return document;
         } else if (documentOrArray instanceof List) {
             //noinspection unchecked
-            List<Document> array = (List<Document>) documentOrArray;
-            ListIterator<Document> iterator = array.listIterator();
+            ListIterator<Object> iterator = ((List<Object>) documentOrArray).listIterator();
             while (iterator.hasNext()) {
-                iterator.set((Document) patchSelector(iterator.next()));
+                iterator.set(patchSelector(iterator.next()));
             }
-            return array;
+            return documentOrArray;
         } else {
             return documentOrArray;
         }

@@ -57,6 +57,10 @@
             max-width: fit-content;
         }
 
+        .submission-digest {
+            position: relative;
+        }
+
         .submission-debug {
             overflow: auto;
         }
@@ -74,12 +78,14 @@
         <div class="col submission-template-id">模板</div>
         <div class="col submission-user">提交者</div>
         <div class="col submission-time">时间</div>
-        <div class="col submission-debug">
-            <pre class="submission-debug">摘要</pre>
+        <div class="col submission-digest">
+            <div class="submission-debug">
+                <pre>摘要</pre>
+            </div>
         </div>
         <div class="col submission-action">
             <!--            <div class="submission-detail"></div>-->
-            <button class="btn btn-info btn-sm" onclick="showDetail(this)">详情</button>
+            <button class="btn btn-info btn-sm btn-submission-show-detail">详情</button>
         </div>
     </div>
 </template>
@@ -93,7 +99,7 @@
         <div class="col submission-time">
             <button class="filter-button" onclick="addStartFilter()">时间</button>
         </div>
-        <div class="col submission-debug">摘要</div>
+        <div class="col submission-digest">摘要</div>
         <div class="col submission-action"></div>
     </div>
     <hr/>
@@ -121,22 +127,6 @@
 </div>
 
 <script>
-    function showDetail(element) {
-        submitee.currentSubmissionTarget =
-            findParentAttributeByElement(element, "data-submitee-submission-uuid");
-
-        $(".modal .modal-title").text("提交详情");
-        $(".modal .modal-body").html("<span class='spinner-border'></span>");
-        $(".modal").on('shown.bs.modal', function () {
-            $(document).off('focusin.modal');
-        }).modal();
-
-        submitee.getPage("submission-detail.html").then(page => {
-            $(".modal .modal-body").html(page);
-        });
-
-    }
-
     /**
      *
      * @param {Submission} submission
@@ -148,7 +138,24 @@
         $(node).find(".submission-row").attr("data-submitee-submission-uuid", submission.attributeMap.get("unique-id"));
 
         $(node).find(".submission-template-id").html("<p class='spinner-border spinner-border-sm'></p>");
-        $(node).find(".submission-debug").text(submission.debug.substr(0, submission.debug.length - 1));
+
+        let tagContainer = document.createElement("div");
+        $(tagContainer).addClass("position-absolute").addClass("d-flex").addClass("flex-row");
+        $(tagContainer).css("right", "0").css("top", "-50%");
+        if (submission["tags"]) {
+            for (let tagId of submission["tags"]) {
+                let tagMeta = submitee.configuration["tags"][tagId];
+                if (!tagMeta) continue;
+                $(tagContainer).append(createTagElement(tagId, submitee.configuration, null, () => {
+                    addTagFilter(tagId, false);
+                }, () => {
+                    addTagFilter(tagId, true);
+                }));
+            }
+        }
+
+        $(node).find(".submission-digest").prepend(tagContainer);
+        $(node).find(".submission-debug pre").text(submission.debug.substr(0, submission.debug.length - 1));
         $(node).find(".submission-time").html(`
 <button class="filter-button" onclick="addStartFilter(this)" data-timestamp="${submission.submitTime}">
 ${submitee.relativeTimeLocale(submission.submitTime)}
@@ -157,6 +164,19 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         ).attr("title",
             new Date(submission.submitTime).toLocaleString());
         $(node).find(".submission-user").html(submission.submitUser);
+
+        $(node).find(".btn-submission-show-detail").on("click", () => {
+            submitee.currentSubmissionTarget = submission.uniqueId;
+            $(".modal .modal-title").text("提交详情");
+            $(".modal .modal-body").html("<span class='spinner-border'></span>");
+            $(".modal").on('shown.bs.modal', function () {
+                $(document).off('focusin.modal');
+            }).modal();
+
+            submitee.getPage("submission-detail.html").then(page => {
+                $(".modal .modal-body").html(page);
+            });
+        });
         return node;
     }
 
@@ -231,6 +251,8 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         if (tid) q += "&tid=" + encodeURIComponent(tid);
         let start = submitee.filterbar.get("start");
         if (start) q += "&start=" + start;
+        let tags = submitee.filterbar.get("tags");
+        if (tags) q += "&tags=" + encodeURIComponent(tags);
         return q;
     }
 
@@ -240,6 +262,26 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
 
     function addTidFilter(element) {
         submitee.filterbar.setValue("tid", element ? $(element).attr("data-tid") : null);
+    }
+
+    function addTagFilter(tagId, append) {
+        let newValue;
+        if (append) {
+            newValue = submitee.filterbar.get("tags");
+            let arr = Array();
+            if (newValue && newValue !== "") {
+                for (let tagId of newValue.split(" ")) {
+                    if (arr.indexOf(tagId) === -1) {
+                        arr.push(tagId);
+                    }
+                }
+            }
+            if (arr.indexOf(tagId) === -1) arr.push(tagId);
+            newValue = arr.join(" ");
+        } else {
+            newValue = tagId;
+        }
+        submitee.filterbar.setValue("tags", newValue);
     }
 
     function reloadWithFilters(page) {
@@ -287,6 +329,59 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
             }
         }
 
+        class TagsFilterbarController extends FilterbarController {
+            constructor(tags) {
+                super();
+                this.tags = tags;
+            }
+
+            generateInputHtml(value) {
+                let id = makeid(6);
+                let present = Array();
+
+                for (let tagId of value.split(" ")) {
+                    if (tagId) {
+                        present.push(tagId);
+                    }
+                }
+
+                let ctl = this;
+                this.selector = new class extends TagSelector {
+                    constructor() {
+                        super(submitee.configuration["tags"], null, present, true);
+                    }
+
+                    close() {
+                        // super.close();
+                        let newValue = ctl.parseInputValue();
+                        submitee.filterbar.setValue("tags", newValue);
+                        if (!newValue) {
+                            reloadWithFilters();
+                        }
+                    }
+                }
+                setTimeout(() => this.selector.show("#" + id));
+                return `<div id="${id}"></div>`;
+            }
+
+            getLocaleValue(value) {
+                let html = "";
+                for (let tagId of value.split(" ")) {
+                    if (tagId) {
+                        let meta = submitee.configuration["tags"][tagId];
+                        if (!meta) continue;
+                        html += `<span style="color: ${meta.color};border: ${meta.color} solid 1px; border-radius: 5px; padding: 2px; margin-right: 2px">${meta.name}</span>`;
+                    }
+                }
+                return html;
+            }
+
+            parseInputValue(jqForm) {
+                let selected = this.selector.exclude;
+                return selected.join(" ");
+            }
+        }
+
         submitee.filterbar.init({
             key: "tid",
             displayKey: "模板",
@@ -294,7 +389,7 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
             setValueCallback: reloadWithFilters,
             removeCallback: reloadWithFilters,
             controller: new TemplateFilterbarController(templates, templateVersionMap)
-        })
+        });
         submitee.filterbar.init({
             key: "start",
             displayKey: "起始时间",
@@ -302,7 +397,15 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
             setValueCallback: reloadWithFilters,
             removeCallback: reloadWithFilters,
             datePicker: true
-        })
+        });
+        submitee.filterbar.init({
+            key: "tags",
+            displayKey: "标签",
+            value: getQueryValue("tags"),
+            setValueCallback: reloadWithFilters,
+            removeCallback: reloadWithFilters,
+            controller: new TagsFilterbarController(submitee.configuration["tags"])
+        });
     }
 
     submitee_safe.loadAllScript([
@@ -315,6 +418,13 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         "js/field-controllers.js",
         "js/ui.js"
     ]).then(async () => {
+        try {
+            await configurationPromise();
+        } catch (xhr) {
+            toast_ajax_error(xhr);
+            return;
+        }
+
         submitee.filterbar = createFilterBar(".filter-container");
         let templates = await fetchTemplateInfo({}, false, 0, null, true);
         let templateVersionMap = {};
@@ -352,6 +462,14 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         let startFilter = submitee.filterbar.get("start");
         if (startFilter) {
             filters["submit-time"] = {"$lte": parseInt(startFilter)};
+        }
+        let tagFilter = submitee.filterbar.get("tags");
+        if (tagFilter) {
+            let array = Array();
+            for (let tagId of tagFilter.split(" ")) {
+                if (tagId) array.push(tagId);
+            }
+            filters["tags"] = {"$all": array};
         }
 
         let order = {"submit-time": -1};
