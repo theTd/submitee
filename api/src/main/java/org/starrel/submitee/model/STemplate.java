@@ -2,12 +2,14 @@ package org.starrel.submitee.model;
 
 import org.starrel.submitee.attribute.AttributeHolder;
 
+import java.sql.SQLException;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public interface STemplate extends AttributeHolder<STemplate>, EventLogHolder {
+    String ATTRIBUTE_COLLECTION_NAME = "templates";
 
     UUID getUniqueId();
 
@@ -48,4 +50,6 @@ public interface STemplate extends AttributeHolder<STemplate>, EventLogHolder {
     default String getAttributeScheme() {
         return "STemplate";
     }
+
+    void delete() throws SQLException;
 }

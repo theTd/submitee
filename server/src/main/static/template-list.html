@@ -113,22 +113,11 @@
         <div class="col s-template-comment"></div>
         <div class="col s-template-actions">
             <div class="template-link-container position-relative d-none" style="right: 2.5rem"></div>
-            <button class="btn btn-sm btn-secondary button-edit-template d-none" onclick="editTemplate(this)">
-                编辑
-            </button>
-            <button class="btn btn-sm btn-outline-danger button-archive-template d-none"
-                    onclick="archiveTemplate(this)">
-                归档
-            </button>
-            <button class="btn btn-sm btn-info button-view-template d-none" onclick="editTemplate(this)">
-                查看
-            </button>
-            <button class="btn btn-sm btn-warning button-revision-template d-none" onclick="revisionTemplate(this)">
-                修订
-            </button>
-            <button class="btn btn-sm btn-danger button-delete-template d-none" onclick="deleteTemplate(this)">
-                删除
-            </button>
+            <button class="btn btn-sm btn-secondary button-edit-template d-none">编辑</button>
+            <button class="btn btn-sm btn-outline-danger button-archive-template d-none">归档</button>
+            <button class="btn btn-sm btn-info button-view-template d-none">查看</button>
+            <button class="btn btn-sm btn-warning button-revision-template d-none">修订</button>
+            <button class="btn btn-sm btn-danger button-delete-template d-none">删除</button>
         </div>
     </div>
 </template>
@@ -168,11 +157,9 @@
 
 <script src="js/safe.js"></script>
 <script>
-    function archiveTemplate(element) {
-        let templateId = findTemplateIdByElement(element);
-
+    function archiveTemplate(template) {
         $.ajax({
-            url: `../template-control/${templateId}/archive`,
+            url: `../template-control/${template.uniqueId}/archive`,
             method: "GET",
             success: function (response) {
                 create_toast("提示", "已完成");
@@ -186,11 +173,9 @@
         });
     }
 
-    function deleteTemplate(element) {
-        let templateId = findTemplateIdByElement(element);
-
+    function deleteTemplate(template) {
         $.ajax({
-            url: `../template-control/${templateId}/delete`,
+            url: `../template-control/${template.uniqueId}/delete`,
             method: "GET",
             success: function (response) {
                 create_toast("提示", "已完成");
@@ -204,10 +189,9 @@
         });
     }
 
-    function revisionTemplate(element) {
-        let id = findTemplateIdByElement(element);
+    function revisionTemplate(template) {
         $.ajax({
-            url: "../create/template/" + id,
+            url: "../create/template/" + template.uniqueId,
             method: "POST",
             contentType: "application/json",
             data: JSON.stringify({}),
@@ -241,13 +225,12 @@
         });
     }
 
-    function findTemplateIdByElement(element) {
-        return findParentAttributeByElement(element, "data-submitee-template-id");
-    }
+    // function findTemplateIdByElement(element) {
+    //     return findParentAttributeByElement(element, "data-submitee-template-id");
+    // }
 
-    function editTemplate(element) {
-        let templateId = findTemplateIdByElement(element);
-        window.location.href = "management.html?method=edit-template&target=" + templateId;
+    function editTemplate(template) {
+        window.location.href = "management.html?method=edit-template&target=" + template.uniqueId;
     }
 
     /**
@@ -277,25 +260,19 @@
                     });
                 })
             )
-            $(node).find(".button-revision-template").removeClass("d-none");
-            $(node).find(".button-view-template").removeClass("d-none");
-            $(node).find(".button-edit-template").addClass("d-none");
-            $(node).find(".button-archive-template").addClass("d-none");
-            $(node).find(".button-delete-template").addClass("d-none");
+            $(node).find(".button-revision-template").removeClass("d-none").on("click", () => revisionTemplate(template));
+            $(node).find(".button-view-template").removeClass("d-none").on("click", () => editTemplate(template));
         } else {
-            $(node).find(".template-link-container").addClass("d-none");
-            $(node).find(".button-view-template").addClass("d-none");
-
             if (template.archived) {
-                $(node).find(".button-revision-template").removeClass("d-none");
-                $(node).find(".button-edit-template").addClass("d-none");
-                $(node).find(".button-archive-template").addClass("d-none");
-                $(node).find(".button-delete-template").removeClass("d-none");
+                $(node).find(".button-revision-template").removeClass("d-none").on("click", () => revisionTemplate(template));
+                $(node).find(".button-delete-template").removeClass("d-none").on("click", () => {
+                    let btn = $(`.s-template-row[data-submitee-template-id="${template.uniqueId}"]`)
+                        .find(".button-delete-template")[0]
+                    createConfirmDialog(btn, () => deleteTemplate(template), "正在删除模板: " + template.name);
+                });
             } else {
-                $(node).find(".button-revision-template").addClass("d-none");
-                $(node).find(".button-edit-template").removeClass("d-none");
-                $(node).find(".button-archive-template").removeClass("d-none");
-                $(node).find(".button-delete-template").addClass("d-none");
+                $(node).find(".button-edit-template").removeClass("d-none").on("click", () => editTemplate(template));
+                $(node).find(".button-archive-template").removeClass("d-none").on("click", () => archiveTemplate(template));
             }
         }
 

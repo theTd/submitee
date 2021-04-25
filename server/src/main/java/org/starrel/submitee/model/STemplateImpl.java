@@ -9,6 +9,7 @@ import org.starrel.submitee.attribute.AttributeMap;
 import org.starrel.submitee.attribute.AttributeSpec;
 import org.starrel.submitee.http.SFieldImpl;
 
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -161,6 +162,11 @@ public class STemplateImpl implements STemplate, Comparable<STemplateImpl> {
             }
         }
         return fields;
+    }
+
+    @Override
+    public void delete() throws SQLException {
+        keeper.deleteTemplate(this);
     }
 
     @Override

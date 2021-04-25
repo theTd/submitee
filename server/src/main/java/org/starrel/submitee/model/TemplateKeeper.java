@@ -3,6 +3,7 @@ package org.starrel.submitee.model;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.gson.JsonObject;
+import com.mongodb.DB;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Filters;
@@ -256,5 +257,17 @@ public class TemplateKeeper {
                 throw e;
             }
         }
+    }
+
+    public void deleteTemplate(STemplateImpl sTemplate) throws SQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            PreparedStatement stmt = conn.prepareStatement("DELETE FROM templates WHERE `uuid`=?");
+            stmt.setString(1, sTemplate.getUniqueId().toString());
+            stmt.executeUpdate();
+        }
+        templateCache.invalidate(sTemplate.getUniqueId());
+        latestVersionCache.invalidate(sTemplate.getTemplateId());
+        SubmiteeServer.getInstance().removeAttributeMap(STemplate.ATTRIBUTE_COLLECTION_NAME,
+                sTemplate.getAttributePersistKey());
     }
 }

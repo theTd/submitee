@@ -11,6 +11,7 @@ import org.starrel.submitee.model.STemplateImpl;
 import org.starrel.submitee.model.User;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -131,6 +132,19 @@ public class TemplateControlServlet extends SubmiteeHttpServlet {
                 SubmiteeServer.getInstance().pushEvent(Level.INFO, TemplateControlServlet.class, "template published",
                         String.format("user=%s, template=%s", user, template));
 
+                resp.setStatus(HttpStatus.OK_200);
+                break;
+            }
+            case "delete": {
+                try {
+                    template.delete();
+                } catch (SQLException e) {
+                    ExceptionReporting.report(TemplateControlServlet.class, "deleting template", "template=" + template, e);
+                    responseInternalError(req, resp);
+                    return;
+                }
+                SubmiteeServer.getInstance().pushEvent(Level.INFO, TemplateControlServlet.class, "template deleted",
+                        String.format("user=%s, template=%s", user, template));
                 resp.setStatus(HttpStatus.OK_200);
                 break;
             }
