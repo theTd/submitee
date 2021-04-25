@@ -29,24 +29,22 @@
         .s-field {
             margin-top: 0.5rem;
             margin-bottom: 0.5rem;
-            transition: .2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            transition: .3s cubic-bezier(0.22, 0.61, 0.36, 1);
+            background-color: transparent;
+            border: 3px solid transparent;
+            border-radius: 10px;
         }
 
-        /*.s-field:hover {*/
-        /*    box-shadow: inset 0 -4px 0 0 #b7b7b7;*/
-        /*}*/
-
-        /*.s-field-editing:hover {*/
-        /*    box-shadow: 0 0 0 3px rgb(255, 164, 7) !important;*/
-        /*}*/
-
         .s-field-editing {
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-            background-color: rgb(253, 222, 130);
-            box-shadow: 0 0 0 3px rgba(255, 193, 7, 1);
-            border: solid rgb(253, 222, 130);
-            border-radius: 3px;
+            padding-top: 0.6rem;
+            padding-bottom: 0.6rem;
+            background-color: rgb(254 239 198);
+            border: 3px solid rgb(253, 203, 65);
+            border-radius: 10px;
+        }
+
+        .s-field-comment p:last-child {
+            margin-bottom: 0;
         }
 
         .field-sort-drop-area {
@@ -84,7 +82,7 @@
         <div></div>
     </div>
 </template>
-<template id="template-present-field">
+<template id="template-s-field">
     <div class="row s-field" draggable="true" ondragstart=fieldDragStart(event) data-submitee-field-name>
         <div class="col col-2 s-field-type"></div>
         <div class="position-relative require-mark d-none">
@@ -95,13 +93,13 @@
         <div class="col col-2 s-field-name"></div>
         <div class="col col-6 s-field-comment"></div>
         <div class="col col-2">
-            <a href="#" onclick="editField(this)" class="btn btn-secondary btn-sm">编辑</a>
-            <a href="#" onclick="deleteField(this)" class="btn btn-danger btn-sm">删除</a>
+            <button class="btn btn-secondary btn-sm btn-edit-field">编辑</button>
+            <button class="btn btn-danger btn-sm btn-delete-field">删除</button>
             <div class="field-error d-inline"></div>
         </div>
     </div>
 </template>
-<template id="template-editing-field">
+<template id="template-s-editing-field">
     <div class="row s-field s-field-editing" data-submitee-field-name>
         <div class="col col-4 container">
             <div class="container" style="padding: 0">
@@ -134,7 +132,7 @@
         </div>
         <div class="col col-6 s-field-comment"></div>
         <div class="col col-2">
-            <a href="#" onclick="applyField(this)" class="btn btn-success btn-sm">完成</a>
+            <button class="btn btn-success btn-sm btn-apply-field">完成</button>
         </div>
     </div>
 </template>
@@ -200,7 +198,7 @@
             <hr/>
             <div id="insert-fields-before"></div>
             <hr/>
-            <form onsubmit="createNewField();return false;" id="create-template-form">
+            <form id="create-template-form">
                 <div class="row">
                     <div class="col col-2 s-field-type">
                         <!--suppress HtmlFormInputWithoutLabel -->
@@ -211,9 +209,8 @@
                         <!--suppress HtmlFormInputWithoutLabel -->
                         <input type="text"/></div>
                     <div class="col col-8">
-                        <a href="#" onclick="createNewField()" class="btn btn-sm btn-success">添加字段</a>
+                        <input type="submit" class="btn btn-sm btn-success" value="添加字段" style="width: unset"/>
                     </div>
-                    <input type="submit" style="display: none"/>
                 </div>
             </form>
         </div>
@@ -309,13 +306,12 @@
 
     function editField(element) {
         let field = findFieldByElement(element);
-        if (!field) {
-            alert("unexpected element");
-            return;
-        }
+        if (!field) throw Error("unexpected element")
 
         let container = findFieldContainer(field);
-        container.parentNode.replaceChild(createEditingFieldRows(field), container);
+        $(container).empty();
+        $(container).append($(createEditingFieldRow(field)).find(".s-field")[0].childNodes);
+        $(container).addClass("s-field-editing")
     }
 
     function deleteField(element) {
@@ -329,53 +325,46 @@
         });
     }
 
-    function applyField(element) {
-        let field = findFieldByElement(element);
-        let container = findFieldContainer(field);
-
-        field.name = container.querySelector(".s-field-name").querySelector("input").value;
-        field.comment = field["commentEditor"].txt.html();
-
-        field.required = container.querySelector(".field-config-require-checkbox").checked;
-
-        let controller = submitee.fieldControllers[field.type];
-        if (controller) {
-            controller.applyConfiguration(field);
-        }
-
-        container.parentNode.replaceChild(createFieldRow(field), container);
-        // $(`.s-field[data-submitee-field-name=${field.name}]`)[0].scrollIntoView();
-        dirty();
-    }
-
     /**
      *
      * @param {SField} field
-     * @return {string|string|DocumentFragment|*}
+     * @return {DocumentFragment}
      */
     function createFieldRow(field) {
-        let template = $("#template-present-field")[0];
+        let node = document.importNode($("#template-s-field")[0].content, true);
 
-        template.content.querySelector(".s-field").setAttribute("data-submitee-field-name", field.name);
-        template.content.querySelector(".s-field-type").textContent = field.getTypeDisplayName();
-        template.content.querySelector(".s-field-name").textContent = field.name;
-        template.content.querySelector(".s-field-comment").innerHTML = field.comment;
-        $(template.content.querySelector(".field-error")).empty();
+        $(node).find(".s-field").attr("data-submitee-field-name", field.name);
+        $(node).find(".s-field-type").text(field.getTypeDisplayName());
+        $(node).find(".s-field-name").text(field.name);
+        $(node).find(".s-field-comment").html(field.comment);
 
         // region require mark
-        if (field.required) {
-            template.content.querySelector(".require-mark").classList.remove("d-none");
-        } else {
-            template.content.querySelector(".require-mark").classList.add("d-none");
-        }
+        if (field.required) $(node).find(".require-mark").removeClass("d-none");
         // endregion
 
         let error = submitee.fieldControllers[field.type].validateConfiguration(field);
         if (error) {
-            template.content.querySelector(".field-error").appendChild(createErrorTooltip(error));
+            $(node).find(".field-error").append(createErrorTooltip(error));
         }
 
-        return document.importNode(template.content, true);
+        $(node).find(".btn-edit-field").on("click", () => {
+            let container = findFieldContainer(field);
+            $(container).empty();
+            $(container).append($(createEditingFieldRow(field)).find(".s-field")[0].childNodes);
+            $(container).addClass("s-field-editing");
+        });
+        $(node).find(".btn-delete-field").on("click", () => {
+            let container = findFieldContainer(field);
+            createConfirmDialog($(container).find(".btn-delete-field")[0], () => {
+                field.owner.removeField(field).then(() => {
+                    container.parentNode.removeChild(container);
+                    create_toast("提示", "已删除字段", 2000);
+                }, error => {
+                    create_toast("重要提示", "操作失败: " + error, 2000);
+                });
+            }, "正在删除字段: " + field.name);
+        });
+        return node;
     }
 
     /**
@@ -439,74 +428,105 @@
      * @param {SField} field
      * @return {DocumentFragment}
      */
-    function createEditingFieldRows(field) {
-        let template = $("#template-editing-field")[0];
+    function createEditingFieldRow(field) {
+        let node = document.importNode($("#template-s-editing-field")[0].content, true);
 
-        template.content.querySelector(".s-field-editing").setAttribute("data-submitee-field-name", field.name);
-        template.content.querySelector(".s-field-type").innerHTML = `<span class="disabled" style="cursor: not-allowed">${field.getTypeDisplayName()}</span>`;
-        template.content.querySelector(".s-field-name").innerHTML = `<input type="text" value="${field.name}"/>`;
-        // template.content.querySelector(".s-field-comment").innerHTML = `<input type="text" value="${field.comment}"/>`
+        $(node).find(".s-field-editing").attr("data-submitee-field-name", field.name);
+        $(node).find(".s-field-type").html(`<span class="disabled" style="cursor: not-allowed">${field.getTypeDisplayName()}</span>`);
+        $(node).find(".s-field-name").html(`<input type="text" value="${field.name}"/>`);
         let editorId = makeid(6);
-        template.content.querySelector(".s-field-comment").innerHTML = `<div id="${editorId}">${field.comment || ""}</div>`
+        $(node).find(".s-field-comment").html(`<div id="${editorId}">${field.comment || ""}</div>`);
         setTimeout(() => {
-            let commentEditor = new window.wangEditor('#' + editorId);
-            commentEditor.config.excludeMenus = ['todo'];
-            commentEditor.config.zIndex = 100;
-            commentEditor.create();
-            field["commentEditor"] = commentEditor;
-        }, 1);
+            let editor = new window.wangEditor('#' + editorId);
+            editor.config.excludeMenus = ['todo'];
+            editor.config.zIndex = 100;
+            editor.config.focus = false;
+            editor.create();
+            field["comment_editor"] = editor;
+        });
 
         // region required
-        let requireId = makeid(6);
-        let requireLabel = template.content.querySelector(".field-config-require-label");
-        requireLabel.setAttribute("for", requireId);
-        let requireCheckbox = template.content.querySelector(".field-config-require-checkbox");
-        requireCheckbox.id = requireId;
-        requireCheckbox.checked = !!field.required;
+        let checkboxRequire = $(node).find(".field-config-require-checkbox");
+        checkboxRequire.attr("checked", !!field.required).bootstrapToggle();
         // endregion
 
+        // region controller conf
         let controller = submitee.fieldControllers[field.type];
         let confHtml;
         if (controller && (confHtml = controller.generateConfigurationHtml(field))) {
-            template.content.querySelector(".field-configuration").id = controller.getContainerId(field);
-            template.content.querySelector(".field-configuration").innerHTML = `<div class="container-fluid">${confHtml}</div>`;
-        } else {
-            template.content.querySelector(".field-configuration").innerHTML = "";
+            $(node).find(".field-configuration").attr("id", controller.getContainerId(field));
+            $(node).find(".field-configuration").html(`<div class="container-fluid">${confHtml}</div>`);
         }
+        // endregion
 
-        setTimeout(() => {
-            let container = $(`.s-field-editing[data-submitee-field-name=${field.name}]`)[0]
-            container.scrollIntoView();
-            $(container.querySelector(".field-config-require-checkbox")).bootstrapToggle();
-        }, 1);
-        return document.importNode(template.content, true);
+        let inputName = $(node).find(".s-field-name input");
+        $(node).find(".btn-apply-field").on("click", () => {
+            let container = findFieldContainer(field);
+
+            let newName = inputName.val();
+            if (field.name !== newName && submitee.currentTemplate.getFieldByName(newName)) {
+                inputName[0].setCustomValidity("字段名需要唯一");
+                inputName[0].reportValidity();
+                return;
+            }
+            field.name = newName;
+            field.comment = field["comment_editor"].txt.html();
+            delete field["comment_editor"];
+
+            field.required = !!checkboxRequire.attr("checked");
+            $(container).empty().append($(createFieldRow(field)).find(".s-field")[0].childNodes);
+            $(container).attr("data-submitee-field-name", newName);
+            $(container).removeClass("s-field-editing");
+            dirty();
+        });
+        inputName.on("keyup", () => {
+            inputName[0].setCustomValidity("");
+        })
+        return node;
     }
 
-    function createNewField(evt) {
-        let container = $("#create-template-form");
-        let type = container.find(".s-field-type").find("select option:selected").val();
-        let name = container.find(".s-field-name").find("input").val();
+    function initCreateTemplateForm() {
+        let form = $("#create-template-form");
+        let selectType = form.find("select");
+        let inputName = form.find("input[type=text]");
+        form.on("submit", () => {
+            let type = selectType.find("option:selected").val();
+            let name = inputName.val();
+            if (!type) {
+                selectType[0].setCustomValidity("未选择字段类型");
+                selectType[0].reportValidity();
+                return false;
+            }
+            if (!name) {
+                inputName[0].setCustomValidity("字段名不能为空");
+                inputName[0].reportValidity();
+                return false;
+            }
+            if (submitee.currentTemplate.getFieldByName(name)) {
+                inputName[0].setCustomValidity("字段名需要唯一");
+                inputName[0].reportValidity();
+                return false;
+            }
 
-        if (!type || !name) {
-            create_toast("重要提示", "<span style='color: red'>字段类型和名称是必填项目</span>", 2000, "input-validate");
-        } else if (submitee.currentTemplate.getFieldByName(name)) {
-            create_toast("重要提示", "字段名需要唯一", "input-validate");
-        } else {
+            form[0].reset();
             let field = new SField(submitee.currentTemplate, null);
             field.type = type;
             field.name = name;
 
             submitee.currentTemplate.addField(field).then(() => {
                 let relative = $("#insert-fields-before")[0];
-                relative.parentNode.insertBefore(createEditingFieldRows(field), relative);
+                relative.parentNode.insertBefore(createEditingFieldRow(field), relative);
             }, error => {
                 create_toast("重要提示", error);
             })
-        }
-        if (evt) {
-            evt.preventDefault();
             return false;
-        }
+        });
+        selectType.on("change", () => {
+            selectType[0].setCustomValidity("");
+        });
+        inputName.on("keyup", () => {
+            inputName[0].setCustomValidity("");
+        })
     }
 
     function createFieldTypeOption(value, text) {
@@ -647,7 +667,6 @@
     function loadDistinguish() {
         let attributeMap = submitee.currentTemplate.attributeMap;
         let allowAnonymous = attributeMap.get("allow-anonymous", true);
-        // $("#checkbox-allow-anonymous")[0].checked = (allowAnonymous);
         $("#checkbox-allow-anonymous").prop('checked', allowAnonymous).bootstrapToggle().on('change', dirty);
 
         let distinguishConfig = attributeMap.get("protected") ? attributeMap.get("protected.user-distinguish") : undefined;
@@ -865,6 +884,7 @@
     }
 
     (() => {
+        initCreateTemplateForm();
         let fetchingConfiguration = fetchConfiguration();
         buildFieldTypeSelect();
 

@@ -1170,3 +1170,62 @@ class TagSelector extends EditableCascadedList {
         return false;
     }
 }
+
+function createConfirmDialog(selectorOrElement, onConfirm, title) {
+    let div = document.createElement("div");
+    $(div).addClass("confirm-dialog");
+    $(div).html(`<button class="btn btn-outline-danger">长按确认</button><div class="confirm-dialog-progressbar"></div>`);
+
+    let prog = 0.0;
+    let schedule;
+    let progressbar = $(div).find(".confirm-dialog-progressbar");
+    $(div).find("button")
+        .on("mousedown", () => {
+            // start timing
+            schedule = setInterval(() => {
+                if (prog > 1) {
+                    clearInterval(schedule)
+                    $(target).popover('dispose');
+                    document.removeEventListener("click", listener);
+                    onConfirm();
+                    return;
+                }
+                prog += 0.1;
+                progressbar.css("clip-path", `inset(0 ${new Intl.NumberFormat().format(100 * (1 - prog)) + "%"} 0 0)`);
+            }, 100);
+        })
+        .on("mouseup blur", () => {
+            prog = 0.0;
+            progressbar.css("clip-path", `inset(0 100% 0 0)`);
+            clearInterval(schedule);
+        });
+
+    let target = selectorOrElement;
+    if (typeof target === 'string') {
+        target = $(target)[0];
+    }
+
+    $(target).popover({
+        content: div,
+        placement: "top",
+        title: title || "",
+        html: true,
+        template: `
+<div class="popover" role="tooltip" style="max-width: unset">
+<div class="arrow"></div>
+<h3 class="popover-header"></h3>
+<div class="popover-body" style="margin: 0; padding: 0"></div>
+</div>`,
+        sanitizeFn: (content) => content,
+    }).popover('show');
+    let listener = function (evt) {
+        if (!div.contains(evt.target)) {
+            console.log("click outer");
+            $(target).popover('dispose');
+            document.removeEventListener("click", listener);
+        }
+    };
+    setTimeout(() => {
+        document.addEventListener("click", listener);
+    });
+}
