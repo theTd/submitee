@@ -6,70 +6,8 @@
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <title>正在载入</title>
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <link rel="stylesheet" href="css/global.css">
     <style>
-        .main {
-            height: 100vh !important;
-            width: 100vw !important;
-            background-image: url("assets/bg.jpg");
-            background-position: center;
-            background-size: cover;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
 
-        a {
-            color: #e0e0e0;
-        }
-
-        a:hover {
-            color: #ffffff;
-            text-decoration: none;
-        }
-
-        a:active {
-            color: #cfcfcf;
-        }
-
-        #realm-tab a {
-            color: white;
-            text-shadow: #888888 2px 0 2px;
-        }
-
-        #realm-tab a.active {
-            color: #000000;
-            text-shadow: unset;
-        }
-
-        #realm-tab .nav-link {
-            font-size: 0.7rem !important;
-            padding: 0.3rem 0.5rem;
-            border-color: #e9ecef #e9ecef #dee2e6;
-            border-radius: 0 0 10px 10px;
-            transition: 0.1s cubic-bezier(0.22, 0.61, 0.36, 1);
-            clip-path: inset(1px -10px -10px -10px);
-        }
-
-        #realm-tab .nav-link:hover {
-            background-color: #dddddd;
-            box-shadow: 0 0 0 2px white;
-            color: #000000;
-            text-shadow: unset;
-        }
-
-        #realm-tab .nav-link.active {
-            background-color: #dddddd;
-            box-shadow: 0 0 0 2px white;
-        }
-
-        #auth-scheme-container {
-            border-radius: 10px 10px 10px 0;
-        }
     </style>
 </head>
 <body>
@@ -219,6 +157,73 @@
             }
         });
     }
+
+    submitee_safe.loadAllStylesheet([
+        "https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css",
+        "css/global.css"
+    ]).then(() => {
+        submitee_safe.appendStyleSheet(`
+.main {
+    height: 100vh !important;
+    width: 100vw !important;
+    background-image: url("assets/bg.jpg");
+    background-position: center;
+    background-size: cover;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+a {
+    color: #e0e0e0;
+}
+
+a:hover {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+a:active {
+    color: #cfcfcf;
+}
+
+#realm-tab a {
+    color: white;
+    text-shadow: #888888 2px 0 2px;
+}
+
+#realm-tab a.active {
+    color: #000000;
+    text-shadow: unset;
+}
+
+#realm-tab .nav-link {
+    font-size: 0.7rem !important;
+    padding: 0.3rem 0.5rem;
+    border-color: #e9ecef #e9ecef #dee2e6;
+    border-radius: 0 0 10px 10px;
+    transition: 0.1s cubic-bezier(0.22, 0.61, 0.36, 1);
+    clip-path: inset(1px -10px -10px -10px);
+}
+
+#realm-tab .nav-link:hover {
+    background-color: #dddddd;
+    box-shadow: 0 0 0 2px white;
+    color: #000000;
+    text-shadow: unset;
+}
+
+#realm-tab .nav-link.active {
+    background-color: #dddddd;
+    box-shadow: 0 0 0 2px white;
+}
+
+#auth-scheme-container {
+    border-radius: 10px 10px 10px 0;
+}
+        `, "auth.html");
+    });
 
     submitee_safe.loadAllScript([
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",

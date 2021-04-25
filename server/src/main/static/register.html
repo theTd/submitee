@@ -3,55 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>站内用户注册</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="css/global.css">
-
-    <style>
-        .main {
-            height: 100vh !important;
-            width: 100vw !important;
-            background-image: url("assets/bg.jpg");
-            background-position: center;
-            background-size: cover;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #register-container {
-            padding: 1rem 1.8rem;
-            background-color: #dddddd;
-            border-radius: 10px;
-            box-shadow: 0 0 0 2px white;
-            width: 20rem;
-        }
-
-        a {
-            color: #e0e0e0;
-        }
-
-        a:hover {
-            color: #ffffff;
-            text-decoration: none;
-        }
-
-        a:active {
-            color: #cfcfcf;
-        }
-
-        #realm-tab a {
-            color: white;
-            text-shadow: #888888 2px 0 2px;
-        }
-
-        #realm-tab a.active {
-            color: #000000;
-            text-shadow: unset;
-        }
-    </style>
 </head>
 <body>
 <div class="main no-gutters">
@@ -256,6 +208,56 @@
         }
         // todo
     }
+
+    submitee_safe.loadAllStylesheet([
+        "https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css",
+        "css/global.css"
+    ]).then(() => {
+        submitee_safe.appendStyleSheet(`
+.main {
+    height: 100vh !important;
+    width: 100vw !important;
+    background-image: url("assets/bg.jpg");
+    background-position: center;
+    background-size: cover;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#register-container {
+    padding: 1rem 1.8rem;
+    background-color: #dddddd;
+    border-radius: 10px;
+    box-shadow: 0 0 0 2px white;
+    width: 20rem;
+}
+
+a {
+    color: #e0e0e0;
+}
+
+a:hover {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+a:active {
+    color: #cfcfcf;
+}
+
+#realm-tab a {
+    color: white;
+    text-shadow: #888888 2px 0 2px;
+}
+
+#realm-tab a.active {
+    color: #000000;
+    text-shadow: unset;
+}
+        `, "register.html");
+    });
 
     submitee_safe.loadAllScript([
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",

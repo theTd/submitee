@@ -4,104 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <title></title>
-
-    <style>
-        .s-template-row {
-            padding: 1rem 0;
-            /*font-size: 0.8rem;*/
-            word-break: break-word;
-            transition: 0.2s ease;
-            align-items: center;
-        }
-
-        .s-template-row:hover {
-            box-shadow: inset 5px 0 0 0 gray;
-            background-color: lightgray;
-        }
-
-        .s-template-row > .col {
-            align-self: center;
-        }
-
-        .s-template-id, .s-template-status {
-            font-size: 0.8rem;
-        }
-
-        span.template-status-editing {
-            border: 1px #17a2b8 solid;
-            color: #17a2b8;
-            padding: 0.1rem 0.2rem;
-            border-radius: 3px;
-            display: inline-block;
-        }
-
-        span.template-status-published {
-            border: 1px #28a745 solid;
-            background-color: #28a745;
-            color: white !important;
-            padding: 0.1rem 0.2rem;
-            border-radius: 3px;
-            display: inline-block;
-        }
-
-        span.template-status-archived {
-            border: 1px #dc3545 solid;
-            color: #dc3545;
-            padding: 0.1rem 0.2rem;
-            border-radius: 3px;
-            display: inline-block;
-        }
-
-        .template-filters > * {
-            vertical-align: middle;
-        }
-
-        .template-filters > label {
-            margin: 0;
-        }
-
-        .filter-button {
-            background-color: transparent;
-            border: 1px solid transparent;
-        }
-
-        .filter-button:hover {
-            border: 1px black solid;
-        }
-
-        .header button {
-            background-color: transparent;
-            border: 1px solid transparent;
-        }
-
-        .header button:hover {
-            border: 1px black solid;
-        }
-
-        .s-template-id, .s-template-actions {
-            max-width: 100px;
-        }
-
-        .s-template-status {
-            max-width: 80px;
-        }
-
-        .s-template-actions {
-            max-width: 150px;
-        }
-
-        .s-template-name {
-            max-width: 200px;
-        }
-
-        .header {
-            /*font-weight: bold;*/
-            font-size: 1.1rem;
-        }
-    </style>
 </head>
 <body>
 
@@ -374,6 +277,106 @@
         }
         return result;
     }
+
+    submitee_safe.loadAllStylesheet([
+        "https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css",
+        "css/global.css"
+    ]).then(() => {
+        submitee_safe.appendStyleSheet(`
+.s-template-row {
+    padding: 1rem 0;
+    /*font-size: 0.8rem;*/
+    word-break: break-word;
+    transition: 0.2s ease;
+    align-items: center;
+}
+
+.s-template-row:hover {
+    box-shadow: inset 5px 0 0 0 gray;
+    background-color: lightgray;
+}
+
+.s-template-row > .col {
+    align-self: center;
+}
+
+.s-template-id, .s-template-status {
+    font-size: 0.8rem;
+}
+
+span.template-status-editing {
+    border: 1px #17a2b8 solid;
+    color: #17a2b8;
+    padding: 0.1rem 0.2rem;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+span.template-status-published {
+    border: 1px #28a745 solid;
+    background-color: #28a745;
+    color: white !important;
+    padding: 0.1rem 0.2rem;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+span.template-status-archived {
+    border: 1px #dc3545 solid;
+    color: #dc3545;
+    padding: 0.1rem 0.2rem;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.template-filters > * {
+    vertical-align: middle;
+}
+
+.template-filters > label {
+    margin: 0;
+}
+
+.filter-button {
+    background-color: transparent;
+    border: 1px solid transparent;
+}
+
+.filter-button:hover {
+    border: 1px black solid;
+}
+
+.header button {
+    background-color: transparent;
+    border: 1px solid transparent;
+}
+
+.header button:hover {
+    border: 1px black solid;
+}
+
+.s-template-id, .s-template-actions {
+    max-width: 100px;
+}
+
+.s-template-status {
+    max-width: 80px;
+}
+
+.s-template-actions {
+    max-width: 150px;
+}
+
+.s-template-name {
+    max-width: 200px;
+}
+
+.header {
+    /*font-weight: bold;*/
+    font-size: 1.1rem;
+}
+        `, "template-list.html");
+    });
 
     submitee_safe.loadAllScript([
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",

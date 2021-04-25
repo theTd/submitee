@@ -5,35 +5,6 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <title></title>
-
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <style>
-        .main .container-fluid {
-            box-shadow: inset 4px 0 0 #797979;
-            margin-bottom: 2rem;
-        }
-
-        .blob-storage-editing {
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-            background-color: rgb(253, 222, 130);
-            box-shadow: 0 0 0 3px rgba(255, 193, 7, 1);
-            border: solid rgb(253, 222, 130);
-            border-radius: 3px;
-        }
-
-        .main .row {
-            margin-top: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .blob-storage-config .row {
-            margin-top: 0;
-            margin-bottom: 0;
-        }
-    </style>
 </head>
 <body>
 <template id="template-blob-storage-config-row">
@@ -248,7 +219,7 @@
     </div>
     <div class="row">
         <h4>标签编辑</h4>
-        <div class="container-fluid">
+        <div class="container-fluid panel">
             <div id="tags-editor"></div>
         </div>
     </div>
@@ -739,6 +710,37 @@
     }
 
     fetchConfiguration();
+
+    submitee_safe.loadAllStylesheet([
+        "https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css",
+        "css/global.css"
+    ]).then(() => {
+        submitee_safe.appendStyleSheet(`
+.main .container-fluid {
+    box-shadow: inset 4px 0 0 #797979;
+    margin-bottom: 2rem;
+}
+
+.blob-storage-editing {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    background-color: rgb(253, 222, 130);
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 1);
+    border: solid rgb(253, 222, 130);
+    border-radius: 3px;
+}
+
+.main .row {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.blob-storage-config .row {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+        `, "settings.xml");
+    });
 </script>
 </body>
 </html>

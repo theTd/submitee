@@ -6,35 +6,6 @@
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title></title>
-
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>
-
-    <link rel="stylesheet" href="css/global.css">
-    <style>
-        .template-name {
-            width: 100%;
-            margin-left: 1rem;
-            background-color: #8d8d8d;
-            font-size: 2rem;
-            color: white;
-        }
-
-        .field-container {
-            margin: 1rem 0;
-            padding-top: 0.2rem;
-            padding-bottom: 0.2rem;
-            transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
-            border-radius: 10px;
-        }
-
-        .field-container:hover {
-            box-shadow: 0 0 0 3px rgb(255, 191, 110) !important;
-        }
-
-
-    </style>
 </head>
 <body>
 <template id="template-field-container">
@@ -46,14 +17,16 @@
         </div>
     </div>
 </template>
-<span class="submission-detail-spinner spinner-border"></span>
-<p class="template-name" style="margin: 0 0 1rem 0; padding-left: 1rem;"></p>
-<div class="container-fluid md-1" style="min-width: 400px">
-    <div class="insert-fields-before"></div>
-    <button class="btn btn-sm btn-outline-info" id="btn-add-tag">添加标签</button>
-    <button class="btn btn-sm btn-outline-info">导出</button>
-    <button class="btn btn-sm btn-outline-info" id="btn-cascade">级联菜单测试</button>
-    <button class="btn btn-sm btn-outline-info" id="btn-editable-cascade">可编辑级联菜单测试</button>
+<div class="submission-detail">
+    <span class="submission-detail-spinner spinner-border"></span>
+    <p class="template-name" style="margin: 0 0 1rem 0; padding-left: 1rem;"></p>
+    <div class="container-fluid md-1" style="min-width: 400px">
+        <div class="insert-fields-before"></div>
+        <button class="btn btn-sm btn-outline-info" id="btn-add-tag">添加标签</button>
+        <button class="btn btn-sm btn-outline-info">导出</button>
+        <button class="btn btn-sm btn-outline-info" id="btn-cascade">级联菜单测试</button>
+        <button class="btn btn-sm btn-outline-info" id="btn-editable-cascade">可编辑级联菜单测试</button>
+    </div>
 </div>
 
 <script src="js/safe.js"></script>
@@ -107,6 +80,33 @@
         })
     }
 
+    submitee_safe.loadAllStylesheet([
+        "https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css",
+        "https://fonts.googleapis.com/icon?family=Material+Icons",
+        "css/global.css"
+    ]).then(() => {
+        submitee_safe.appendStyleSheet(`
+.submission-detail .template-name {
+    width: 100%;
+    margin-left: 1rem;
+    background-color: #8d8d8d;
+    font-size: 2rem;
+    color: white;
+}
+
+.submission-detail .field-container {
+    margin: 1rem 0;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+    border-radius: 10px;
+}
+
+.submission-detail .field-container:hover {
+    box-shadow: 0 0 0 3px rgb(255, 191, 110) !important;
+}
+        `, "submission-detail.html");
+    });
     submitee_safe.loadAllScript([
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
         "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js",

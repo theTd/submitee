@@ -273,12 +273,16 @@ class FileFieldController extends FieldController {
 
     async submissionInit() {
         submitee.fileTemp = {};
-        await new Promise(resolve => {
+
+        await Promise.all([
+            submitee_safe.loadStylesheetPromise(
+                "https://cdn.jsdelivr.net/npm/uppy@1.27.0/dist/uppy.min.css"
+            ),
             submitee_safe.loadAllScript([
                 "https://cdn.jsdelivr.net/npm/uppy@1.27.0/dist/uppy.min.js",
                 "https://cdn.jsdelivr.net/npm/@uppy/locales@1.18.0/dist/zh_CN.min.js"
-            ]).then(resolve)
-        })
+            ])
+        ]);
     }
 
     /**

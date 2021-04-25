@@ -517,23 +517,6 @@ function getFieldTypeDisplayName(type) {
     return c ? c.displayName : type;
 }
 
-/**
- * https://stackoverflow.com/questions/1349404/generate-random-string-characters-in-javascript
- * @param length
- * @returns {string}
- */
-function makeid(length) {
-    let result = [];
-    // noinspection SpellCheckingInspection
-    let characters = 'abcdefghijklmnopqrstuvwxyz';
-    let charactersLength = characters.length;
-    for (let i = 0; i < length; i++) {
-        result.push(characters.charAt(Math.floor(Math.random() *
-            charactersLength)));
-    }
-    return result.join('');
-}
-
 function findParentAttributeByElement(element, attribute) {
     let node = element;
     let name;
