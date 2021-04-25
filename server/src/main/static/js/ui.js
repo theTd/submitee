@@ -1135,10 +1135,12 @@ ${sortButtons}${editButton}${createCascadeListButton}
 }
 
 class TagSelector extends EditableCascadedList {
-    constructor(tags, selectHook) {
+    constructor(tags, selectHook, exclude) {
         super();
         this.tags = tags;
         this.selectHook = selectHook;
+        this.exclude = Array.isArray(exclude) ? exclude : [];
+
         for (let value of Object.values(this.tags)) {
             this.addSelection(value);
         }
@@ -1150,7 +1152,7 @@ class TagSelector extends EditableCascadedList {
 
     onFinalSelect(selection) {
         if (this.selectHook) {
-            this.selectHook(selection.id);
+            this.selectHook(selection);
         }
     }
 
@@ -1168,6 +1170,19 @@ class TagSelector extends EditableCascadedList {
 
     enableSearch() {
         return false;
+    }
+
+    createNodeSelection(selection) {
+        let sel = super.createNodeSelection(selection);
+        if (this.exclude.indexOf(selection.id) !== -1) {
+            $(sel).addClass("disabled");
+            $(sel).css("order", "10");
+            $(sel).attr("tab-index", -1);
+        } else {
+            $(sel).css("order", "1");
+            // $(sel).attr("tab-index", 0);
+        }
+        return sel;
     }
 }
 
@@ -1220,7 +1235,6 @@ function createConfirmDialog(selectorOrElement, onConfirm, title) {
     }).popover('show');
     let listener = function (evt) {
         if (!div.contains(evt.target)) {
-            console.log("click outer");
             $(target).popover('dispose');
             document.removeEventListener("click", listener);
         }
@@ -1228,4 +1242,121 @@ function createConfirmDialog(selectorOrElement, onConfirm, title) {
     setTimeout(() => {
         document.addEventListener("click", listener);
     });
+}
+
+async function asyncCreateRegionCascadedList(selectCallback) {
+    if (!submitee["region-model"]) {
+        submitee["region-model"] = await new Promise(resolve => {
+            $.ajax({
+                url: "assets/region.json",
+                success: function (response) {
+                    let obj;
+                    if (typeof response === 'string') {
+                        obj = JSON.parse(response);
+                    } else {
+                        obj = response;
+                    }
+                    let model = {};
+                    for (let id of Object.keys(obj).sort()) {
+                        let tid = id.substr(4);
+                        let sid = id.substr(2, 2);
+                        let fid = id.substr(0, 2);
+                        let display = obj[id];
+                        if (tid === '00') {
+                            if (sid === '00') {
+                                // first class
+                                model[id] = {id: id, display: display};
+                            } else {
+                                // second class
+                                let o = model[fid + "0000"];
+                                if (!o) continue;
+
+                                let child = o["child"];
+                                if (!child) {
+                                    child = {};
+                                    o["child"] = child;
+                                }
+                                child[id] = {id: id, display: display};
+                            }
+                        } else {
+                            // third class
+                            let lvl = model[fid + "0000"];
+                            if (lvl["child"]) {
+                                let s = lvl["child"][fid + sid + "00"];
+                                if (s) lvl = s;
+                            }
+
+                            let child = lvl["child"];
+                            if (!child) {
+                                child = {};
+                                lvl["child"] = child;
+                            }
+                            child[id] = {id: id, display: display};
+                        }
+                    }
+                    resolve(model);
+                }
+            })
+        })
+    }
+
+    let fnInitCascadedList = function (struct) {
+        let list = new RegionCascadedList();
+        for (let k of Object.keys(struct)) {
+            let obj = struct[k];
+            obj["id"] = k;
+            list.addSelection(obj);
+        }
+        return list;
+    }
+
+    class RegionCascadedList extends CascadedList {
+        onFinalSelect(selection) {
+            selectCallback(selection);
+        }
+
+        haveCascadeList(selection) {
+            return selection["child"];
+        }
+
+        getCascadeList(selection) {
+            return fnInitCascadedList(selection["child"]);
+        }
+
+        getSelectionKey(selection) {
+            return selection["display"];
+        }
+
+        enableSearch() {
+            return true;
+        }
+    }
+
+    return fnInitCascadedList(submitee["region-model"]);
+}
+
+function createTagElement(tagId, configuration, deleteCallback, clickCallback) {
+    if (!configuration["tags"]) return;
+    let tagMeta = configuration["tags"][tagId];
+    if (!tagMeta) return;
+    let div = document.createElement("div");
+    $(div).addClass("tag-box");
+    $(div).addClass("position-relative");
+    $(div).css("background-color", tagMeta["color"]);
+    if (clickCallback) {
+        $(div).html(`<button class="btn-tag-box-label">${tagMeta["name"]}</button><button class="btn-tag-box-delete" title="删除标签"></button>`);
+        $(div).find(".btn-tag-box-label").on("click", () => {
+            clickCallback();
+        });
+    } else {
+        $(div).html(`${tagMeta["name"]}<button class="btn-tag-box-delete" title="删除标签"></button>`);
+    }
+    if (!deleteCallback) {
+        $(div).find(".btn-tag-box-delete").remove();
+    } else {
+        $(div).find(".btn-tag-box-delete").on("click", () => {
+            deleteCallback();
+        });
+    }
+    return div;
 }

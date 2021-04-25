@@ -22,10 +22,10 @@
     <p class="template-name" style="margin: 0 0 1rem 0; padding-left: 1rem;"></p>
     <div class="container-fluid md-1" style="min-width: 400px">
         <div class="insert-fields-before"></div>
+    </div>
+    <div>
+        <div class="insert-tags-before w-100"></div>
         <button class="btn btn-sm btn-outline-info" id="btn-add-tag">添加标签</button>
-        <button class="btn btn-sm btn-outline-info">导出</button>
-        <button class="btn btn-sm btn-outline-info" id="btn-cascade">级联菜单测试</button>
-        <button class="btn btn-sm btn-outline-info" id="btn-editable-cascade">可编辑级联菜单测试</button>
     </div>
 </div>
 
@@ -62,6 +62,26 @@
         document.dispatchEvent(new CustomEvent("submission-detail-loaded"));
     }
 
+    function loadTags(submission) {
+        let r = $(".insert-tags-before");
+        r.parent().find(".tag-box").remove();
+        configurationPromise().then(conf => {
+            if (submission["tags"]) {
+                for (let tagId of submission["tags"]) {
+                    r[0].parentNode.insertBefore(createTagElement(tagId, conf, () => {
+                        let tags = submission["tags"];
+                        tags.splice(tags.indexOf(tagId), 1);
+                        submission.sync().then(() => {
+                            loadTags(submission);
+                        }, (error) => {
+                            create_toast("重要提示", `<span class='text-danger'>${error}</span>`)
+                        });
+                    }), r[0]);
+                }
+            }
+        })
+    }
+
     /**
      *
      * @param {Submission} submission
@@ -77,6 +97,7 @@
                 submitee.currentTemplate.templateId + ":" + submitee.currentTemplate.version;
             setTitle(title);
             buildFields(submission);
+            loadTags(submission);
         })
     }
 
@@ -131,236 +152,27 @@
                 create_toast("重要提示", "未找到目标提交");
                 return;
             }
-            loadSubmission(array[0]);
-
-            let tagList = [
-                {name: "紫色", color: "#af00af"},
-                {name: "红色", color: "#ff4242"},
-                {name: "黄色", color: "#FFC21A"}
-            ];
+            let submission = array[0];
+            loadSubmission(submission);
 
             $("#btn-add-tag").on("click", () => {
-                let list = new class extends EditableCascadedList {
-                    onCreate(selection) {
-                        tagList.push(selection);
-                    }
-
-                    findIndex(sel) {
-                        for (let i = 0; i < tagList.length; i++) {
-                            if (tagList[i].name === sel.name) {
-                                return i;
-                            }
-                        }
-                    }
-
-                    onDelete(selection) {
-                        tagList.splice(this.findIndex(selection), 1);
-                    }
-
-                    onFinalSelect(selection) {
-                        console.log("selected " + selection.name);
-                    }
-
-                    onEdit(selection, newSelection) {
-                        let d = tagList[this.findIndex(selection)];
-                        Object.assign(d, newSelection);
-                    }
-
-                    onMoveUp(selection) {
-                        let idx = this.findIndex(selection);
-                        let newIdx = idx - 1;
-                        let d = tagList.splice(idx, 1);
-                        tagList.splice(newIdx, 0, d[0]);
-                    }
-
-                    onMoveDown(selection) {
-                        let idx = this.findIndex(selection);
-                        let newIdx = idx + 1;
-                        let d = tagList.splice(idx, 1);
-                        tagList.splice(newIdx, 0, d[0]);
-                    }
-                }
-                tagList.forEach(d => list.addSelection(d));
-                list.show("#btn-add-tag");
-            });
-
-            $("#btn-cascade").on("click", async () => {
-                let modelPromise = new Promise(resolve => {
-                    $.ajax({
-                        url: "assets/region.json",
-                        success: function (response) {
-                            let obj;
-                            if (typeof response === 'string') {
-                                obj = JSON.parse(response);
-                            } else {
-                                obj = response;
-                            }
-                            let model = {};
-                            for (let id of Object.keys(obj).sort()) {
-                                let tid = id.substr(4);
-                                let sid = id.substr(2, 2);
-                                let fid = id.substr(0, 2);
-                                let display = obj[id];
-                                if (tid === '00') {
-                                    if (sid === '00') {
-                                        // first class
-                                        model[id] = {id: id, display: display};
-                                    } else {
-                                        // second class
-                                        let o = model[fid + "0000"];
-                                        if (!o) continue;
-
-                                        let child = o["child"];
-                                        if (!child) {
-                                            child = {};
-                                            o["child"] = child;
-                                        }
-                                        child[id] = {id: id, display: display};
-                                    }
-                                } else {
-                                    // third class
-                                    let lvl = model[fid + "0000"];
-                                    if (lvl["child"]) {
-                                        let s = lvl["child"][fid + sid + "00"];
-                                        if (s) lvl = s;
-                                    }
-
-                                    let child = lvl["child"];
-                                    if (!child) {
-                                        child = {};
-                                        lvl["child"] = child;
-                                    }
-                                    child[id] = {id: id, display: display};
-                                }
-                            }
-                            resolve(model);
-                        }
-                    })
-                })
-
-                let model = await modelPromise;
-
-                let fnInitCascadedList = function (struct) {
-                    let list = new RegionCascadedList();
-                    for (let k of Object.keys(struct)) {
-                        let obj = struct[k];
-                        obj["id"] = k;
-                        list.addSelection(obj);
-                    }
-                    return list;
-                }
-
-                class RegionCascadedList extends CascadedList {
-                    onFinalSelect(selection) {
-                        console.log(`selected ${selection.display} (${selection.id})`);
-                    }
-
-                    haveCascadeList(selection) {
-                        return selection["child"];
-                    }
-
-                    getCascadeList(selection) {
-                        return fnInitCascadedList(selection["child"]);
-                    }
-
-                    getSelectionKey(selection) {
-                        return selection["display"];
-                    }
-
-                    enableSearch() {
-                        return true;
-                    }
-                }
-
-                let rootList = fnInitCascadedList(model);
-                rootList.show("#btn-cascade");
-            });
-
-            let rootData = [{name: "initial element"}];
-
-            $("#btn-editable-cascade").on("click", () => {
-
-                let createListFn = function (dataList) {
-                    let lst = new list(dataList);
-                    for (let d of dataList) {
-                        lst.addSelection(d);
-                    }
-                    return lst;
-                }
-
-                let list = class extends EditableCascadedList {
-                    constructor(dataList) {
-                        super();
-                        this.dataList = dataList;
-                    }
-
-                    findDataListIndex(selection) {
-                        let name = selection["name"];
-                        for (let i = 0; i < this.dataList.length; i++) {
-                            if (this.dataList[i].name === name) {
-                                return i;
-                            }
-                        }
-                    }
-
-                    getCascadeList(selection) {
-                        let child = selection["child"];
-                        if (child) {
-                            return createListFn(child);
-                        } else {
-                            selection["child"] = Array();
-                            return createListFn(selection["child"]);
-                        }
-                    }
-
-                    haveCascadeList(selection) {
-                        return selection["child"];
-                    }
-
-                    onMoveUp(selection) {
-                        let idx = this.findDataListIndex(selection);
-                        let newIdx = idx - 1;
-                        let d = this.dataList.splice(idx, 1);
-                        this.dataList.splice(newIdx, 0, d[0]);
-                    }
-
-                    onMoveDown(selection) {
-                        let idx = this.findDataListIndex(selection);
-                        let newIdx = idx + 1;
-                        let d = this.dataList.splice(idx, 1);
-                        this.dataList.splice(newIdx, 0, d[0]);
-                    }
-
-                    onEdit(selection, newSelection) {
-                        let idx = this.findDataListIndex(selection);
-                        if (idx === -1) {
-                            console.warn("idx of datalist not found of selection " + this.getSelectionKey(selection));
+                configurationPromise().then(conf => {
+                    let selector = new TagSelector(conf["tags"], (sel) => {
+                        let tags = submission["tags"];
+                        if (tags.indexOf(sel.id) !== -1) {
+                            create_toast("提示", "已包含标签: " + sel.name);
                             return;
                         }
-                        let d = this.dataList[idx];
-                        d.name = newSelection.name;
-                        d.color = newSelection.color;
-                    }
-
-                    onCreate(selection) {
-                        this.dataList.push(JSON.parse(JSON.stringify(selection)));
-                    }
-
-                    onDelete(selection) {
-                        this.dataList.splice(this.findDataListIndex(selection), 1);
-                    }
-
-                    allowCreateCascadeList() {
-                        return true;
-                    }
-
-                    onFinalSelect(selection) {
-                        console.log(selection.name + " is selected");
-                    }
-                }
-
-                let lst = createListFn(rootData);
-                lst.show("#btn-editable-cascade", "bottom");
+                        tags.push(sel.id);
+                        selector.close();
+                        submission.sync().then(() => {
+                            loadTags(submission);
+                        }, error => {
+                            create_toast("重要提示", `<span class='text-danger'>${error}</span>`);
+                        });
+                    }, submission["tags"]);
+                    selector.show("#btn-add-tag");
+                }, toast_ajax_error);
             });
         })
     })

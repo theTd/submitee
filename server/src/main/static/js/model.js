@@ -123,6 +123,32 @@ class Submission {
     get content() {
         return this.attributeMap.get("body");
     }
+
+    get tags() {
+        let tags = this.attributeMap.get("tags");
+        if (!tags) {
+            tags = [];
+            this.attributeMap.set("tags", tags);
+        }
+        return tags;
+    }
+
+    async sync() {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: "../paste/submission/" + this.uniqueId,
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(this.attributeMap.root),
+                success: function (data) {
+                    resolve();
+                },
+                error: function (error) {
+                    reject(getMessageFromAjaxError(error));
+                }
+            })
+        })
+    }
 }
 
 class STemplate {
@@ -272,13 +298,10 @@ class STemplate {
         this.updateAttributeMap();
         return new Promise((resolve, reject) => {
             $.ajax({
-                url: "../paste",
+                url: "../paste/template/" + this.uniqueId,
                 method: "POST",
                 contentType: "application/json",
-                data: JSON.stringify({
-                    "target": this.uniqueId,
-                    "content": this.attributeMap.root
-                }),
+                data: JSON.stringify(this.attributeMap.root),
                 success: function (data) {
                     resolve();
                 },
@@ -665,3 +688,21 @@ submitee.copyToClipboard = function (text, success, error) {
 
 submitee.mailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
 submitee.uuidPattern = /\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b/;
+
+function configurationPromise(update) {
+    if (!update && submitee["configuration"]) {
+        return new Promise(r => r(submitee["configuration"]));
+    }
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: "../configuration",
+            method: "GET",
+            success: function (data) {
+                // noinspection JSUndeclaredVariable
+                submitee.configuration = data;
+                resolve(submitee.configuration);
+            },
+            error: reject
+        })
+    })
+}
