@@ -236,6 +236,10 @@ public class InternalAccountRealm implements UserRealm {
         return null;
     }
 
+    public void invalidateUsername(String prevUsername) {
+        usernameUidCache.invalidate(prevUsername.toLowerCase(Locale.ROOT));
+    }
+
     private class AuthHandler implements PasswordAuthScheme.AuthHandler {
 
         @Override

@@ -316,6 +316,37 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                 }
                 break;
             }
+            case "set-username": {
+                User user = getSession(req).getUser();
+                if (!(user instanceof InternalAccountUser)) {
+                    responseAccessDenied(req, resp);
+                    return;
+                }
+                String username = JsonUtil.parseString(body, "username");
+                if (username == null || username.isEmpty()) {
+                    responseBadRequest(req, resp);
+                    return;
+                }
+                Integer uidFromUsername;
+                try {
+                    uidFromUsername = SubmiteeServer.getInstance().getInternalAccountRealm().getUidFromUsername(username);
+                } catch (ExecutionException e) {
+                    ExceptionReporting.report(InternalAccountServlet.class, "querying uid from username", "username=" + username, e);
+                    responseInternalError(req, resp);
+                    return;
+                }
+                if (uidFromUsername != null) {
+                    responseClassifiedError(req, resp, ClassifiedErrors.USERNAME_OCCUPIED);
+                } else {
+                    String prevUsername = ((InternalAccountUser) user).getUsername();
+                    if (prevUsername != null) {
+                        SubmiteeServer.getInstance().getInternalAccountRealm().invalidateUsername(prevUsername);
+                    }
+                    ((InternalAccountUser) user).setUsername(username);
+                    resp.setStatus(HttpStatus.OK_200);
+                }
+                break;
+            }
             default: {
                 ExceptionReporting.report(InternalAccountServlet.class, "parsing method", "unknown method: " + uriParts[0]);
                 responseBadRequest(req, resp);

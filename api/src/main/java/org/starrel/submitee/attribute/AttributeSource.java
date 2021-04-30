@@ -16,6 +16,9 @@ public interface AttributeSource {
 
     List<String> listKeys(String path);
 
+    default void specSet(String path) {
+    }
+
     void delete(String path);
 
     <TValue> TValue getListAttribute(String path, int index, Class<TValue> type);

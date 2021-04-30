@@ -80,6 +80,7 @@ public abstract class I18N {
         public static final ConstantI18NKey TEMPLATE_ALREADY_PUBLISHED = new ConstantI18NKey("general.template_already_published");
         public static final ConstantI18NKey TEMPLATE_NOT_PUBLISHED = new ConstantI18NKey("general.template_not_published");
         public static final ConstantI18NKey EVER_PUBLISHED_TEMPLATE = new ConstantI18NKey("general.ever_published_template");
+        public static final ConstantI18NKey USERNAME_OCCUPIED = new ConstantI18NKey("general.username_occupied");
     }
 
     public static abstract class Http {

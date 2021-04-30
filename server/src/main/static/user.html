@@ -107,6 +107,30 @@
 
                 let inputNewUsername = $("#new-username");
                 inputNewUsername.attr("placeholder", username ? username : "<未设置>");
+                inputNewUsername.on("keyup", () => inputNewUsername[0].setCustomValidity(""));
+                $("#btn-change-username").on("click", () => {
+                    let username = inputNewUsername.val();
+                    if (!username) {
+                        inputNewUsername[0].setCustomValidity("必填项目");
+                        inputNewUsername[0].reportValidity();
+                        return;
+                    }
+                    $.ajax({
+                        url: "../internal-account/set-username",
+                        method: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            "username": username
+                        }),
+                        success: () => {
+                            create_toast("提示", "已完成设置用户名");
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        },
+                        error: toast_ajax_error
+                    })
+                });
             }
         })
     });

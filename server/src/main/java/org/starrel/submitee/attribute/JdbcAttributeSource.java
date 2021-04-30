@@ -8,6 +8,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
@@ -63,7 +64,15 @@ public class JdbcAttributeSource implements AttributeSource {
 
     @Override
     public List<String> listKeys(String path) {
-        return null;
+        return keys;
+    }
+
+    private final List<String> keys = new ArrayList<>();
+
+    @Override
+    public void specSet(String path) {
+        String cName = getColumnName(path);
+        if (!keys.contains(cName)) keys.add(getColumnName(path));
     }
 
     @Override
