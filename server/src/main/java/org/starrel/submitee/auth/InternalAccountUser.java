@@ -46,10 +46,14 @@ public class InternalAccountUser extends AbstractUser {
 
     public void setPassword(String password) throws ExecutionException {
         this.password.set(InternalAccountRealm.hashPassword(password));
-        Session session = SubmiteeServer.getInstance().getUserSession(getDescriptor());
-        if (session != null) {
+        for (Session session : SubmiteeServer.getInstance().getUserSession(getDescriptor())) {
             session.close(null);
         }
+    }
+
+    public boolean verifyPassword(String verify) {
+        String stored = this.password.get();
+        return InternalAccountRealm.verifyPassword(verify, stored);
     }
 
     public String getEmail() {

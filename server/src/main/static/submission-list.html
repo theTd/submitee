@@ -251,6 +251,8 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         if (tid) q += "&tid=" + encodeURIComponent(tid);
         let start = submitee.filterbar.get("start");
         if (start) q += "&start=" + start;
+        let end = submitee.filterbar.get("end");
+        if (end) q += "&end=" + end;
         let tags = submitee.filterbar.get("tags");
         if (tags) q += "&tags=" + encodeURIComponent(tags);
         return q;
@@ -399,6 +401,14 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
             datePicker: true
         });
         submitee.filterbar.init({
+            key: "end",
+            displayKey: "终止时间",
+            value: parseInt(getQueryValue("end")),
+            setValueCallback: reloadWithFilters,
+            removeCallback: reloadWithFilters,
+            datePicker: true
+        });
+        submitee.filterbar.init({
             key: "tags",
             displayKey: "标签",
             value: getQueryValue("tags"),
@@ -461,7 +471,13 @@ ${submitee.relativeTimeLocale(submission.submitTime)}
         }
         let startFilter = submitee.filterbar.get("start");
         if (startFilter) {
-            filters["submit-time"] = {"$lte": parseInt(startFilter)};
+            if (!filters["submit-time"]) filters["submit-time"] = {};
+            filters["submit-time"]["$lte"] = parseInt(startFilter);
+        }
+        let endFilter = submitee.filterbar.get("end");
+        if (endFilter) {
+            if (!filters["submit-time"]) filters["submit-time"] = {};
+            filters["submit-time"]["$gte"] = parseInt(endFilter);
         }
         let tagFilter = submitee.filterbar.get("tags");
         if (tagFilter) {

@@ -2,6 +2,7 @@ package org.starrel.submitee.model;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
@@ -13,17 +14,17 @@ import org.starrel.submitee.SubmiteeServer;
 import org.starrel.submitee.Util;
 import org.starrel.submitee.auth.AnonymousUser;
 
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 public class SessionKeeper {
     public final static String HTTP_ATTRIBUTE_SESSION = "submitee_session";
     public final static String COOKIE_NAME_SESSION_TOKEN = "sess";
     private final Cache<String, SessionImpl> cache = CacheBuilder.newBuilder().weakValues().build();
-    private final Cache<UserDescriptor, String> userCache = CacheBuilder.newBuilder()
+    private final Cache<UserDescriptor, List<String>> userCache = CacheBuilder.newBuilder()
             .expireAfterAccess(30, TimeUnit.MINUTES).maximumSize(1000).build();
 
     private static String generateNewSessionToken() {
@@ -89,33 +90,43 @@ public class SessionKeeper {
         }
     }
 
-    public SessionImpl getByUser(UserDescriptor userDescriptor) throws ExecutionException {
-        String token;
+    public List<SessionImpl> getByUser(UserDescriptor userDescriptor) throws ExecutionException {
+        List<String> tokenList;
         try {
-            token = userCache.get(userDescriptor, () -> {
+            tokenList = userCache.get(userDescriptor, () -> {
                 MongoDatabase mongoDatabase = SubmiteeServer.getInstance().getMongoDatabase();
-                Document found = mongoDatabase.getCollection(Session.COLLECTION_NAME)
-                        .find(Filters.eq("logged-in-user", userDescriptor.toString()))
+                MongoCursor<Document> cursor = mongoDatabase.getCollection(Session.COLLECTION_NAME)
+                        .find(Filters.and(
+                                Filters.eq("body.logged-in-user.user-id", userDescriptor.userId),
+                                Filters.eq("body.logged-in-user.realm-type", userDescriptor.realmType))
+                        )
                         .projection(Projections.include("id"))
-                        .first();
-                if (found == null) throw NotExistsSignal.INSTANCE;
-                return found.getString("id");
+                        .cursor();
+                List<String> lst = new ArrayList<>();
+                while (cursor.hasNext()) {
+                    lst.add(cursor.next().getString("id"));
+                }
+                return lst;
             });
         } catch (ExecutionException e) {
             if (e.getCause() instanceof NotExistsSignal) {
-                token = null;
+                tokenList = null;
             } else {
                 throw e;
             }
         }
-        if (token == null) return null;
-        return getByToken(token);
+        if (tokenList == null) return Collections.emptyList();
+        return tokenList.stream().map(this::getByToken).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     void remove(SessionImpl session) {
         cache.invalidate(session.getSessionToken());
-        userCache.asMap().entrySet().stream()
-                .filter(en -> Objects.equals(en.getValue(), session.getSessionToken())).findFirst()
-                .ifPresent(en -> userCache.invalidate(en.getKey()));
+        if (session.getUser() != null) {
+            userCache.invalidate(session.getUser().getDescriptor());
+        }
+    }
+
+    public void invalidateUserCache(UserDescriptor descriptor) {
+        userCache.invalidate(descriptor);
     }
 }

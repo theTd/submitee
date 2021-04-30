@@ -441,7 +441,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
     }
 
     @Override
-    public Session getUserSession(UserDescriptor userDescriptor) throws ExecutionException {
+    public List<? extends Session> getUserSession(UserDescriptor userDescriptor) throws ExecutionException {
         return sessionKeeper.getByUser(userDescriptor);
     }
 

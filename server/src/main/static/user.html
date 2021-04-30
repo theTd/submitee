@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>正在载入</title>
+</head>
+<body>
+<div id="session-header"></div>
+<div class="container panel">
+    <div class="row mt-4">
+        <div class="col-3">
+            <h4>密码</h4>
+        </div>
+        <div class="col-9">
+            <label>最后修改: </label>
+            <label id="label-last-change-password">N/A</label>
+            <br/>
+            <label for="new-password" class="w-100">新密码</label>
+            <input type="password" id="new-password" autocomplete="new-password"/>
+            <label for="current-password" class="w-100">当前密码</label>
+            <input type="password" id="current-password" autocomplete="password"/>
+            <hr class="w-100"/>
+            <button class="btn btn-secondary" id="btn-change-password">修改密码</button>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-3">
+            <h4>用户名</h4>
+        </div>
+        <div class="col-9">
+            <label for="new-username" class="w-100">修改用户名</label>
+            <input type="text" id="new-username"/>
+            <hr class="w-100"/>
+            <button class="btn btn-secondary" id="btn-change-username">修改用户名</button>
+        </div>
+    </div>
+</div>
+<script src="js/safe.js"></script>
+<script>
+    submitee_safe.loadAllStylesheet([
+        "https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css",
+        "https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/css/bootstrap4-toggle.min.css",
+        "https://fonts.googleapis.com/icon?family=Material+Icons",
+        "css/global.css"
+    ]).then(() => {
+    });
+
+    submitee_safe.loadAllScript([
+        "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
+        "https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js",
+        // "https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js",
+        // "https://cdn.jsdelivr.net/npm/wangeditor@latest/dist/wangEditor.min.js",
+        "js/model.js",
+        "js/session.js",
+        // "js/field-controllers.js",
+        "js/ui.js",
+    ]).then(() => {
+        setAuthTarget("user.html");
+        createSessionHeader("session-header");
+        promiseSessionInfo().then(session => {
+            if (session["realm"] !== 'internal') {
+                sendToAuthPage();
+            } else {
+                let lastChangePassword = session["profile"]["last-change-password"];
+                if (lastChangePassword) {
+                    $("#label-last-change-password").text(submitee.relativeTimeLocale(lastChangePassword));
+                }
+                let username = session["profile"]["username"];
+                let inputNewPassword = $("#new-password");
+                inputNewPassword.on("keyup", () => inputNewPassword[0].setCustomValidity(""));
+                let inputCurrentPassword = $("#current-password");
+                inputCurrentPassword.on("keyup", () => inputCurrentPassword[0].setCustomValidity(""));
+
+                $("#btn-change-password").on("click", () => {
+                    let newPassword = inputNewPassword.val();
+                    if (!newPassword) {
+                        inputNewPassword[0].setCustomValidity("必填项目");
+                        inputNewPassword[0].reportValidity();
+                        return;
+                    }
+                    let currentPassword = inputCurrentPassword.val();
+                    if (!currentPassword) {
+                        inputCurrentPassword[0].setCustomValidity("必填项目");
+                        inputCurrentPassword[0].reportValidity();
+                        return;
+                    }
+                    $.ajax({
+                        url: "../internal-account/set-password",
+                        method: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            "new-password": newPassword,
+                            "current-password": currentPassword
+                        }),
+                        success: () => {
+                            create_toast("提示", "已完成修改密码，结束所有会话");
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        },
+                        error: toast_ajax_error
+                    });
+                });
+
+                let inputNewUsername = $("#new-username");
+                inputNewUsername.attr("placeholder", username ? username : "<未设置>");
+            }
+        })
+    });
+</script>
+</body>
+</html>

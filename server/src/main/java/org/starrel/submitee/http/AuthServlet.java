@@ -75,6 +75,7 @@ public class AuthServlet extends AbstractJsonServlet {
                 }
                 break;
             }
+            case "user.html":
             case "management": {
                 realms.add(SubmiteeServer.getInstance().getInternalAccountRealm());
                 break;

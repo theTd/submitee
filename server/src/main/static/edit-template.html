@@ -628,7 +628,29 @@
 
     function loadActions() {
         if (submitee.currentTemplate.published) {
-            $(".template-status-text").html(`<p class="alert alert-info">已发布，过去一小时内已收到10个提交，一共收到10个提交，其中6个未读</p>`);
+            $(".template-status-text").html(`<p class="alert alert-info">已发布</p>`);
+
+            let filter = {"template-uuid": submitee.currentTemplate.uniqueId};
+
+            let lastHour = new Date().getTime();
+            lastHour -= 3600 * 1000;
+            let lastHourFilter = {
+                "template-uuid": submitee.currentTemplate.uniqueId,
+                "submit-time": {"$gte": lastHour}
+            };
+            let totalSizePromise = fetchSubmissionSize(filter);
+            let lastHourSizePromise = fetchSubmissionSize(lastHourFilter)
+            Promise.all([totalSizePromise, lastHourSizePromise]).then(async () => {
+                $(".template-status-text").html(`
+<p class="alert alert-info">
+已发布，近一个小时内收到
+<a href="?method=submission-list&tid=${submitee.currentTemplate.uniqueId}&end=${lastHour}">&nbsp;${await lastHourSizePromise}&nbsp;</a>
+项提交，共收到
+<a href="?method=submission-list&tid=${submitee.currentTemplate.uniqueId}">&nbsp;${await totalSizePromise}&nbsp;</a>
+项提交</p>
+`);
+            });
+
             $("#btn-template-link").removeClass("d-none").on('click', () => {
                 submitee.copyToClipboard(submitee.currentTemplate.submissionPageLink, () => {
                     $("#btn-template-link").popover({

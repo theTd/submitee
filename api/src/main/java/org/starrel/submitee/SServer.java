@@ -74,7 +74,7 @@ public interface SServer {
 
     Submission createSubmission(UserDescriptor userDescriptor, STemplate template);
 
-    Session getUserSession(UserDescriptor userDescriptor) throws ExecutionException;
+    List<? extends Session> getUserSession(UserDescriptor userDescriptor) throws ExecutionException;
 
     AuthScheme createPasswordAuthScheme();
 

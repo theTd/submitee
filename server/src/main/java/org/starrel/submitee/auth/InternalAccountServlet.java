@@ -15,12 +15,14 @@ import org.eclipse.jetty.http.HttpStatus;
 import org.starrel.submitee.*;
 import org.starrel.submitee.http.AbstractJsonServlet;
 import org.starrel.submitee.model.Session;
+import org.starrel.submitee.model.SessionImpl;
 import org.starrel.submitee.model.User;
 
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class InternalAccountServlet extends AbstractJsonServlet {
@@ -276,6 +278,42 @@ public class InternalAccountServlet extends AbstractJsonServlet {
                         asyncContext.complete();
                     }
                 });
+                break;
+            }
+            case "set-password": {
+                User user = getSession(req).getUser();
+                if (!(user instanceof InternalAccountUser)) {
+                    responseAccessDenied(req, resp);
+                    return;
+                }
+                String newPassword = JsonUtil.parseString(body, "new-password");
+                String currentPassword = JsonUtil.parseString(body, "current-password");
+                if (newPassword == null || newPassword.isEmpty() || currentPassword == null || currentPassword.isEmpty()) {
+                    responseBadRequest(req, resp);
+                    return;
+                }
+
+                if (!((InternalAccountUser) user).verifyPassword(currentPassword)) {
+                    responseClassifiedError(req, resp, ClassifiedErrors.INCORRECT_PASSWORD);
+                    return;
+                }
+                try {
+                    ((InternalAccountUser) user).setPassword(newPassword);
+                    user.getAttributeMap().set("profile.last-change-password", System.currentTimeMillis());
+
+                    for (SessionImpl sess : SubmiteeServer.getInstance().getSessionKeeper().getByUser(user.getDescriptor())) {
+                        if (sess == getSession(req)) {
+                            sess.close(req.getSession());
+                        } else {
+                            sess.close(null);
+                        }
+                    }
+                    resp.setStatus(HttpStatus.OK_200);
+                } catch (ExecutionException e) {
+                    ExceptionReporting.report(InternalAccountServlet.class, "setting new password", "user=" + user, e);
+                    responseInternalError(req, resp);
+                    return;
+                }
                 break;
             }
             default: {

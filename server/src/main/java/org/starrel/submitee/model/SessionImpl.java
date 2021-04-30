@@ -57,6 +57,7 @@ public class SessionImpl implements Session {
     @Override
     public void setUser(User user) {
         this.user = user;
+        keeper.invalidateUserCache(user.getDescriptor());
     }
 
     @Override

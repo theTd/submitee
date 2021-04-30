@@ -54,6 +54,8 @@ public abstract class ClassifiedErrors {
 
     public final static ClassifiedError TEMPLATE_NOT_PUBLISHED = create(
             "TEMPLATE_NOT_PUBLISHED", HttpStatus.NOT_FOUND_404, I18N.General.TEMPLATE_NOT_PUBLISHED);
-    public static final ClassifiedError EVER_PUBLISHED_TEMPLATE = create(
+    public final static ClassifiedError EVER_PUBLISHED_TEMPLATE = create(
             "EVER_PUBLISHED_TEMPLATE", HttpStatus.FORBIDDEN_403, I18N.General.EVER_PUBLISHED_TEMPLATE);
+    public final static ClassifiedError INCORRECT_PASSWORD = create(
+            "INCORRECT_PASSWORD", HttpStatus.FORBIDDEN_403, I18N.General.INCORRECT_PASSWORD);
 }
