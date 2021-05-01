@@ -140,7 +140,7 @@
         $(node).find(".submission-template-id").html("<p class='spinner-border spinner-border-sm'></p>");
 
         let tagContainer = document.createElement("div");
-        $(tagContainer).addClass("position-absolute").addClass("d-flex").addClass("flex-row");
+        $(tagContainer).addClass("position-relative").addClass("d-flex").addClass("flex-row");
         $(tagContainer).css("right", "0").css("top", "-50%");
         if (submission["tags"]) {
             for (let tagId of submission["tags"]) {

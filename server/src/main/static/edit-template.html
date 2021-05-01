@@ -396,6 +396,9 @@
 
         let inputName = $(node).find(".s-field-name input");
         $(node).find(".btn-apply-field").on("click", () => {
+            let ctl = submitee.fieldControllers[field.type];
+            ctl.applyConfiguration(field);
+
             let container = findFieldContainer(field);
 
             let newName = inputName.val();

@@ -14,6 +14,8 @@ import org.starrel.submitee.model.STemplateImpl;
 import org.starrel.submitee.model.Session;
 
 import java.io.*;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -37,7 +39,7 @@ public class UploadServlet extends SubmiteeHttpServlet {
         }
 
         String templateUniqueIdString = uriParts[0];
-        String fieldName = uriParts[1];
+        String fieldName = URLDecoder.decode(uriParts[1], StandardCharsets.UTF_8);
 
         UUID templateUniqueId;
         try {
