@@ -70,6 +70,16 @@
             max-height: 10rem;
         }
 
+        .tag-container {
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: end;
+            align-items: center;
+        }
+
     </style>
 </head>
 <body>
@@ -140,8 +150,7 @@
         $(node).find(".submission-template-id").html("<p class='spinner-border spinner-border-sm'></p>");
 
         let tagContainer = document.createElement("div");
-        $(tagContainer).addClass("position-relative").addClass("d-flex").addClass("flex-row");
-        $(tagContainer).css("right", "0").css("top", "-50%");
+        $(tagContainer).addClass("tag-container");
         if (submission["tags"]) {
             for (let tagId of submission["tags"]) {
                 let tagMeta = submitee.configuration["tags"][tagId];
