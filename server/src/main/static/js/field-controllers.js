@@ -477,6 +477,10 @@ class CascadedListFieldController extends FieldController {
                         this.path = path;
                     }
 
+                    allowCreate() {
+                        return false;
+                    }
+
                     haveCascadeList(selection) {
                         return selection["child"];
                     }

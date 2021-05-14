@@ -160,6 +160,7 @@ public class SubmiteeServer implements SServer, AttributeHolder<SubmiteeServer> 
             ServerConnector connector = new ServerConnector(jettyServer);
             connector.setHost(address.getHostName());
             connector.setPort(address.getPort());
+            connector.setReuseAddress(true);
             for (ConnectionFactory factory : connector.getConnectionFactories()) {
                 if (factory instanceof HttpConnectionFactory) {
                     ((HttpConnectionFactory) factory).getHttpConfiguration().setSendServerVersion(false);
