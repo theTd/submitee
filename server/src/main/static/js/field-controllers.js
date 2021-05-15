@@ -305,6 +305,7 @@ class FileFieldController extends FieldController {
                 }
             }).use(Uppy.Dashboard, {
                 inline: true,
+                height: '10rem',
                 target: '#' + uploadFieldId
             }).use(Uppy.XHRUpload, {endpoint: `../upload/${field.owner.uniqueId}/${field.name}`})
 
